@@ -1,0 +1,14 @@
+[package]
+name = "map-ed25519"
+version = "0.1.0-pre"
+license = "MIT"
+authors = ["MAP <developers@marcopolo.link>"]
+edition = "2018"
+
+[dependencies]
+ed25519-dalek = {version = "1", features = ["nightly"], optional = true}
+bincode = "1.2.0"
+rand_os = "0.1"
+
+[features]
+nightly = ["ed25519-dalek/nightly"]
