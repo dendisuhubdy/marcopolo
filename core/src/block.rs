@@ -35,6 +35,18 @@ impl Default for Header {
 	}
 }
 
+pub struct Block {
+    pub header: Header,
+}
+
+impl Default for Block {
+    fn default() -> Self {
+        Block {
+            header: Default::default(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
