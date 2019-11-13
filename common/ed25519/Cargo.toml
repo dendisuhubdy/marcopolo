@@ -6,9 +6,13 @@ authors = ["MAP <developers@marcopolo.link>"]
 edition = "2018"
 
 [dependencies]
-ed25519-dalek = {version = "1", features = ["nightly"], optional = true}
+# ed25519-dalek = {version = "0.9", features = ["nightly"], optional = true}
 bincode = "1.2.0"
 rand_os = "0.1"
+rand = "*"
+
+[dependencies.ed25519-dalek]
+version = "0.9"
 
 [features]
 nightly = ["ed25519-dalek/nightly"]

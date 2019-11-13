@@ -17,6 +17,7 @@
 //! MarcoPolo ED25519.
 
 extern crate rand_os;
+// extern crate ed25519_dalek;
 
 use rand_os::OsRng;
 use ed25519_dalek::{PublicKey,SecretKey,Signature,SignatureError};
