@@ -16,7 +16,7 @@
 
 //! MarcoPolo ED25519.
 
-extern crate ed25519_dalek;
+// 
 extern crate serde;
 extern crate bincode;
 

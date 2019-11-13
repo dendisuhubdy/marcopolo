@@ -39,7 +39,7 @@ impl SignatureInfo {
         let res = Signature::from_bytes(data);
         res
     }
-    pub fn from_signature(sign &Signature) -> Self {
+    pub fn from_signature(sign: &Signature) -> Self {
         let data = sign.to_bytes();
         SignatureInfo(data)
     }

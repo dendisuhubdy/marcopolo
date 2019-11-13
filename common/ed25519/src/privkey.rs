@@ -16,7 +16,7 @@
 
 //! MarcoPolo ED25519.
 
-use ed25519_dalek::{SecretKey,Signature,PublicKey,SignatureError};.
+use ed25519_dalek::{SecretKey,Signature,PublicKey,SignatureError};
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
 use crate::hash::H256;
 
@@ -37,7 +37,7 @@ impl PrivKey {
         res
     }
 
-    pub fn from_secret_key(key &SecretKey) -> Self {
+    pub fn from_secret_key(key: &SecretKey) -> Self {
         PrivKey(SecretKey::to_bytes())
     }
 

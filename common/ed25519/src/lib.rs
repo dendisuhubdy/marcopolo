@@ -23,5 +23,6 @@ mod privkey;
 mod pubkey;
 mod signature;
 
+extern crate ed25519_dalek;
 use crate::hash::H256;
 pub type Message = H256;
