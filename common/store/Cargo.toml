@@ -1,0 +1,10 @@
+[package]
+name = "map-store"
+version = "0.1.0-pre"
+license = "MIT"
+authors = ["MAP <developers@marcopolo.link>"]
+edition = "2018"
+
+[dependencies.rocksdb]
+git = "https://github.com/rust-rocksdb/rust-rocksdb"
+tag = "v0.13.0"
