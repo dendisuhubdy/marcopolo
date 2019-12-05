@@ -15,7 +15,8 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use serde::{Serialize, Deserialize};
-use crate::hash::{Hash};
+use crate::hash;
+use hash::Hash;
 use bincode;
 
 /// Block header
@@ -51,8 +52,8 @@ impl Default for Block {
     }
     pub fn hash(&self) -> Option<Hash> {
         let code = bincode::serialize(&self).unwrap();
-        let mut hh = [0u8; 32];
-        Some(Hash{hh.copy_from_slice(&code[..])})
+        let mut hh = [0u8; 32];  
+        Some(Hash{hash::inner_blake2b_256(hh.copy_from_slice(&code[..]))})
     }
 }
 
