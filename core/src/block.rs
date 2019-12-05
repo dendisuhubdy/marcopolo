@@ -16,9 +16,11 @@
 
 use serde::{Serialize, Deserialize};
 use crate::hash::{Hash};
+use bincode;
 
 /// Block header
 #[derive(Serialize, Deserialize, Debug)]
+#[derive(Copy, Clone)]
 pub struct Header {
 	pub height: u64,
 	pub parent_hash: Hash,
@@ -35,6 +37,8 @@ impl Default for Header {
 	}
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+#[derive(Copy, Clone)]
 pub struct Block {
     pub header: Header,
 }
@@ -45,6 +49,15 @@ impl Default for Block {
             header: Default::default(),
         }
     }
+    pub fn hash(&self) -> Option<Hash> {
+        let code = bincode::serialize(&self).unwrap();
+        let mut hh = [0u8; 32];
+        Some(Hash{hh.copy_from_slice(&code[..])})
+    }
+}
+
+pub fn is_equal_hash(hash1: Option<Hash>,hash2: Option<Hash>) -> bool {
+    hash1.map_or(false,|v|{hash2.map_or(false,|v2|{ if v == v2 {return true;} else {return false;}})})
 }
 
 #[cfg(test)]

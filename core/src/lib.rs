@@ -16,3 +16,6 @@
 
 pub mod block;
 pub mod hash;
+pub mod chain;
+pub mod service;
+pub mod config;
