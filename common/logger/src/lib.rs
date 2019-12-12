@@ -14,12 +14,18 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
-#[macro_use]
+extern crate env_logger;
 extern crate log;
 
-fn main() {
-    cli::run();
-    logger::init().expect("Logger must be successfully initialized");
-    info!("info message");
-    error!("error message")
+mod logger;
+
+
+use log::SetLoggerError;
+
+use logger::Logger;
+
+pub fn init() -> Result<(), SetLoggerError> {
+    let logger = Logger::new();
+    log::set_max_level(logger.filter());
+    log::set_boxed_logger(Box::new(logger))
 }
