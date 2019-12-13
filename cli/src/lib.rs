@@ -18,10 +18,24 @@
 
 use clap::{App, Arg, SubCommand};
 
+use logger::LogConfig;
+
 pub fn run() {
     let matches = App::new("map")
         .version("0.1.0")
-        .about("MarcoPolo Protocol Rust Implementation")
+        .about("MarcoPolo Protocol - A new P2P e-cash system")
+        .arg(Arg::with_name("data_dir")
+            .long("data-dir")
+            .short("d")
+            .value_name("PATH")
+            .takes_value(true)
+            .help("Runs as if map was started in <PATH> instead of the current working directory."))
+        .arg(Arg::with_name("log")
+            .long("log")
+            .short("l")
+            .value_name("LOG_FILTER")
+            .takes_value(true)
+            .help("Sets logging filter with <LOG_FILTER>."))
         .arg(Arg::with_name("single")
             .long("single")
             .short("s")
@@ -29,6 +43,18 @@ pub fn run() {
         .subcommand(SubCommand::with_name("clean")
             .about("Remove the whole chain data"))
         .get_matches();
+
+    if let Some(data_dir) = matches.value_of("data_dir") {
+        println!("Run map under path {}", data_dir);
+    }
+
+    if let Some(log_filter) = matches.value_of("log") {
+        println!("Run map with {} log", log_filter);
+        let log_config = LogConfig {
+            filter: Some(log_filter.to_string()),
+        };
+        logger::init(log_config).expect("Logger must be successfully initialized");
+    }
 
     if matches.is_present("single") {
         println!("Run map with single node");

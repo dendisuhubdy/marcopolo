@@ -19,7 +19,6 @@ extern crate log;
 
 fn main() {
     cli::run();
-    logger::init().expect("Logger must be successfully initialized");
     info!("info message");
     error!("error message")
 }
