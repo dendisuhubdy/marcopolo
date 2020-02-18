@@ -23,7 +23,7 @@ impl MapDB {
         db.put(key,value)
     }
 
-    pub fn get(&mut self,key: Option<Vec<u8>>) -> Result<Option<Vec<u8>> {
+    pub fn get(&mut self,key: Option<Vec<u8>>) -> Result<Option<Vec<u8>>> {
         let &mut db = self.inner.read().unwrap();
         db.get(key)
     }
