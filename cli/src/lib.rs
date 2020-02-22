@@ -29,7 +29,7 @@ pub fn run() {
             .short("d")
             .value_name("PATH")
             .takes_value(true)
-            .help("Runs as if map was started in <PATH> instead of the current working directory."))
+            .help("Run as if map was started in <PATH> instead of the current working directory."))
         .arg(Arg::with_name("log")
             .long("log")
             .short("l")
