@@ -50,11 +50,11 @@ impl Default for Block {
             header: Default::default(),
         }
     }
-    pub fn hash(&self) -> Option<Hash> {
-        let code = bincode::serialize(&self).unwrap();
-        let mut hh = [0u8; 32];  
-        Some(Hash{hash::inner_blake2b_256(hh.copy_from_slice(&code[..]))})
-    }
+    // fn hash1(&self) -> Option<Hash> {
+    //     let code = bincode::serialize(&self).unwrap();
+    //     let mut hh = [0u8; 32];
+    //     Some(Hash{hash::inner_blake2b_256(hh.copy_from_slice(&code[..]))})
+    // }
 }
 
 pub fn is_equal_hash(hash1: Option<Hash>,hash2: Option<Hash>) -> bool {
