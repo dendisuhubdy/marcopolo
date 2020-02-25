@@ -2,6 +2,7 @@
 name = "map"
 version = "0.1.0"
 authors = ["alexrichton <alex_richton@protonmail.com>"]
+license = "GPL-3.0"
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -10,3 +11,11 @@ edition = "2018"
 cli = { package = "map-cli", path = "cli" }
 logger = { package = "map-logger", path = "common/logger" }
 log = "0.4.8"
+
+[workspace]
+members = [
+	"common/ed25519",
+	"common/hash",
+	"common/logger",
+	"common/store",
+]
