@@ -19,3 +19,4 @@ pub mod hash;
 pub mod chain;
 pub mod service;
 pub mod config;
+pub mod traits;

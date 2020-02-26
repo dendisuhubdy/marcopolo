@@ -15,6 +15,7 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use serde::{Serialize, Deserialize};
+use crate::traits::{TxMsg};
 use crate::hash;
 use hash::Hash;
 use bincode;
@@ -38,10 +39,14 @@ impl Default for Header {
 	}
 }
 
+pub struct verificationItem {}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[derive(Copy, Clone)]
-pub struct Block {
+pub struct Block<T: TxMsg> {
     pub header: Header,
+    pub signs: Vec<verificationItem>,
+    pub txs:  Vec<T>,
 }
 
 impl Default for Block {
