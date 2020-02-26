@@ -5,6 +5,5 @@ license = "MIT"
 authors = ["MAP <developers@marcopolo.link>"]
 edition = "2018"
 
-[dependencies.rocksdb]
-git = "https://github.com/rust-rocksdb/rust-rocksdb"
-tag = "v0.13.0"
+[dependencies]
+rocksdb = "0.13.0"
