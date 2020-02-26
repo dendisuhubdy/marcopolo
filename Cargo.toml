@@ -13,6 +13,8 @@ logger = { package = "map-logger", path = "common/logger" }
 log = "0.4.8"
 
 [workspace]
+# This should only list projects that are not
+# in the dependency tree in any other way
 members = [
 	"common/ed25519",
 	"common/hash",
