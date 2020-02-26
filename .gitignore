@@ -3,7 +3,6 @@
 # .gitignore file locally for IDE/Emacs/Vim generated files.
 **/target
 **/*.rs.bk
-.idea
 
 # MacOS specific ignores
 .DS_Store
@@ -11,3 +10,12 @@
 # local cargo config
 .cargo/config
 
+# jetbrains ide stuff
+.idea
+*.iml
+
+# Executables
+*.exe
+
+# Cargo lock in subs
+**/Cargo.lock
