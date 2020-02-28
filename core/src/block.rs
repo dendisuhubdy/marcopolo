@@ -16,6 +16,7 @@
 
 use serde::{Serialize, Deserialize};
 use crate::traits::{TxMsg};
+use crate::ed25519::{SignatureInfo};
 use crate::hash;
 use hash::Hash;
 use bincode;
@@ -39,7 +40,10 @@ impl Default for Header {
 	}
 }
 
-pub struct verificationItem {}
+pub struct verificationItem {
+    pub msg:    Hash,
+    pub signs:  SignatureInfo,     
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 #[derive(Copy, Clone)]
