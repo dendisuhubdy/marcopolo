@@ -19,18 +19,18 @@ impl MapDB {
         })
     }
 
-    pub fn put(&mut self,key: Option<Vec<u8>>,value: Option<Vec<u8>>) -> Result<(),Error> {
-        let &mut db = self.inner.write().unwrap();
-        db.put(key,value)
+    pub fn put(&mut self, key: Vec<u8>, value: Vec<u8>) -> Result<(),Error> {
+        let db = self.inner.write().unwrap();
+        db.put(key, value)
     }
 
-    pub fn get(&mut self,key: Option<Vec<u8>>) -> Result<Option<Vec<u8>>, Error> {
-        let &mut db = self.inner.read().unwrap();
+    pub fn get(&mut self, key: Vec<u8>) -> Result<Option<Vec<u8>>, Error> {
+        let db = self.inner.read().unwrap();
         db.get(key)
     }
 
-    pub fn remove(&mut self, key: Option<Vec<u8>>) -> Result<(),Error> {
-        let &mut db = self.inner.write().unwrap();
+    pub fn remove(&mut self, key: Vec<u8>) -> Result<(),Error> {
+        let db = self.inner.write().unwrap();
         db.delete(key)
     }
 }
