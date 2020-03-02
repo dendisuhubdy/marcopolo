@@ -15,8 +15,8 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 //! MarcoPolo ED25519.
-
-use ed25519_dalek::{Signature,SignatureError,SignatureError::InternalError};
+extern crate ed25519_dalek;
+use ed25519_dalek::{Signature,SignatureError};
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, KEYPAIR_LENGTH, SIGNATURE_LENGTH};
 
 #[derive(Clone)]
@@ -44,15 +44,16 @@ impl SignatureInfo {
         SignatureInfo(data)
     }
 
-    pub fn from_slice(data: &[u8]) -> Result<Self, SignatureError> {
-        if data.len() != SIGNATURE_LENGTH {
-            return Err(SignatureError(InternalError::BytesLengthError {
-                name: "SignatureInfo",
-                length: SIGNATURE_LENGTH,
-            }));
-        }
-        let mut sig = [0u8; SIGNATURE_LENGTH];
-        sig[..].copy_from_slice(data);
-        Ok(SignatureInfo(sig))
-    }
+    // pub fn from_slice(data: &[u8]) -> Result<Self, SignatureError> {
+    //     if data.len() != SIGNATURE_LENGTH {
+    //         // return Err(SignatureError(SignatureError::InternalError::BytesLengthError {
+    //         //     name: "SignatureInfo",
+    //         //     length: SIGNATURE_LENGTH,
+    //         // }));
+    //         return Err(SignatureError());
+    //     }
+    //     let mut sig = [0u8; SIGNATURE_LENGTH];
+    //     sig[..].copy_from_slice(data);
+    //     Ok(SignatureInfo(sig))
+    // }
 }
