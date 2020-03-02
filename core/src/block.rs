@@ -40,7 +40,7 @@ impl Default for Header {
 	}
 }
 
-pub struct verificationItem {
+pub struct VerificationItem {
     pub msg:    Hash,
     pub signs:  SignatureInfo,     
 }
@@ -49,7 +49,7 @@ pub struct verificationItem {
 #[derive(Copy, Clone)]
 pub struct Block<T: TxMsg> {
     pub header: Header,
-    pub signs: Vec<verificationItem>,
+    pub signs: Vec<VerificationItem>,
     pub txs:  Vec<T>,
 }
 
@@ -59,11 +59,20 @@ impl Default for Block {
             header: Default::default(),
         }
     }
-    // fn hash1(&self) -> Option<Hash> {
-    //     let code = bincode::serialize(&self).unwrap();
-    //     let mut hh = [0u8; 32];
-    //     Some(Hash{hash::inner_blake2b_256(hh.copy_from_slice(&code[..]))})
-    // }
+}
+
+impl<T: TxMsg>  Block<T> {
+    fn new(header: Header,txs: Vec<T>,signs: Vec<VerificationItem>) -> Self {
+        Block{header,signs,txs}
+    }
+    fn header(&self) -> &Header {
+		&self.header
+    }
+    fn hash(&self) -> Option<Hash> {
+        let code = bincode::serialize(&self).unwrap();
+        let mut hh = [0u8; 32];
+        Some(Hash{hash::inner_blake2b_256(hh.copy_from_slice(&code[..]))})
+    }
 }
 
 pub fn is_equal_hash(hash1: Option<Hash>,hash2: Option<Hash>) -> bool {
