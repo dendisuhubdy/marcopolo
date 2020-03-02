@@ -14,11 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
+extern crate ed25519;
+extern crate hash;
+
 use serde::{Serialize, Deserialize};
-use crate::traits::{TxMsg};
-use crate::ed25519::{SignatureInfo};
-use crate::hash;
-use hash::Hash;
+use traits::{TxMsg};
+use ed25519::{SignatureInfo};
+use hash;
+use core::Hash;
 use bincode;
 
 /// Block header
@@ -68,11 +71,11 @@ impl<T: TxMsg>  Block<T> {
     fn header(&self) -> &Header {
 		&self.header
     }
-    fn hash(&self) -> Option<Hash> {
-        let code = bincode::serialize(&self).unwrap();
-        let mut hh = [0u8; 32];
-        Some(Hash{hash::inner_blake2b_256(hh.copy_from_slice(&code[..]))})
-    }
+    // fn hash(&self) -> Option<Hash> {
+    //     let code = bincode::serialize(&self).unwrap();
+    //     let mut hh = [0u8; 32];
+    //     Some(Hash{hash::inner_blake2b_256(hh.copy_from_slice(&code[..]))})
+    // }
 }
 
 pub fn is_equal_hash(hash1: Option<Hash>,hash2: Option<Hash>) -> bool {
