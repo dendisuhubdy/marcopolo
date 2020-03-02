@@ -16,13 +16,12 @@
 
 //! MarcoPolo ED25519.
 
+// pub mod generator;
+// pub mod privkey;
+pub mod pubkey;
+pub mod signature;
 
 
-mod generator;
-mod privkey;
-mod pubkey;
-mod signature;
-
-extern crate ed25519_dalek;
-use crate::hash::H256;
+#[derive(Debug,PartialEq, Eq, Clone, Copy)]
+pub struct H256(pub [u8; 32]);
 pub type Message = H256;

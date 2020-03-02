@@ -6,10 +6,13 @@ authors = ["MAP <developers@marcopolo.link>"]
 edition = "2018"
 
 [dependencies]
-# ed25519-dalek = {version = "0.9", features = ["nightly"], optional = true}
+#ed25519-dalek = {version = "0.9", features = ["nightly"], optional = true}
+serde = { version = "1.0.102", features = ["derive"] }
+hash = { package = "map-hash", path = "../hash" }
+sha2 = "0.8"
 bincode = "1.2.0"
-rand_os = "0.1"
 rand = "*"
+rand_os = "0.1"
 
 [dependencies.ed25519-dalek]
 version = "0.9"

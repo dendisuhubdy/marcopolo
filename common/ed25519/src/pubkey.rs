@@ -18,13 +18,14 @@
 
 extern crate ed25519_dalek;
 extern crate bincode;
-// extern crate serde;
+extern crate sha2;
 // extern crate hash;
 
 use bincode::{serialize};
 use ed25519_dalek::{PublicKey,Signature,SignatureError};
 use super::signature::SignatureInfo;
 use super::{H256,Message};
+use sha2::Sha512;
 
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -46,7 +47,7 @@ impl Pubkey {
     pub fn verify(&self, message: &Message, signinfo: &SignatureInfo) -> Result<(), SignatureError> {
         let sign: Signature = signinfo.to_signature().unwrap();
         let pubkey: PublicKey = self.to_pubkey().unwrap();
-        pubkey.verify(&message.0,&sign)?;
+        PublicKey::verify::<Sha512>(&pubkey,&message.0,&sign)?;
         Ok(())
     }
 }
