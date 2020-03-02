@@ -16,14 +16,15 @@
 
 //! MarcoPolo ED25519.
 
-// 
-extern crate serde;
+extern crate ed25519_dalek;
 extern crate bincode;
+// extern crate serde;
+// extern crate hash;
 
-use bincode::{serialize, Infinite};
+use bincode::{serialize};
 use ed25519_dalek::{PublicKey,Signature,SignatureError};
 use super::signature::SignatureInfo;
-use crate::hash::H256;
+use super::{H256,Message};
 
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -33,18 +34,19 @@ pub struct Pubkey {
 
 impl Pubkey {
 
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self)->Vec<u8> {
         Vec::from(&self.inner.0[..])
     }
 
-    pub fn to_pubkey(&self) -> Result(PublicKey,SignatureError) {
+    #[inline]
+    pub fn to_pubkey(&self)->Result<PublicKey,SignatureError> {
         PublicKey::from_bytes(&self.inner.0[..])
     }
 
     pub fn verify(&self, message: &Message, signinfo: &SignatureInfo) -> Result<(), SignatureError> {
         let sign: Signature = signinfo.to_signature().unwrap();
-        let pubkey: PublicKey = to_pubkey.to_pubkey().unwrap();
-        pubkey.verify(&message.0,sign)?;
+        let pubkey: PublicKey = self.to_pubkey().unwrap();
+        pubkey.verify(&message.0,&sign)?;
         Ok(())
     }
 }
