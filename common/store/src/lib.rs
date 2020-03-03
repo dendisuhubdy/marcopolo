@@ -1,9 +1,9 @@
 
 extern crate rocksdb;
 
-pub mod MapDB;
+pub mod mapdb;
 
-pub mod Config {
+pub mod config {
     use std::path::PathBuf;
     use std::env;
 

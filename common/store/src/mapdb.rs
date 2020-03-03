@@ -1,13 +1,11 @@
 
-use std::sync::{Arc,RwLock};
-use rocksdb::{Error,Options,DB};
-// use super::Config;
-use crate::Config::Config;
+use std::sync::{Arc, RwLock};
+use rocksdb::{Error, DB};
+use crate::config::Config;
 
 
 pub struct MapDB{
     inner:     Arc<RwLock<DB>>,
-    // inner: Arc<RwLock<Option<Arc<DB>>>>,
 }
 
 
