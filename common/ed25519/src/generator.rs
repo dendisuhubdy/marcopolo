@@ -17,26 +17,25 @@
 //! MarcoPolo ED25519.
 
 extern crate rand_os;
-// extern crate ed25519_dalek;
+extern crate ed25519_dalek;
 
 use rand_os::OsRng;
 use ed25519_dalek::{PublicKey,SecretKey,Signature,SignatureError};
 use super::{privkey::PrivKey,pubkey::Pubkey};
 
-pub struct Generator {
-    rng: OsRng,
-}
+pub struct Generator {}
 
 impl Default for Generator {
     fn default() -> Self {
-        OsRng::new()
+        Generator{}
     }
 }
 
 impl Generator {
     pub fn new(&self) -> (PrivKey,Pubkey) {
-        let sk: SecretKey = SecretKey::generate(&mut self.rng);
-        let pk: PublicKey = (&sk).into();
-        (sk,pk)
+        let mut csprng: OsRng = OsRng::new().unwrap();
+        let sk: SecretKey = SecretKey::generate(&mut csprng);
+        let priv_key: PrivKey = PrivKey::from_secret_key(&sk);
+        (priv_key,priv_key.to_pubkey())
     }
 }

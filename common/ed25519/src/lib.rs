@@ -16,7 +16,7 @@
 
 //! MarcoPolo ED25519.
 
-// pub mod generator;
+pub mod generator;
 pub mod privkey;
 pub mod pubkey;
 pub mod signature;

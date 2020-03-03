@@ -24,7 +24,7 @@ use ed25519_dalek::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
 use super::{H256,Message,pubkey::Pubkey};
 use sha2::Sha512;
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone,Copy)]
 pub struct PrivKey {
     inner: H256,
 }
