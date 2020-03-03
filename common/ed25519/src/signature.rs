@@ -44,16 +44,10 @@ impl SignatureInfo {
         SignatureInfo(data)
     }
 
-    // pub fn from_slice(data: &[u8]) -> Result<Self, SignatureError> {
-    //     if data.len() != SIGNATURE_LENGTH {
-    //         // return Err(SignatureError(SignatureError::InternalError::BytesLengthError {
-    //         //     name: "SignatureInfo",
-    //         //     length: SIGNATURE_LENGTH,
-    //         // }));
-    //         return Err(SignatureError());
-    //     }
-    //     let mut sig = [0u8; SIGNATURE_LENGTH];
-    //     sig[..].copy_from_slice(data);
-    //     Ok(SignatureInfo(sig))
-    // }
+    pub fn from_slice(data: &[u8]) -> Result<Self, SignatureError> {
+        // let mut sig = [0u8; SIGNATURE_LENGTH];
+        // sig[..].copy_from_slice(data);
+        let sig: Signature = Signature::from_bytes(data).unwrap();
+        Ok(SignatureInfo::from_signature(&sig))
+    }
 }
