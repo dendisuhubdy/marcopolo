@@ -38,7 +38,9 @@ impl Pubkey {
     pub fn to_bytes(&self)->Vec<u8> {
         Vec::from(&self.inner.0[..])
     }
-
+    pub fn from_pubkey(pk: &PublicKey) -> Self {
+        Pubkey{inner: H256(pk.to_bytes())}
+    }
     #[inline]
     pub fn to_pubkey(&self)->Result<PublicKey,SignatureError> {
         PublicKey::from_bytes(&self.inner.0[..])

@@ -16,9 +16,13 @@
 
 //! MarcoPolo ED25519.
 
-use ed25519_dalek::{SecretKey,Signature,PublicKey,SignatureError};
+extern crate ed25519_dalek;
+extern crate sha2;
+
+use ed25519_dalek::{SecretKey,Signature,PublicKey,SignatureError,ExpandedSecretKey};
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
-use crate::hash::H256;
+use super::{H256,Message,pubkey::Pubkey};
+use sha2::Sha512;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct PrivKey {
@@ -38,20 +42,17 @@ impl PrivKey {
     }
 
     pub fn from_secret_key(key: &SecretKey) -> Self {
-        PrivKey(SecretKey::to_bytes())
+        PrivKey{inner: H256(key.to_bytes())}
     }
-
-    pub fn sign(&self,message: &[u8]) -> Result<Signature, SignatureError>  {
+    pub fn to_pubkey(&self) -> Pubkey {
         let sk: SecretKey = self.to_secrit_key().unwrap();
-        let expanded_secret: ExpandedSecretKey = (&sk).into();
-        let pk: PublicKey = self.to_pubkey().unwrap();
-        expanded_secret.sign(&message,&pk)
+        let public_key: PublicKey = PublicKey::from_secret::<Sha512>(&sk);
+        Pubkey::from_pubkey(&public_key)
     }
-
-    pub fn to_pubkey(&self) -> Result<Pubkey,SignatureError> {
+    pub fn sign(&self,message: &[u8]) -> Signature {
         let sk: SecretKey = self.to_secrit_key().unwrap();
-        let public_from_secret: PublicKey = (&sk).into();
-        OK(public_from_secret)
+        let expanded_secret: ExpandedSecretKey = ExpandedSecretKey::from_secret_key::<Sha512>(&sk);
+        let pk: PublicKey = self.to_pubkey().to_pubkey().unwrap();
+        expanded_secret.sign::<Sha512>(&message,&pk)
     }
-
 }
