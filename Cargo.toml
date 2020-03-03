@@ -20,5 +20,6 @@ members = [
 	"common/hash",
 	"common/logger",
 	"common/store",
-	"core"
+	"core",
+    "chain"
 ]
