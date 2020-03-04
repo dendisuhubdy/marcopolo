@@ -39,7 +39,7 @@ pub fn blake2b_256<T: AsRef<[u8]>>(s: T) -> [u8; 32] {
     inner_blake2b_256(s)
 }
 
-fn inner_blake2b_256<T: AsRef<[u8]>>(s: T) -> [u8; 32] {
+pub fn inner_blake2b_256<T: AsRef<[u8]>>(s: T) -> [u8; 32] {
     let mut result = [0u8; 32];
     let mut blake2b = new_blake2b();
     blake2b.update(s.as_ref());
