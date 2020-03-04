@@ -53,11 +53,28 @@ pub struct VerificationItem {
     pub signs:  SignatureInfo,     
 }
 
+#[derive(Serialize, Deserialize)]
+#[derive(Debug, Default,Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub struct BlockProof([u8;32],[u8;32],u8);
+
+impl BlockProof {
+    pub fn get_pk(&self,mut pk: [u8;64]) {
+        if self.2 == 0u8 {
+            pk[0..32].copy_from_slice(&self.0[..]);
+        } else {
+            pk[0..32].copy_from_slice(&self.0[..]);
+            pk[32..64].copy_from_slice(&self.1[..]);
+        }
+    }
+}
+
+
 #[derive(Debug,Clone,Serialize, Deserialize)]
 pub struct Block<T: TxMsg> {
     pub header: Header,
     pub signs: Vec<VerificationItem>,
     pub txs:  Vec<T>,
+    pub proofs: Vec<BlockProof>,
 }
 
 impl<T: TxMsg> Default for Block<T> {
@@ -66,13 +83,14 @@ impl<T: TxMsg> Default for Block<T> {
             header: Default::default(),
             signs:  Vec::new(),
             txs:    Vec::new(),
+            proofs: Vec::new(),
         }
     }
 }
 
 impl<T: TxMsg>  Block<T> {
-    fn new(header: Header,txs: Vec<T>,signs: Vec<VerificationItem>) -> Self {
-        Block{header,signs,txs}
+    fn new(header: Header,txs: Vec<T>,signs: Vec<VerificationItem>,proofs: Vec<BlockProof>) -> Self {
+        Block{header,signs,txs,proofs}
     }
     fn header(&self) -> &Header {
 		&self.header
