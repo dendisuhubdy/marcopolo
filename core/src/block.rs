@@ -15,7 +15,7 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 extern crate ed25519;
-// extern crate hash;
+extern crate hash;
 
 use serde::{Serialize, Deserialize};
 use super::traits::{TxMsg};
@@ -46,13 +46,14 @@ impl Default for Header {
 	}
 }
 
+#[derive(Serialize, Deserialize)]
 #[derive(Clone, Default, Debug)]
 pub struct VerificationItem {
     pub msg:    Hash,
-    pub signs:  SignatureInfo,     
+    // pub signs:  SignatureInfo,     
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,Serialize, Deserialize)]
 pub struct Block<T: TxMsg> {
     pub header: Header,
     pub signs: Vec<VerificationItem>,
@@ -76,11 +77,13 @@ impl<T: TxMsg>  Block<T> {
     fn header(&self) -> &Header {
 		&self.header
     }
-    // fn hash(&self) -> Option<Hash> {
-    //     let code = bincode::serialize(&self).unwrap();
-    //     let mut hh = [0u8; 32];
-    //     Some(Hash{hash::inner_blake2b_256(hh.copy_from_slice(&code[..]))})
-    // }
+    fn get_hash(&self) -> Option<Hash> {
+        let code = bincode::serialize(&self).unwrap();
+        let mut hh = [0u8; 32];
+        hh.copy_from_slice(&code[..]);
+        let mut hash_data = hash::inner_blake2b_256(hh);
+        Some(Hash(hash_data))
+    }
 }
 
 pub fn is_equal_hash(hash1: Option<Hash>,hash2: Option<Hash>) -> bool {
