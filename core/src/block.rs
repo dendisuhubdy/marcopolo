@@ -27,6 +27,13 @@ use bincode;
 #[derive(Debug, Default,Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Hash(pub [u8; 32]);
 
+impl Hash {
+    pub fn to_slice(&self) -> &[u8] {
+        return &self.0
+    }
+}
+
+
 /// Block header
 #[derive(Serialize, Deserialize, Debug)]
 #[derive(Copy, Clone)]
@@ -44,6 +51,13 @@ impl Default for Header {
 			time: 0,
 		}
 	}
+}
+
+impl Header {
+    pub fn hash(&self) -> Hash {
+        let encoded: Vec<u8> = bincode::serialize(&self).unwrap();
+        Hash(hash::blake2b_256(encoded))
+    }
 }
 
 #[derive(Serialize, Deserialize)]

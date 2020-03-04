@@ -9,4 +9,4 @@ edition = "2018"
 [dependencies]
 core = { path = "../core" }
 map-store = { path = "../common/store" }
-#bincode = "1.2.0"
+bincode = "1.2.0"
