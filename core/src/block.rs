@@ -50,7 +50,7 @@ impl Default for Header {
 #[derive(Clone, Default, Debug)]
 pub struct VerificationItem {
     pub msg:    Hash,
-    // pub signs:  SignatureInfo,     
+    pub signs:  SignatureInfo,     
 }
 
 #[derive(Debug,Clone,Serialize, Deserialize)]
