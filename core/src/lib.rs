@@ -15,7 +15,6 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 pub mod block;
-pub mod Hash;
 // pub mod chain;
 // pub mod service;
 // pub mod config;

@@ -16,4 +16,5 @@
 
 use std::fmt::{Debug, Display};
 use serde::{Serialize, Deserialize};
-pub trait TxMsg : Serialize + DeserializeOwned+Debug {}
+
+pub trait TxMsg : Serialize + Debug {}

@@ -15,14 +15,17 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 extern crate ed25519;
-extern crate hash;
+// extern crate hash;
 
 use serde::{Serialize, Deserialize};
-use traits::{TxMsg};
-use ed25519::{SignatureInfo};
-use hash;
-use core::Hash;
+use super::traits::{TxMsg};
+use ed25519::{signature::SignatureInfo};
+// use hash;
 use bincode;
+
+#[derive(Serialize, Deserialize)]
+#[derive(Debug, Default,Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub struct Hash(pub [u8; 32]);
 
 /// Block header
 #[derive(Serialize, Deserialize, Debug)]
@@ -43,23 +46,25 @@ impl Default for Header {
 	}
 }
 
+#[derive(Clone, Default, Debug)]
 pub struct VerificationItem {
     pub msg:    Hash,
     pub signs:  SignatureInfo,     
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[derive(Copy, Clone)]
+#[derive(Debug,Clone)]
 pub struct Block<T: TxMsg> {
     pub header: Header,
     pub signs: Vec<VerificationItem>,
     pub txs:  Vec<T>,
 }
 
-impl Default for Block {
+impl<T: TxMsg> Default for Block<T> {
     fn default() -> Self {
         Block {
             header: Default::default(),
+            signs:  Vec::new(),
+            txs:    Vec::new(),
         }
     }
 }
