@@ -16,11 +16,34 @@
 
 //! MarcoPolo ED25519.
 extern crate ed25519_dalek;
+extern crate serde;
+
+use serde::{Serialize, Deserialize};
 use ed25519_dalek::{Signature,SignatureError};
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, KEYPAIR_LENGTH, SIGNATURE_LENGTH};
+use std::fmt;
+use faster_hex::hex_string;
+use std::fmt::Error;
+use std::str::FromStr;
+
 
 #[derive(Clone)]
-pub struct SignatureInfo([u8; SIGNATURE_LENGTH]);
+pub struct SignatureInfo(pub [u8; SIGNATURE_LENGTH]);
+
+impl Default for SignatureInfo {
+    fn default() -> Self {
+        SignatureInfo([0u8;SIGNATURE_LENGTH])
+    }
+}
+impl fmt::Debug for SignatureInfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        f.debug_struct("Signature")
+            .field("r", &hex_string(&self.0[0..32]).expect("hex string"))
+            .field("s", &hex_string(&self.0[32..64]).expect("hex string"))
+            .field("v", &hex_string(&self.0[64..65]).expect("hex string"))
+            .finish()
+    }
+}
 
 impl SignatureInfo {
 

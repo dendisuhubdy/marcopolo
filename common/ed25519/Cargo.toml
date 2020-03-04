@@ -11,6 +11,7 @@ serde = { version = "1.0.102", features = ["derive"] }
 hash = { package = "map-hash", path = "../hash" }
 sha2 = "0.8"
 bincode = "1.2.0"
+faster-hex = "0.4"
 rand = "*"
 rand_os = "0.1"
 
