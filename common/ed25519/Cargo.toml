@@ -12,7 +12,7 @@ hash = { package = "map-hash", path = "../hash" }
 sha2 = "0.8"
 bincode = "1.2.0"
 faster-hex = "0.4"
-rand = "*"
+rand = "0.6.5"
 rand_os = "0.1"
 
 [dependencies.ed25519-dalek]
