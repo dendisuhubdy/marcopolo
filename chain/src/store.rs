@@ -17,12 +17,16 @@
 use map_store::mapdb::MapDB;
 use map_store::config::Config;
 use map_store::Error;
-use map_core::block::Header;
+use map_core::block::{Header, Hash};
+// use map_core::block;
 use bincode;
 
 const HEADER_PREFIX: u8 = 'h' as u8;
 const HEAD_PREFIX: u8 = 'H' as u8;
 const BLOCK_PREFIX: u8 = 'b' as u8;
+
+const HEADERHASH_PREFIX: u8 = 'n' as u8;
+
 
 /// Blockchain storage backend implement
 pub struct ChainDB {
@@ -40,14 +44,33 @@ impl ChainDB {
 
     pub fn write_header(&mut self, h: &Header) -> Result<(), Error> {
         let encoded: Vec<u8> = bincode::serialize(h).unwrap();
-        let key = Self::header_key(HEADER_PREFIX, &(h.hash().0));
+        let key = Self::header_key(&(h.hash().0));
+        self.write_header_hash(h.height, &h.hash());
         self.db.put(&key, &encoded)
     }
 
-    fn header_key(prefix: u8, _hash: &[u8]) -> Vec<u8> {
+    pub fn read_header_hash(&mut self, num: u64) -> Result<Option<Vec<u8>>, Error> {
+        let key = Self::header_hash_key(num);
+        self.db.get(&key)
+    }
+
+    pub fn write_header_hash(&mut self, num: u64, hash: &Hash) -> Result<(), Error> {
+        let key = Self::header_hash_key(num);
+        self.db.put(&key, hash.to_slice())
+    }
+
+    fn header_key(_hash: &[u8]) -> Vec<u8> {
         let mut pre = Vec::new();
-        pre.push(prefix);
+        pre.push(HEADER_PREFIX);
         pre.extend_from_slice(_hash);
+        pre
+    }
+
+    fn header_hash_key(num: u64) -> Vec<u8> {
+        let mut pre = Vec::new();
+        pre.push(HEADERHASH_PREFIX);
+        let bytes = num.to_be_bytes();
+        pre.extend_from_slice(&bytes);
         pre
     }
 }
