@@ -15,7 +15,6 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 pub mod block;
-// pub mod chain;
-// pub mod service;
-// pub mod config;
+pub mod genesis;
+//pub mod transaction;
 pub mod traits;

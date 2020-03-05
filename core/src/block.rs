@@ -19,9 +19,11 @@ extern crate hash;
 
 use serde::{Serialize, Deserialize};
 use super::traits::{TxMsg};
+// use super::transaction::{Transaction};
 use ed25519::{signature::SignatureInfo};
 // use hash;
 use bincode;
+
 
 #[derive(Serialize, Deserialize)]
 #[derive(Debug, Default,Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
@@ -84,28 +86,31 @@ impl BlockProof {
 
 
 #[derive(Debug,Clone,Serialize, Deserialize)]
-pub struct Block<T: TxMsg> {
+pub struct Block {
     pub header: Header,
     pub signs: Vec<VerificationItem>,
-    pub txs:  Vec<T>,
+    // pub txs:  Vec<T>,
     pub proofs: Vec<BlockProof>,
 }
 
-impl<T: TxMsg> Default for Block<T> {
+impl Default for Block {
     fn default() -> Self {
         Block {
             header: Default::default(),
             signs:  Vec::new(),
-            txs:    Vec::new(),
+            // txs:    Vec::new(),
             proofs: Vec::new(),
         }
     }
 }
 
-impl<T: TxMsg>  Block<T> {
-    fn new(header: Header,txs: Vec<T>,signs: Vec<VerificationItem>,proofs: Vec<BlockProof>) -> Self {
-        Block{header,signs,txs,proofs}
+impl  Block {
+    fn new(header: Header,signs: Vec<VerificationItem>,proofs: Vec<BlockProof>) -> Self {
+        Block{header,signs,proofs}
     }
+    // fn new(header: Header,txs: Vec<T>,signs: Vec<VerificationItem>,proofs: Vec<BlockProof>) -> Self {
+    //     Block{header,signs,txs,proofs}
+    // }
     fn header(&self) -> &Header {
 		&self.header
     }
