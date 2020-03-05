@@ -37,9 +37,9 @@ impl MapDB {
         db.put(key, value)
     }
 
-    pub fn get(&mut self, key: &[u8]) -> Result<Option<Vec<u8>>, Error> {
+    pub fn get(&mut self, key: &[u8]) -> Option<Vec<u8>> {
         let db = self.inner.read().unwrap();
-        db.get(key)
+        db.get(key).unwrap()
     }
 
     pub fn remove(&mut self, key: &[u8]) -> Result<(),Error> {
@@ -63,10 +63,10 @@ fn test_set_value() {
 
     assert!(m.put(b"k1", b"v1111").is_ok());
 
-    let r: Result<Option<Vec<u8>>, Error> = m.get(b"k1");
+    let r: Option<Vec<u8>> = m.get(b"k1");
 
-    assert_eq!(r.unwrap().unwrap(), b"v1111");
+    assert_eq!(r.unwrap(), b"v1111");
     assert!(m.remove(b"k1").is_ok());
-    assert!(m.get(b"k1").unwrap().is_none());
+    assert!(m.get(b"k1").is_none());
     assert!(!m.exists(b"k1").unwrap());
 }

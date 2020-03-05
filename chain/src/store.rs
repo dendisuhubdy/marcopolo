@@ -49,9 +49,13 @@ impl ChainDB {
         self.db.put(&key, &encoded)
     }
 
-    pub fn read_header_hash(&mut self, num: u64) -> Result<Option<Vec<u8>>, Error> {
+    pub fn read_header_hash(&mut self, num: u64) -> Option<Hash> {
         let key = Self::header_hash_key(num);
-        self.db.get(&key)
+        self.db.get(&key).map(|h| {
+            let mut hash: Hash = Default::default();
+            hash.0.copy_from_slice(h.as_slice());
+            hash
+        })
     }
 
     pub fn write_header_hash(&mut self, num: u64, hash: &Hash) -> Result<(), Error> {
