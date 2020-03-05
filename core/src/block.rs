@@ -18,7 +18,7 @@ extern crate ed25519;
 extern crate hash;
 
 use serde::{Serialize, Deserialize};
-use super::traits::{TxMsg};
+// use super::traits::{TxMsg};
 // use super::transaction::{Transaction};
 use ed25519::{signature::SignatureInfo};
 // use hash;
@@ -71,7 +71,7 @@ pub struct VerificationItem {
 
 #[derive(Serialize, Deserialize)]
 #[derive(Debug, Default,Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub struct BlockProof([u8;32],[u8;32],u8);
+pub struct BlockProof(pub [u8;32],pub [u8;32],pub u8);
 
 impl BlockProof {
     pub fn get_pk(&self,mut pk: [u8;64]) {
