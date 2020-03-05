@@ -39,3 +39,11 @@ impl Generator {
         (priv_key,priv_key.to_pubkey())
     }
 }
+
+#[test]
+fn generatePair() {
+    println!("start generatePair test....");
+    let (priv_key,pub_key) = Generator::default().new();
+    println!("priv_key:{:?},pub_key:{:?}",priv_key,pub_key);
+    println!("end generatePair test....");
+}
