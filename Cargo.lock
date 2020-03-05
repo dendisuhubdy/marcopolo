@@ -336,6 +336,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "map-consensus"
+version = "0.1.0"
+
+[[package]]
 name = "map-core"
 version = "0.1.0"
 dependencies = [
