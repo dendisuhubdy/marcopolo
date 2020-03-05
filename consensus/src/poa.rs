@@ -21,8 +21,8 @@ pub struct poa {
 }
 
 impl IConsensus for poa {
-    pub fn version() -> u32 {
-        1
+    fn version() -> u32 {
+        1u32
     }
 } 
 

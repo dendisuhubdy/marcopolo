@@ -15,5 +15,5 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 pub trait IConsensus {
-    pub fn version() -> u32 ;
+    fn version() -> u32 ;
 }
