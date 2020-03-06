@@ -13,9 +13,12 @@
 
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
+extern crate core;
 
 use super::traits::IConsensus;
-
+use core::{block::Block};
+use super::Error;
+// use std::error::Error;
 pub struct poa {
 
 }
@@ -27,7 +30,7 @@ impl IConsensus for poa {
 } 
 
 impl poa {
-    pub fn finalize_block() {
-        
+    pub fn finalize_block(t: u8,pk: &[u8],b: Block) -> Result<(),Error> {
+        Ok(())
     }
 }

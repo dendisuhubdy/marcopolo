@@ -14,5 +14,64 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
+
+#[macro_use]
+extern crate enum_display_derive;
+
+use failure::{Backtrace, Context, Fail};
+use std::fmt::{self, Display};
+
 pub mod poa;
 pub mod traits;
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Display)]
+pub enum ErrorKind {
+    Header,
+    Block,
+    Verify,
+}
+
+#[derive(Debug)]
+pub struct Error {
+    kind: Context<ErrorKind>,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(cause) = self.cause() {
+            if f.alternate() {
+                write!(f, "{}: {}", self.kind(), cause)
+            } else {
+                write!(f, "{}({})", self.kind(), cause)
+            }
+        } else {
+            write!(f, "{}", self.kind())
+        }
+    }
+}
+
+impl From<Context<ErrorKind>> for Error {
+    fn from(inner: Context<ErrorKind>) -> Self {
+        Self { kind: inner }
+    }
+}
+
+impl Fail for Error {
+    fn cause(&self) -> Option<&dyn Fail> {
+        self.kind.cause()
+    }
+
+    fn backtrace(&self) -> Option<&Backtrace> {
+        self.kind.backtrace()
+    }
+}
+
+impl Error {
+    pub fn kind(&self) -> &ErrorKind {
+        self.kind.get_context()
+    }
+
+    pub fn downcast_ref<T: Fail>(&self) -> Option<&T> {
+        self.cause().and_then(|cause| cause.downcast_ref::<T>())
+    }
+}
