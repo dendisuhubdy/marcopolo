@@ -17,7 +17,7 @@
 use map_store::mapdb::MapDB;
 use map_store::config::Config;
 use map_store::Error;
-use map_core::block::{Header, Hash};
+use map_core::block::{Header, Hash, Block};
 // use map_core::block;
 use bincode;
 
@@ -78,6 +78,24 @@ impl ChainDB {
         self.db.put(&key, hash.to_slice())
     }
 
+    pub fn read_block(&mut self, h: &Hash) -> Option<Block> {
+        let key = Self::block_key(h);
+        let serialized = match self.db.get(&key[..]) {
+            Some(s) => s,
+            None => return None,
+        };
+
+        let b: Block = bincode::deserialize(&serialized[..]).unwrap();
+        Some(b)
+    }
+
+    pub fn write_block(&mut self, block: &Block) -> Result<(), Error> {
+        self.write_header(&block.header)?;
+        let key = Self::block_key(&block.header.hash());
+        let encoded: Vec<u8> = bincode::serialize(block).unwrap();
+        self.db.put(&key, &encoded)
+    }
+
     fn header_key(_hash: &[u8]) -> Vec<u8> {
         let mut pre = Vec::new();
         pre.push(HEADER_PREFIX);
@@ -90,6 +108,13 @@ impl ChainDB {
         pre.push(HEADERHASH_PREFIX);
         let bytes = num.to_be_bytes();
         pre.extend_from_slice(&bytes);
+        pre
+    }
+
+    fn block_key(hash: &Hash) -> Vec<u8> {
+        let mut pre = Vec::new();
+        pre.push(BLOCK_PREFIX);
+        pre.extend_from_slice(hash.to_slice());
         pre
     }
 }
