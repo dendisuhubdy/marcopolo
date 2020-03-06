@@ -74,6 +74,19 @@ pub struct VerificationItem {
 pub struct BlockProof(pub [u8;32],pub [u8;32],pub u8);
 
 impl BlockProof {
+    pub fn new(t: u8,pk: &[u8]) -> Self {
+        if t == 0u8 {
+            let mut o1 = [0u8;32];
+            o1[..].copy_from_slice(&pk[0..32]);
+            BlockProof(o1,[0u8;32],t)
+        } else {
+            let mut o1 = [0u8;32];
+            let mut o2 = [0u8;32];
+            o1[..].copy_from_slice(&pk[0..32]);
+            o2[..].copy_from_slice(&pk[32..64]);
+            BlockProof(o1,o2,t)
+        }
+    }
     pub fn get_pk(&self,mut pk: [u8;64]) {
         if self.2 == 0u8 {
             pk[0..32].copy_from_slice(&self.0[..]);
