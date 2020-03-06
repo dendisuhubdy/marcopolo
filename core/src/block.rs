@@ -127,12 +127,15 @@ impl  Block {
     fn header(&self) -> &Header {
 		&self.header
     }
-    fn get_hash(&self) -> Option<Hash> {
+    pub fn get_hash(&self) -> Option<Hash> {
         let code = bincode::serialize(&self).unwrap();
         let mut hh = [0u8; 32];
         hh.copy_from_slice(&code[..]);
         let mut hash_data = hash::inner_blake2b_256(hh);
         Some(Hash(hash_data))
+    }
+    pub fn add_proof(&mut self,proof: BlockProof) {
+        self.proofs.push(proof);
     }
 }
 
