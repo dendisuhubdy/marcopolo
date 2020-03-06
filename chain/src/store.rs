@@ -49,6 +49,21 @@ impl ChainDB {
         self.db.put(&key, &encoded)
     }
 
+    pub fn read_header(&mut self, num: u64) -> Option<Header> {
+        let header_hash = match self.read_header_hash(num) {
+            Some(h) => h,
+            None => return None,
+        };
+        let key = Self::header_key(&(header_hash.0));
+        let serialized = match self.db.get(&key.as_slice()) {
+            Some(s) => s,
+            None => return None,
+        };
+
+        let header: Header = bincode::deserialize(&serialized.as_slice()).unwrap();
+        Some(header)
+    }
+
     pub fn read_header_hash(&mut self, num: u64) -> Option<Hash> {
         let key = Self::header_hash_key(num);
         self.db.get(&key).map(|h| {

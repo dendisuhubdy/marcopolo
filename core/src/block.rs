@@ -26,7 +26,7 @@ use bincode;
 
 
 #[derive(Serialize, Deserialize)]
-#[derive(Debug, Default,Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Default, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Hash(pub [u8; 32]);
 
 impl Hash {
@@ -66,7 +66,7 @@ impl Header {
 #[derive(Clone, Default, Debug)]
 pub struct VerificationItem {
     pub msg:    Hash,
-    pub signs:  SignatureInfo,     
+    pub signs:  SignatureInfo,
 }
 
 #[derive(Serialize, Deserialize)]
