@@ -19,13 +19,14 @@ use super::traits::IConsensus;
 use core::block::{Block,BlockProof};
 use super::Error;
 // use std::error::Error;
+const poa_Version: u32 = 1;
 pub struct poa {
 
 }
 
 impl IConsensus for poa {
     fn version() -> u32 {
-        1u32
+        poa_Version
     }
 } 
 

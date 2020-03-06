@@ -1,12 +1,9 @@
 extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-
+use serde::{Serialize, Deserialize};
 use bytes::Bytes;
 
 /// Represents a transaction
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq,Serialize, Deserialize)]
 pub struct Transaction {
 	/// sender.
 	pub sender: String,

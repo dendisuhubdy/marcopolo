@@ -16,5 +16,5 @@
 
 pub mod block;
 pub mod genesis;
-//pub mod transaction;
+pub mod transaction;
 pub mod traits;

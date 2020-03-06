@@ -19,7 +19,7 @@ extern crate hash;
 
 use serde::{Serialize, Deserialize};
 // use super::traits::{TxMsg};
-// use super::transaction::{Transaction};
+use super::transaction::{Transaction};
 use ed25519::{signature::SignatureInfo};
 // use hash;
 use bincode;
@@ -102,7 +102,7 @@ impl BlockProof {
 pub struct Block {
     pub header: Header,
     pub signs: Vec<VerificationItem>,
-    // pub txs:  Vec<T>,
+    pub txs:  Vec<Transaction>,
     pub proofs: Vec<BlockProof>,
 }
 
@@ -111,19 +111,19 @@ impl Default for Block {
         Block {
             header: Default::default(),
             signs:  Vec::new(),
-            // txs:    Vec::new(),
+            txs:    Vec::new(),
             proofs: Vec::new(),
         }
     }
 }
 
 impl  Block {
-    fn new(header: Header,signs: Vec<VerificationItem>,proofs: Vec<BlockProof>) -> Self {
-        Block{header,signs,proofs}
-    }
-    // fn new(header: Header,txs: Vec<T>,signs: Vec<VerificationItem>,proofs: Vec<BlockProof>) -> Self {
-    //     Block{header,signs,txs,proofs}
+    // fn new(header: Header,signs: Vec<VerificationItem>,proofs: Vec<BlockProof>) -> Self {
+    //     Block{header,signs,proofs}
     // }
+    fn new(header: Header,txs: Vec<Transaction>,signs: Vec<VerificationItem>,proofs: Vec<BlockProof>) -> Self {
+        Block{header,signs,txs,proofs}
+    }
     fn header(&self) -> &Header {
 		&self.header
     }

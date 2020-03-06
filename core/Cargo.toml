@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 serde = { version = "1.0.102", features = ["derive"] }
+bytes = { version="0.5.4", features = ["serde"] }
 bincode = "1.2.0"
 ed25519 = { package = "map-ed25519", path = "../common/ed25519" }
 hash = { package = "map-hash", path = "../common/hash" }
