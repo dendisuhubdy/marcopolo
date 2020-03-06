@@ -24,8 +24,8 @@ use bincode;
 const HEADER_PREFIX: u8 = 'h' as u8;
 const HEAD_PREFIX: u8 = 'H' as u8;
 const BLOCK_PREFIX: u8 = 'b' as u8;
-
 const HEADERHASH_PREFIX: u8 = 'n' as u8;
+const HEAD_KEY: &str = "HEAD";
 
 
 /// Blockchain storage backend implement
@@ -64,6 +64,31 @@ impl ChainDB {
         Some(header)
     }
 
+    pub fn head_header(&mut self) -> Option<Header> {
+        let header_hash = match self.head_hash() {
+            Some(h) => h,
+            None => return None,
+        };
+        let key = Self::header_key(&(header_hash.0));
+        let serialized = match self.db.get(&key.as_slice()) {
+            Some(s) => s,
+            None => return None,
+        };
+
+        let header: Header = bincode::deserialize(&serialized.as_slice()).unwrap();
+        Some(header)
+    }
+
+    pub fn head_hash(&mut self) -> Option<Hash> {
+        let h = match self.db.get(&Self::head_key()[..]) {
+            Some(h) => h,
+            None => return None,
+        };
+        let mut hash: Hash = Default::default();
+        hash.0.copy_from_slice(h.as_slice());
+        Some(hash)
+    }
+
     pub fn read_header_hash(&mut self, num: u64) -> Option<Hash> {
         let key = Self::header_hash_key(num);
         self.db.get(&key).map(|h| {
@@ -76,6 +101,15 @@ impl ChainDB {
     pub fn write_header_hash(&mut self, num: u64, hash: &Hash) -> Result<(), Error> {
         let key = Self::header_hash_key(num);
         self.db.put(&key, hash.to_slice())
+    }
+
+    pub fn head_block(&mut self) -> Option<Block> {
+        let hash = match self.head_hash() {
+            Some(h) => h,
+            None => return None,
+        };
+
+        self.read_block(&hash)
     }
 
     pub fn read_block(&mut self, h: &Hash) -> Option<Block> {
@@ -94,6 +128,13 @@ impl ChainDB {
         let key = Self::block_key(&block.header.hash());
         let encoded: Vec<u8> = bincode::serialize(block).unwrap();
         self.db.put(&key, &encoded)
+    }
+
+    fn head_key() -> Vec<u8> {
+        let mut pre = Vec::new();
+        pre.push(HEAD_PREFIX);
+        pre.extend_from_slice(HEAD_KEY.as_bytes());
+        pre
     }
 
     fn header_key(_hash: &[u8]) -> Vec<u8> {
