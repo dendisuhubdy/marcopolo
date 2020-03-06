@@ -16,7 +16,7 @@
 extern crate core;
 
 use super::traits::IConsensus;
-use core::{block::Block};
+use core::block::{Block,BlockProof};
 use super::Error;
 // use std::error::Error;
 pub struct poa {
@@ -30,7 +30,9 @@ impl IConsensus for poa {
 } 
 
 impl poa {
-    pub fn finalize_block(t: u8,pk: &[u8],b: Block) -> Result<(),Error> {
+    pub fn finalize_block(t: u8,pk: &[u8],mut b: Block) -> Result<(),Error> {
+        let proof = BlockProof::new(t,pk);
+        b.add_proof(proof);
         Ok(())
     }
 }
