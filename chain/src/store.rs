@@ -49,12 +49,8 @@ impl ChainDB {
         self.db.put(&key, &encoded)
     }
 
-    pub fn read_header(&mut self, num: u64) -> Option<Header> {
-        let header_hash = match self.read_header_hash(num) {
-            Some(h) => h,
-            None => return None,
-        };
-        let key = Self::header_key(&(header_hash.0));
+    pub fn get_header(&mut self, h: &Hash) -> Option<Header> {
+        let key = Self::header_key(&(h.0));
         let serialized = match self.db.get(&key.as_slice()) {
             Some(s) => s,
             None => return None,
@@ -62,6 +58,15 @@ impl ChainDB {
 
         let header: Header = bincode::deserialize(&serialized.as_slice()).unwrap();
         Some(header)
+    }
+
+    pub fn get_header_by_number(&mut self, num: u64) -> Option<Header> {
+        let header_hash = match self.get_header_hash(num) {
+            Some(h) => h,
+            None => return None,
+        };
+
+        self.get_header(&header_hash)
     }
 
     pub fn head_header(&mut self) -> Option<Header> {
@@ -89,7 +94,7 @@ impl ChainDB {
         Some(hash)
     }
 
-    pub fn read_header_hash(&mut self, num: u64) -> Option<Hash> {
+    pub fn get_header_hash(&mut self, num: u64) -> Option<Hash> {
         let key = Self::header_hash_key(num);
         self.db.get(&key).map(|h| {
             let mut hash: Hash = Default::default();
@@ -109,10 +114,10 @@ impl ChainDB {
             None => return None,
         };
 
-        self.read_block(&hash)
+        self.get_block(&hash)
     }
 
-    pub fn read_block(&mut self, h: &Hash) -> Option<Block> {
+    pub fn get_block(&mut self, h: &Hash) -> Option<Block> {
         let key = Self::block_key(h);
         let serialized = match self.db.get(&key[..]) {
             Some(s) => s,
@@ -121,6 +126,15 @@ impl ChainDB {
 
         let b: Block = bincode::deserialize(&serialized[..]).unwrap();
         Some(b)
+    }
+
+    pub fn get_block_by_number(&mut self, num: u64) -> Option<Block> {
+        let header_hash = match self.get_header_hash(num) {
+            Some(h) => h,
+            None => return None,
+        };
+
+        self.get_block(&header_hash)
     }
 
     pub fn write_block(&mut self, block: &Block) -> Result<(), Error> {
