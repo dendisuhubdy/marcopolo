@@ -60,6 +60,11 @@ impl ChainDB {
         Some(header)
     }
 
+    pub fn delete_header(&mut self, h: &Hash) -> Result<(), Error> {
+        let key = Self::header_key(&(h.0));
+        self.db.remove(&key[..])
+    }
+
     pub fn get_header_by_number(&mut self, num: u64) -> Option<Header> {
         let header_hash = match self.get_header_hash(num) {
             Some(h) => h,
@@ -108,6 +113,11 @@ impl ChainDB {
         self.db.put(&key, hash.to_slice())
     }
 
+    pub fn delete_header_height(&mut self, num: u64) -> Result<(), Error> {
+        let key = Self::header_hash_key(num);
+        self.db.remove(&key)
+    }
+
     pub fn head_block(&mut self) -> Option<Block> {
         let hash = match self.head_hash() {
             Some(h) => h,
@@ -142,6 +152,11 @@ impl ChainDB {
         let key = Self::block_key(&block.header.hash());
         let encoded: Vec<u8> = bincode::serialize(block).unwrap();
         self.db.put(&key, &encoded)
+    }
+
+    pub fn delete_block(&mut self, h: &Hash) -> Result<(), Error> {
+        let key = Self::block_key(h);
+        self.db.remove(&key[..])
     }
 
     fn head_key() -> Vec<u8> {
