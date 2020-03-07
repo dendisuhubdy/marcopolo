@@ -45,7 +45,7 @@ impl ChainDB {
     pub fn write_header(&mut self, h: &Header) -> Result<(), Error> {
         let encoded: Vec<u8> = bincode::serialize(h).unwrap();
         let key = Self::header_key(&(h.hash().0));
-        self.write_header_hash(h.height, &h.hash());
+        self.write_header_hash(h.height, &h.hash())?;
         self.db.put(&key, &encoded)
     }
 
