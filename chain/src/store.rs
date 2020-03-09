@@ -48,7 +48,7 @@ impl ChainDB {
         self.db.put(&key, &encoded)
     }
 
-    pub fn get_header(&mut self, h: &Hash) -> Option<Header> {
+    pub fn get_header(&self, h: &Hash) -> Option<Header> {
         let key = Self::header_key(&(h.0));
         let serialized = match self.db.get(&key.as_slice()) {
             Some(s) => s,
@@ -64,7 +64,7 @@ impl ChainDB {
         self.db.remove(&key[..])
     }
 
-    pub fn get_header_by_number(&mut self, num: u64) -> Option<Header> {
+    pub fn get_header_by_number(&self, num: u64) -> Option<Header> {
         let header_hash = match self.get_header_hash(num) {
             Some(h) => h,
             None => return None,
@@ -73,7 +73,7 @@ impl ChainDB {
         self.get_header(&header_hash)
     }
 
-    pub fn head_header(&mut self) -> Option<Header> {
+    pub fn head_header(&self) -> Option<Header> {
         let header_hash = match self.head_hash() {
             Some(h) => h,
             None => return None,
@@ -88,7 +88,7 @@ impl ChainDB {
         Some(header)
     }
 
-    pub fn head_hash(&mut self) -> Option<Hash> {
+    pub fn head_hash(&self) -> Option<Hash> {
         let h = match self.db.get(&Self::head_key()[..]) {
             Some(h) => h,
             None => return None,
@@ -98,7 +98,7 @@ impl ChainDB {
         Some(hash)
     }
 
-    pub fn get_header_hash(&mut self, num: u64) -> Option<Hash> {
+    pub fn get_header_hash(&self, num: u64) -> Option<Hash> {
         let key = Self::header_hash_key(num);
         self.db.get(&key).map(|h| {
             let mut hash: Hash = Default::default();
@@ -117,7 +117,7 @@ impl ChainDB {
         self.db.remove(&key)
     }
 
-    pub fn head_block(&mut self) -> Option<Block> {
+    pub fn head_block(&self) -> Option<Block> {
         let hash = match self.head_hash() {
             Some(h) => h,
             None => return None,
@@ -126,7 +126,7 @@ impl ChainDB {
         self.get_block(&hash)
     }
 
-    pub fn get_block(&mut self, h: &Hash) -> Option<Block> {
+    pub fn get_block(&self, h: &Hash) -> Option<Block> {
         let key = Self::block_key(h);
         let serialized = match self.db.get(&key[..]) {
             Some(s) => s,
@@ -137,7 +137,7 @@ impl ChainDB {
         Some(b)
     }
 
-    pub fn get_block_by_number(&mut self, num: u64) -> Option<Block> {
+    pub fn get_block_by_number(&self, num: u64) -> Option<Block> {
         let header_hash = match self.get_header_hash(num) {
             Some(h) => h,
             None => return None,

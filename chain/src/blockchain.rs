@@ -16,11 +16,12 @@
 
 use crate::store::ChainDB;
 use map_store;
-use map_core::block::{Block};
+use map_core::block::{Block, Hash};
 use map_core::genesis;
 
 pub struct BlockChain {
     db: ChainDB,
+
     genesis: Block,
 }
 
@@ -28,9 +29,17 @@ impl BlockChain {
     pub fn new() -> Self {
         let db_cfg = map_store::config::Config::default();
 
-        BlockChain{
+        BlockChain {
             db: ChainDB::new(db_cfg).unwrap(),
             genesis: genesis::to_genesis(),
         }
+    }
+
+    fn setup_genesis(&mut self) -> Hash {
+        if self.db.get_block_by_number(0).is_none() {
+            self.db.write_block(&self.genesis);
+        }
+
+        self.genesis.header.hash()
     }
 }
