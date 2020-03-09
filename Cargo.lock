@@ -394,6 +394,7 @@ dependencies = [
  "enum-display-derive 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "map-core 0.1.0",
+ "map-ed25519 0.1.0-pre",
 ]
 
 [[package]]

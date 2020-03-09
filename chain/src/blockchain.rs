@@ -14,5 +14,20 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
-pub mod store;
-pub mod blockchain;
+use crate::store::ChainDB;
+use map_core::block::{Block};
+use map_core::genesis;
+
+pub struct BlockChain {
+    db: ChainDB,
+    genesis: Block,
+}
+
+impl BlockChain {
+    pub fn new() -> Self {
+        BlockChain{
+            db: ChainDB::new().unwrap(),
+            genesis: genesis::to_genesis(),
+        }
+    }
+}
