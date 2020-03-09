@@ -38,6 +38,11 @@ impl Pubkey {
     pub fn to_bytes(&self)->Vec<u8> {
         Vec::from(&self.inner.0[..])
     }
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        let mut pk: [u8; 32] = [0u8; 32];
+        pk.copy_from_slice(&bytes[..32]);
+        Pubkey{inner: H256(pk)}
+    }
     pub fn from_pubkey(pk: &PublicKey) -> Self {
         Pubkey{inner: H256(pk.to_bytes())}
     }
