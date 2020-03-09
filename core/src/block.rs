@@ -20,7 +20,7 @@ extern crate hash;
 use serde::{Serialize, Deserialize};
 // use super::traits::{TxMsg};
 use super::transaction::{Transaction};
-use ed25519::{signature::SignatureInfo};
+use ed25519::{signature::SignatureInfo,Message,H256};
 // use hash;
 use bincode;
 
@@ -67,10 +67,16 @@ impl Header {
 }
 
 #[derive(Serialize, Deserialize)]
-#[derive(Clone, Default, Debug)]
+#[derive(Clone,Copy, Default, Debug)]
 pub struct VerificationItem {
     pub msg:    Hash,
     pub signs:  SignatureInfo,
+}
+
+impl VerificationItem {
+    pub fn to_msg(&self) -> Message {
+        H256(self.msg.0)
+    }
 }
 
 #[derive(Serialize, Deserialize)]
