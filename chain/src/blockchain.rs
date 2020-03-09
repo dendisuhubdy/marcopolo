@@ -15,6 +15,7 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::store::ChainDB;
+use map_store;
 use map_core::block::{Block};
 use map_core::genesis;
 
@@ -25,8 +26,10 @@ pub struct BlockChain {
 
 impl BlockChain {
     pub fn new() -> Self {
+        let db_cfg = map_store::config::Config::default();
+
         BlockChain{
-            db: ChainDB::new().unwrap(),
+            db: ChainDB::new(db_cfg).unwrap(),
             genesis: genesis::to_genesis(),
         }
     }
