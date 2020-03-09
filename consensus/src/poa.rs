@@ -49,7 +49,15 @@ impl poa {
                     None => Ok(()),
                 }
             },
-            None => Ok(()),
+            None => {
+                // get proof from genesis
+                let proof = BlockProof::new(0u8,&ed_genesis_pub_key);
+                let sign_info = b.sign_one();
+                match sign_info {
+                    Some(&v2) => self.poa_verify(&proof,&v2),
+                    None => Ok(()),
+                }
+            },
         }
         //Err(ErrorKind::Verify)
     }
