@@ -145,6 +145,9 @@ impl  Block {
     pub fn proof_one(&self) -> Option<&BlockProof> {
         self.proofs.get(0)
     }
+    pub fn sign_one(&self) ->Option<&VerificationItem> {
+        self.signs.get(0)
+    }
 }
 
 pub fn is_equal_hash(hash1: Option<Hash>,hash2: Option<Hash>) -> bool {
