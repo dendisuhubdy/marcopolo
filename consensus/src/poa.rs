@@ -68,8 +68,9 @@ impl poa {
         b.add_proof(proof);
         Ok(())
     }
-    pub fn finalize_block(t: u8,pk: &[u8],mut b: Block) -> Result<(),Error> {
-        Ok(())
+    pub fn finalize_block(&self,mut b: Block) -> Result<(),Error> {
+        // sign with default priv key
+        poa::sign_block(0u8,None,b)
     }
     pub fn verify(&self,b: Block) -> Result<(),Error> {
         let proof = b.proof_one();
