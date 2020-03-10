@@ -13,17 +13,17 @@
 
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
+
 extern crate core;
 extern crate ed25519;
 
 use super::{Error,ErrorKind,ConsensusErrorKind};
 use super::traits::IConsensus;
-use core::block::{Block,BlockProof,VerificationItem};
+use core::block::{Block,BlockProof,VerificationItem,Hash};
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
-use ed25519::{pubkey::Pubkey};
+use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 
 
-// use std::error::Error;
 const poa_Version: u32 = 1;
 pub struct poa {}
 
@@ -34,9 +34,41 @@ impl IConsensus for poa {
 } 
 
 impl poa {
-    pub fn finalize_block(t: u8,pk: &[u8],mut b: Block) -> Result<(),Error> {
+    pub fn sign_block(t: u8,pkey: Option<PrivKey>,mut b: Block) -> Result<(),Error> {
+        let h = b.get_hash();
+        match pkey {
+            Some(p) => {
+                if t == 0u8 {
+                    let h = b.get_hash();
+                    let signs = p.sign(h.to_slice());
+                    poa::add_signs_to_block(h,signs,b)
+                } else {
+                    Ok(())
+                }
+            },
+            None => {
+                if t == 0u8 {
+                    let pkey = PrivKey::from_bytes(&ed_genesis_priv_key);
+                    let h = b.get_hash();
+                    let signs = pkey.sign(h.to_slice());
+                    poa::add_signs_to_block(h,signs,b)
+                } else {
+                    Ok(())
+                }
+            },
+        }
+    }
+    fn add_signs_to_block(h:Hash,signs: SignatureInfo,mut b: Block) -> Result<(),Error> {
+        let signs = VerificationItem::new(h,signs);
+        b.add_verify_item(signs);
+        Ok(())
+    }
+    fn add_proof_to_block(t: u8,pk: &[u8],mut b: Block) -> Result<(),Error> {
         let proof = BlockProof::new(t,pk);
         b.add_proof(proof);
+        Ok(())
+    }
+    pub fn finalize_block(t: u8,pk: &[u8],mut b: Block) -> Result<(),Error> {
         Ok(())
     }
     pub fn verify(&self,b: Block) -> Result<(),Error> {

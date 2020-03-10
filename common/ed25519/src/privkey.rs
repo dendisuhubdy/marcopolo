@@ -21,7 +21,7 @@ extern crate sha2;
 
 use ed25519_dalek::{SecretKey,Signature,PublicKey,SignatureError,ExpandedSecretKey};
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
-use super::{H256,Message,pubkey::Pubkey};
+use super::{H256,Message,pubkey::Pubkey,signature::SignatureInfo};
 use sha2::Sha512;
 
 #[derive(Debug, Eq, PartialEq, Clone,Copy)]
@@ -34,7 +34,11 @@ impl PrivKey {
     pub fn to_bytes(&self) -> [u8; SECRET_KEY_LENGTH] {
         self.inner.0
     }
-
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        let mut pkey: [u8; 32] = [0u8; 32];
+        pkey.copy_from_slice(&bytes[..32]);
+        PrivKey{inner: H256(pkey)}
+    }
     pub fn to_secrit_key(&self) -> Result<SecretKey, SignatureError> {
         let data = self.inner.0;
         let res = SecretKey::from_bytes(&data[..]);
@@ -49,10 +53,11 @@ impl PrivKey {
         let public_key: PublicKey = PublicKey::from_secret::<Sha512>(&sk);
         Pubkey::from_pubkey(&public_key)
     }
-    pub fn sign(&self,message: &[u8]) -> Signature {
+    pub fn sign(&self,message: &[u8]) -> SignatureInfo {
         let sk: SecretKey = self.to_secrit_key().unwrap();
         let expanded_secret: ExpandedSecretKey = ExpandedSecretKey::from_secret_key::<Sha512>(&sk);
         let pk: PublicKey = self.to_pubkey().to_pubkey().unwrap();
-        expanded_secret.sign::<Sha512>(&message,&pk)
+        let sign_data = expanded_secret.sign::<Sha512>(&message,&pk);
+        SignatureInfo::from_signature(&sign_data)
     }
 }

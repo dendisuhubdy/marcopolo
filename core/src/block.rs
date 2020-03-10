@@ -33,9 +33,11 @@ impl Hash {
     pub fn to_slice(&self) -> &[u8] {
         return &self.0
     }
-
     pub fn to_vec(&self) -> Vec<u8> {
         self.0.to_vec()
+    }
+    pub fn to_msg(&self) -> Message {
+        H256(self.0)
     }
 }
 
@@ -75,7 +77,10 @@ pub struct VerificationItem {
 
 impl VerificationItem {
     pub fn to_msg(&self) -> Message {
-        H256(self.msg.0)
+        self.msg.to_msg()
+    }
+    pub fn new(msg: Hash,signs: SignatureInfo) -> Self {
+        VerificationItem{msg,signs}
     }
 }
 
@@ -138,18 +143,21 @@ impl  Block {
     fn header(&self) -> &Header {
 		&self.header
     }
-    pub fn get_hash(&self) -> Option<Hash> {
+    pub fn get_hash(&self) -> Hash {
         let code = bincode::serialize(&self).unwrap();
         let mut hh = [0u8; 32];
         hh.copy_from_slice(&code[..]);
         let mut hash_data = hash::inner_blake2b_256(hh);
-        Some(Hash(hash_data))
+        Hash(hash_data)
     }
     pub fn add_proof(&mut self,proof: BlockProof) {
         self.proofs.push(proof);
     }
     pub fn proof_one(&self) -> Option<&BlockProof> {
         self.proofs.get(0)
+    }
+    pub fn add_verify_item(&mut self,item: VerificationItem) {
+        self.signs.push(item)
     }
     pub fn sign_one(&self) ->Option<&VerificationItem> {
         self.signs.get(0)
