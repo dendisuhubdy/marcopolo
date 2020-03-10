@@ -27,7 +27,6 @@ pub enum Error {
 
 pub struct BlockChain {
     db: ChainDB,
-
     genesis: Block,
 }
 
@@ -50,6 +49,13 @@ impl BlockChain {
     }
 
     pub fn load(&mut self) {
+        if self.db.get_block_by_number(0).is_none() {
+            self.setup_genesis();
+        }
+    }
+
+    pub fn genesis_hash(&mut self) -> Hash {
+        self.genesis.hash()
     }
 
     pub fn current_block(&mut self) -> Block {
