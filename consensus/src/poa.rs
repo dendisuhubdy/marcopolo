@@ -16,7 +16,7 @@
 extern crate core;
 extern crate ed25519;
 
-use super::{Error,ErrorKind};
+use super::{Error,ErrorKind,ConsensusErrorKind};
 use super::traits::IConsensus;
 use core::block::{Block,BlockProof,VerificationItem};
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
@@ -46,7 +46,7 @@ impl poa {
                 let sign_info = b.sign_one();
                 match sign_info {
                     Some(&v2) => self.poa_verify(&v,&v2),
-                    None => Ok(()),
+                    None => Err(ConsensusErrorKind::NoneSign.into()), 
                 }
             },
             None => {
@@ -55,12 +55,12 @@ impl poa {
                 let sign_info = b.sign_one();
                 match sign_info {
                     Some(&v2) => self.poa_verify(&proof,&v2),
-                    None => Ok(()),
+                    None => Err(ConsensusErrorKind::NoneSign.into()),           
                 }
             },
         }
-        //Err(ErrorKind::Verify)
     }
+
     fn poa_verify(&self,proof: &BlockProof,vInfo: &VerificationItem) -> Result<(),Error> {
         let mut pk0 = [0u8;64];
         let t = proof.get_pk(pk0);
@@ -69,10 +69,11 @@ impl poa {
             let msg = vInfo.to_msg();
             let res = pk.verify(&msg,&vInfo.signs);
             match res {
-                Ok(n) => Ok(()),
-                Err(e) => Err(()), 
-            };
+                Ok(()) => Ok(()),
+                Err(e) => Err(ConsensusErrorKind::Verify.into()), 
+            }
+        } else {
+            Ok(())
         }
-        Ok(())
     }
 }

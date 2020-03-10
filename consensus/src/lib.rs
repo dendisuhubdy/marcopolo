@@ -89,6 +89,7 @@ pub enum ConsensusErrorKind {
     Header,
     Block,
     Verify,
+    NoneSign,
 }
 
 impl fmt::Display for ConsensusError {
