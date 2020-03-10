@@ -76,4 +76,7 @@ impl poa {
             Ok(())
         }
     }
+    pub fn get_interval() -> u64 {
+        2000u64
+    }
 }
