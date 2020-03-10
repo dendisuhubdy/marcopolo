@@ -19,6 +19,12 @@ use map_store;
 use map_core::block::{Block, Hash};
 use map_core::genesis;
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Error {
+    UnknownAncestor,
+    KnownBlock,
+}
+
 pub struct BlockChain {
     db: ChainDB,
 
@@ -37,7 +43,7 @@ impl BlockChain {
 
     pub fn setup_genesis(&mut self) -> Hash {
         if self.db.get_block_by_number(0).is_none() {
-            self.db.write_block(&self.genesis);
+            self.db.write_block(&self.genesis).expect("can not write block");
         }
 
         self.genesis.header.hash()
@@ -50,20 +56,25 @@ impl BlockChain {
         self.db.head_block().unwrap()
     }
 
-    pub fn exits_block(&self, hash: Hash, num: u64) -> bool {
+    #[allow(unused_variables)]
+    pub fn exits_block(&self, h: Hash, num: u64) -> bool {
         self.db.get_block_by_number(num).is_some()
     }
 
-    pub fn insert_block(&mut self, block: Block) {
+    pub fn insert_block(&mut self, block: Block) -> Result<(), Error>{
+        // Already in chain
         if self.exits_block(block.header.hash(), block.height()) {
-            return
+            return Err(Error::KnownBlock)
         }
 
         let current = self.current_block();
+        // No valid ancestor
         if block.header.hash() != current.header.hash() {
-            return
+            return Err(Error::UnknownAncestor)
         }
-        self.db.write_block(&block);
-        self.db.write_head_hash(block.header.hash());
+
+        self.db.write_block(&block).expect("can not write block");
+        self.db.write_head_hash(block.header.hash()).expect("can not wirte head");
+        Ok(())
     }
 }

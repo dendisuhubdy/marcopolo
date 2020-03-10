@@ -388,6 +388,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "map-client"
+version = "0.1.0"
+dependencies = [
+ "map-core 0.1.0",
+]
+
+[[package]]
 name = "map-consensus"
 version = "0.1.0"
 dependencies = [

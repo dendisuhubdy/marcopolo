@@ -148,6 +148,10 @@ impl  Block {
         self.header.height
     }
 
+    pub fn hash(&self) -> Hash {
+        self.header.hash()
+    }
+
     pub fn get_hash(&self) -> Hash {
         let code = bincode::serialize(&self).unwrap();
         let mut hh = [0u8; 32];
