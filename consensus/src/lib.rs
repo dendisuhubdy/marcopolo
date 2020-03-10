@@ -18,17 +18,19 @@
 #[macro_use]
 extern crate enum_display_derive;
 
-use failure::{Backtrace, Context, Fail};
-use std::fmt::{self, Display};
+use failure::{Backtrace,err_msg, Context, Fail};
+use std::fmt::{self, Display,Debug};
 
 pub mod poa;
 pub mod traits;
+
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Display)]
 pub enum ErrorKind {
     Header,
     Block,
-    Verify,
+    Internal,
+    Consensus,
 }
 
 #[derive(Debug)]
@@ -73,5 +75,78 @@ impl Error {
 
     pub fn downcast_ref<T: Fail>(&self) -> Option<&T> {
         self.cause().and_then(|cause| cause.downcast_ref::<T>())
+    }
+}
+
+//////////////////////////////////////////////////////////////////
+#[derive(Debug)]
+pub struct ConsensusError {
+    kind: Context<ConsensusErrorKind>,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Display)]
+pub enum ConsensusErrorKind {
+    Header,
+    Block,
+    Verify,
+}
+
+impl fmt::Display for ConsensusError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(cause) = self.cause() {
+            write!(f, "{}({})", self.kind(), cause)
+        } else {
+            write!(f, "{}", self.kind())
+        }
+    }
+}
+
+impl From<ConsensusError> for Error {
+    fn from(error: ConsensusError) -> Self {
+        error.context(ErrorKind::Internal).into()
+    }
+}
+
+impl From<ConsensusErrorKind> for ConsensusError {
+    fn from(kind: ConsensusErrorKind) -> Self {
+        ConsensusError {
+            kind: Context::new(kind),
+        }
+    }
+}
+
+impl From<ConsensusErrorKind> for Error {
+    fn from(kind: ConsensusErrorKind) -> Self {
+        Into::<ConsensusError>::into(kind).into()
+    }
+}
+
+impl ConsensusErrorKind {
+    pub fn cause<F: Fail>(self, cause: F) -> ConsensusError {
+        ConsensusError {
+            kind: cause.context(self),
+        }
+    }
+
+    pub fn reason<S: Display + Debug + Sync + Send + 'static>(self, reason: S) -> ConsensusError {
+        ConsensusError {
+            kind: err_msg(reason).compat().context(self),
+        }
+    }
+}
+
+impl ConsensusError {
+    pub fn kind(&self) -> &ConsensusErrorKind {
+        &self.kind.get_context()
+    }
+}
+
+impl Fail for ConsensusError {
+    fn cause(&self) -> Option<&dyn Fail> {
+        self.kind.cause()
+    }
+
+    fn backtrace(&self) -> Option<&Backtrace> {
+        self.kind.backtrace()
     }
 }
