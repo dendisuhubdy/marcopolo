@@ -98,6 +98,11 @@ impl ChainDB {
         Some(hash)
     }
 
+    pub fn write_head_hash(&mut self, hash: Hash) -> Result<(), Error>{
+        let key = Self::head_key();
+        self.db.put(&key, hash.to_slice())
+    }
+
     pub fn get_header_hash(&self, num: u64) -> Option<Hash> {
         let key = Self::header_hash_key(num);
         self.db.get(&key).map(|h| {

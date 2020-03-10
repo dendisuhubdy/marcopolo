@@ -35,11 +35,35 @@ impl BlockChain {
         }
     }
 
-    fn setup_genesis(&mut self) -> Hash {
+    pub fn setup_genesis(&mut self) -> Hash {
         if self.db.get_block_by_number(0).is_none() {
             self.db.write_block(&self.genesis);
         }
 
         self.genesis.header.hash()
+    }
+
+    pub fn load(&mut self) {
+    }
+
+    pub fn current_block(&mut self) -> Block {
+        self.db.head_block().unwrap()
+    }
+
+    pub fn exits_block(&self, hash: Hash, num: u64) -> bool {
+        self.db.get_block_by_number(num).is_some()
+    }
+
+    pub fn insert_block(&mut self, block: Block) {
+        if self.exits_block(block.header.hash(), block.height()) {
+            return
+        }
+
+        let current = self.current_block();
+        if block.header.hash() != current.header.hash() {
+            return
+        }
+        self.db.write_block(&block);
+        self.db.write_head_hash(block.header.hash());
     }
 }
