@@ -23,10 +23,12 @@ use map_core::genesis;
 pub enum Error {
     UnknownAncestor,
     KnownBlock,
+    MismatchHash,
 }
 
 pub struct BlockChain {
     db: ChainDB,
+    validator: Validator,
     genesis: Block,
 }
 
@@ -37,6 +39,7 @@ impl BlockChain {
         BlockChain {
             db: ChainDB::new(db_cfg).unwrap(),
             genesis: genesis::to_genesis(),
+            validator: Validator{},
         }
     }
 
@@ -87,8 +90,23 @@ impl BlockChain {
             return Err(Error::UnknownAncestor)
         }
 
+        self.validator.validate_block(&block)?;
+
         self.db.write_block(&block).expect("can not write block");
         self.db.write_head_hash(block.header.hash()).expect("can not wirte head");
+        Ok(())
+    }
+}
+
+pub struct Validator;
+// pub struct Validator<'a> {
+//     chain: &'a BlockChain,
+// }
+
+
+impl Validator {
+    #[allow(unused_variables)]
+    pub fn validate_block(&self, block: &Block) -> Result<(), Error> {
         Ok(())
     }
 }
