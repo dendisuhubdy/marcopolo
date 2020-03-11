@@ -16,7 +16,7 @@
 
 use crate::store::ChainDB;
 use map_store;
-use map_core::block::{Block, Hash};
+use map_core::block::{Block, Header, Hash};
 use map_core::genesis;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -45,7 +45,7 @@ impl BlockChain {
             self.db.write_block(&self.genesis).expect("can not write block");
         }
 
-        self.genesis.header.hash()
+        self.genesis.hash()
     }
 
     pub fn load(&mut self) {
@@ -67,15 +67,23 @@ impl BlockChain {
         self.db.get_block_by_number(num).is_some()
     }
 
-    pub fn insert_block(&mut self, block: Block) -> Result<(), Error>{
+    pub fn check_previous(&self, header: &Header) -> bool {
+        self.db.get_block(&header.parent_hash).is_some()
+    }
+
+    pub fn insert_block(&mut self, block: Block) -> Result<(), Error> {
         // Already in chain
-        if self.exits_block(block.header.hash(), block.height()) {
+        if self.exits_block(block.hash(), block.height()) {
             return Err(Error::KnownBlock)
+        }
+
+        if !self.check_previous(&block.header) {
+            return Err(Error::UnknownAncestor)
         }
 
         let current = self.current_block();
         // No valid ancestor
-        if block.header.hash() != current.header.hash() {
+        if block.hash() != current.hash() {
             return Err(Error::UnknownAncestor)
         }
 
