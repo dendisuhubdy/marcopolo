@@ -24,6 +24,9 @@ pub enum Error {
     UnknownAncestor,
     KnownBlock,
     MismatchHash,
+    InvalidBlockProof,
+    InvalidBlockTime,
+    InvalidBlockHeight,
 }
 
 pub struct BlockChain {
@@ -78,6 +81,10 @@ impl BlockChain {
         self.db.get_block_by_number(num)
     }
 
+    pub fn get_block(&self, hash: Hash) -> Option<Block> {
+        self.db.get_block(&hash)
+    }
+
     pub fn get_header_by_number(&self, num: u64) -> Option<Header> {
         self.db.get_header_by_number(num)
     }
@@ -98,7 +105,8 @@ impl BlockChain {
             return Err(Error::UnknownAncestor)
         }
 
-        self.validator.validate_block(&block)?;
+        self.validator.validate_header(self, &block.header)?;
+        self.validator.validate_block(self, &block)?;
 
         self.db.write_block(&block).expect("can not write block");
         self.db.write_head_hash(block.header.hash()).expect("can not wirte head");
@@ -107,14 +115,24 @@ impl BlockChain {
 }
 
 pub struct Validator;
-// pub struct Validator<'a> {
-//     chain: &'a BlockChain,
-// }
-
 
 impl Validator {
     #[allow(unused_variables)]
-    pub fn validate_block(&self, block: &Block) -> Result<(), Error> {
+    pub fn validate_block(&self, chain: &BlockChain, block: &Block) -> Result<(), Error> {
+        Ok(())
+    }
+
+    pub fn validate_header(&self, chain: &BlockChain, header: &Header) -> Result<(), Error> {
+        // Ensure block parent exists on chain
+        let pre = match chain.get_block(header.parent_hash) {
+            Some(b) => b,
+            None => return Err(Error::UnknownAncestor),
+        };
+
+        // Ensure block height increase by one
+        if header.height != pre.header.height + 1 {
+            return Err(Error::InvalidBlockHeight);
+        }
         Ok(())
     }
 }

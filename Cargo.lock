@@ -391,6 +391,7 @@ dependencies = [
 name = "map-client"
 version = "0.1.0"
 dependencies = [
+ "map-consensus 0.1.0",
  "map-core 0.1.0",
 ]
 
