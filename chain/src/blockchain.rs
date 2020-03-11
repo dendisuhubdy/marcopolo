@@ -74,6 +74,14 @@ impl BlockChain {
         self.db.get_block(&header.parent_hash).is_some()
     }
 
+    pub fn get_block_by_number(&self, num: u64) -> Option<Block> {
+        self.db.get_block_by_number(num)
+    }
+
+    pub fn get_header_by_number(&self, num: u64) -> Option<Header> {
+        self.db.get_header_by_number(num)
+    }
+
     pub fn insert_block(&mut self, block: Block) -> Result<(), Error> {
         // Already in chain
         if self.exits_block(block.hash(), block.height()) {
@@ -108,5 +116,19 @@ impl Validator {
     #[allow(unused_variables)]
     pub fn validate_block(&self, block: &Block) -> Result<(), Error> {
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_init() {
+        let mut chain = BlockChain::new();
+        chain.load();
+        assert_eq!(chain.genesis.height(), 0);
+        assert_eq!(chain.genesis.header.parent_hash, Hash::default());
+        assert!(chain.get_block_by_number(0).is_some());
     }
 }
