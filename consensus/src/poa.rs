@@ -25,15 +25,15 @@ use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 
 
 const poa_Version: u32 = 1;
-pub struct poa {}
+pub struct POA {}
 
-impl IConsensus for poa {
+impl IConsensus for POA {
     fn version() -> u32 {
         poa_Version
     }
 } 
 
-impl poa {
+impl POA {
     pub fn sign_block(t: u8,pkey: Option<PrivKey>,mut b: Block) -> Result<(),Error> {
         let h = b.get_hash();
         match pkey {
@@ -41,7 +41,7 @@ impl poa {
                 if t == 0u8 {
                     let h = b.get_hash();
                     let signs = p.sign(h.to_slice());
-                    poa::add_signs_to_block(h,signs,b)
+                    POA::add_signs_to_block(h,signs,b)
                 } else {
                     Ok(())
                 }
@@ -51,7 +51,7 @@ impl poa {
                     let pkey = PrivKey::from_bytes(&ed_genesis_priv_key);
                     let h = b.get_hash();
                     let signs = pkey.sign(h.to_slice());
-                    poa::add_signs_to_block(h,signs,b)
+                    POA::add_signs_to_block(h,signs,b)
                 } else {
                     Ok(())
                 }
@@ -70,7 +70,7 @@ impl poa {
     }
     pub fn finalize_block(&self,mut b: Block) -> Result<(),Error> {
         // sign with default priv key
-        poa::sign_block(0u8,None,b)
+        POA::sign_block(0u8,None,b)
     }
     pub fn verify(&self,b: Block) -> Result<(),Error> {
         let proof = b.proof_one();
