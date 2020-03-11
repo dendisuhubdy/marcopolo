@@ -47,7 +47,9 @@ impl Hash {
 #[derive(Copy, Clone)]
 pub struct Header {
 	pub height: u64,
-	pub parent_hash: Hash,
+    pub parent_hash: Hash,
+    pub tx_root: Hash,
+    pub sign_root: Hash,
     pub time: u64,
 }
 
@@ -55,7 +57,9 @@ impl Default for Header {
 	fn default() -> Self {
 		Header {
 			height: 0,
-			parent_hash: Hash([0; 32]),
+            parent_hash: Hash([0; 32]),
+            tx_root:  Hash([0;32]),
+            sign_root:  Hash([0;32]),
 			time: 0,
 		}
 	}
@@ -113,6 +117,14 @@ impl BlockProof {
     }
 }
 
+pub fn get_hash_from_txs(txs: Vec<Transaction>) -> Hash {
+    let data = bincode::serialize(&txs).unwrap();
+    Hash(hash::blake2b_256(data))
+}
+pub fn get_hash_from_signs(signs: Vec<VerificationItem>) -> Hash {
+    let data = bincode::serialize(&signs).unwrap();
+    Hash(hash::blake2b_256(data))
+}
 
 #[derive(Debug,Clone,Serialize, Deserialize)]
 pub struct Block {
@@ -134,10 +146,9 @@ impl Default for Block {
 }
 
 impl  Block {
-    // fn new(header: Header,signs: Vec<VerificationItem>,proofs: Vec<BlockProof>) -> Self {
-    //     Block{header,signs,proofs}
-    // }
-    fn new(header: Header,txs: Vec<Transaction>,signs: Vec<VerificationItem>,proofs: Vec<BlockProof>) -> Self {
+    fn new(mut header: Header,txs: Vec<Transaction>,signs: Vec<VerificationItem>,proofs: Vec<BlockProof>) -> Self {
+        header.tx_root = get_hash_from_txs(txs.clone());
+        header.sign_root = get_hash_from_signs(signs.clone());
         Block{header,signs,txs,proofs}
     }
     fn header(&self) -> &Header {
@@ -153,11 +164,7 @@ impl  Block {
     }
 
     pub fn get_hash(&self) -> Hash {
-        let code = bincode::serialize(&self).unwrap();
-        let mut hh = [0u8; 32];
-        hh.copy_from_slice(&code[..]);
-        let mut hash_data = hash::inner_blake2b_256(hh);
-        Hash(hash_data)
+       self.header.hash()
     }
     pub fn add_proof(&mut self,proof: BlockProof) {
         self.proofs.push(proof);
