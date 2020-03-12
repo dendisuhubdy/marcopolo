@@ -54,6 +54,7 @@ impl BlockChain {
     pub fn setup_genesis(&mut self) -> Hash {
         if self.db.get_block_by_number(0).is_none() {
             self.db.write_block(&self.genesis).expect("can not write block");
+            self.db.write_head_hash(self.genesis.hash()).expect("can not wirte head");
         }
 
         self.genesis.hash()
@@ -105,8 +106,8 @@ impl BlockChain {
         }
 
         let current = self.current_block();
-        // No valid ancestor
-        if block.hash() != current.hash() {
+
+        if block.header.parent_hash != current.hash() {
             return Err(Error::UnknownAncestor)
         }
 
@@ -159,5 +160,30 @@ mod tests {
         assert_eq!(chain.genesis.height(), 0);
         assert_eq!(chain.genesis.header.parent_hash, Hash::default());
         assert!(chain.get_block_by_number(0).is_some());
+    }
+
+    #[test]
+    fn test_insert_empty() {
+        let mut chain = BlockChain::new();
+        chain.load();
+        {
+            let block = Block {
+                header: Header{
+                    height: 1,
+                    ..Default::default()
+                },
+                ..Block::default()
+            };
+            let ret = chain.insert_block(block);
+            assert!(ret.is_err());
+        }
+
+        {
+            let mut block = Block::default();
+            block.header.height = 1;
+            block.header.parent_hash = chain.genesis_hash();
+            let ret = chain.insert_block(block);
+            assert!(ret.is_err());
+        }
     }
 }

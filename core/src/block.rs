@@ -17,6 +17,7 @@
 extern crate ed25519;
 extern crate hash;
 
+use std::fmt;
 use serde::{Serialize, Deserialize};
 // use super::traits::{TxMsg};
 use super::transaction::{Transaction};
@@ -26,7 +27,7 @@ use bincode;
 
 
 #[derive(Serialize, Deserialize)]
-#[derive(Debug, Default, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Default, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Hash(pub [u8; 32]);
 
 impl Hash {
@@ -41,6 +42,23 @@ impl Hash {
     }
 }
 
+impl fmt::Debug for Hash {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		for i in self.0.iter() {
+			write!(f, "{:02x}", i)?;
+		}
+		Ok(())
+	}
+}
+
+impl fmt::Display for Hash {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		for i in self.0[..4].iter() {
+			write!(f, "{:02x}", i)?;
+		}
+		Ok(())
+	}
+}
 
 /// Block header
 #[derive(Serialize, Deserialize, Debug)]
