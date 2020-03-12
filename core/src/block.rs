@@ -126,7 +126,7 @@ pub fn get_hash_from_signs(signs: Vec<VerificationItem>) -> Hash {
     Hash(hash::blake2b_256(data))
 }
 
-#[derive(Debug,Clone,Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Block {
     pub header: Header,
     pub signs: Vec<VerificationItem>,

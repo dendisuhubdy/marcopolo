@@ -31,7 +31,7 @@ impl IConsensus for POA {
     fn version() -> u32 {
         poa_Version
     }
-} 
+}
 
 impl POA {
     pub fn sign_block(t: u8,pkey: Option<PrivKey>,mut b: Block) -> Result<(),Error> {
@@ -72,14 +72,14 @@ impl POA {
         // sign with default priv key
         POA::sign_block(0u8,None,b)
     }
-    pub fn verify(&self,b: Block) -> Result<(),Error> {
+    pub fn verify(&self,b: &Block) -> Result<(),Error> {
         let proof = b.proof_one();
         match proof {
             Some(&v) => {
                 let sign_info = b.sign_one();
                 match sign_info {
                     Some(&v2) => self.poa_verify(&v,&v2),
-                    None => Err(ConsensusErrorKind::NoneSign.into()), 
+                    None => Err(ConsensusErrorKind::NoneSign.into()),
                 }
             },
             None => {
@@ -88,7 +88,7 @@ impl POA {
                 let sign_info = b.sign_one();
                 match sign_info {
                     Some(&v2) => self.poa_verify(&proof,&v2),
-                    None => Err(ConsensusErrorKind::NoneSign.into()),           
+                    None => Err(ConsensusErrorKind::NoneSign.into()),
                 }
             },
         }
@@ -103,7 +103,7 @@ impl POA {
             let res = pk.verify(&msg,&vInfo.signs);
             match res {
                 Ok(()) => Ok(()),
-                Err(e) => Err(ConsensusErrorKind::Verify.into()), 
+                Err(e) => Err(ConsensusErrorKind::Verify.into()),
             }
         } else {
             Ok(())

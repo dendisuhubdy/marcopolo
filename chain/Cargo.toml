@@ -9,4 +9,5 @@ edition = "2018"
 [dependencies]
 map-core = { path = "../core" }
 map-store = { path = "../common/store" }
+map-consensus = { path = "../consensus" }
 bincode = "1.2.0"

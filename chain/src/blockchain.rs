@@ -18,6 +18,7 @@ use crate::store::ChainDB;
 use map_store;
 use map_core::block::{Block, Header, Hash};
 use map_core::genesis;
+use map_consensus::poa;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Error {
@@ -27,12 +28,14 @@ pub enum Error {
     InvalidBlockProof,
     InvalidBlockTime,
     InvalidBlockHeight,
+    InvalidAuthority,
 }
 
 pub struct BlockChain {
     db: ChainDB,
     validator: Validator,
     genesis: Block,
+    consensus: poa::POA
 }
 
 impl BlockChain {
@@ -43,6 +46,7 @@ impl BlockChain {
             db: ChainDB::new(db_cfg).unwrap(),
             genesis: genesis::to_genesis(),
             validator: Validator{},
+            consensus: poa::POA{},
         }
     }
 
@@ -106,6 +110,9 @@ impl BlockChain {
         }
 
         self.validator.validate_header(self, &block.header)?;
+        if self.consensus.verify(&block).is_err() {
+            return Err(Error::InvalidAuthority)
+        }
         self.validator.validate_block(self, &block)?;
 
         self.db.write_block(&block).expect("can not write block");
