@@ -16,33 +16,41 @@
 
 extern crate core;
 extern crate consensus;
+extern crate chain;
 
 use core::block::{self,Block,BlockProof,VerificationItem,Header,Hash};
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
-use consensus::{Error,poa::POA};
+use consensus::{poa::POA};
+use chain::blockchain::{BlockChain,Error};
 use std::thread;
 use std::panic;
 use std::fmt;
 use std::time::{Duration, Instant};
 
 
-#[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
+//#[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct simple_client {
     pub running: bool,
+    pub block_chain: BlockChain,
 }
 
 impl simple_client {
     pub fn new_client() -> Self {
-        simple_client{running:false}
+        simple_client{
+            running:        false,
+            block_chain:    BlockChain::new(),
+        }
     }
     pub fn start(mut self) -> bool {
         thread::spawn(move || {
             self.running = true;
             loop {
-                let res = self.insert_block(self.generate_block());
+                let b = self.generate_block();
+                // let res = &self.insert_block();
+                let res = self.block_chain.insert_block(b);
                 match res {
                     Ok(()) => println!("insert a block"),
-                    Err(e) => println!("Error: {}", e),
+                    Err(e) => println!("Error: {:?}", e),
                 };
                 thread::sleep(Duration::from_millis(POA::get_interval()));
                 if !self.running {
@@ -59,12 +67,12 @@ impl simple_client {
     pub fn new_empty_block() -> Block {
         Block::default()
     }
-    pub fn generate_block(&self) -> Block {
+    pub fn generate_block(&mut self) -> Block {
         // 1. get txs from txpool
         // 2. exc txs
         // 3. get pre_block info
         // 4. finalize block
-        let cur_block = self.get_current_block();
+        let cur_block = self.block_chain.current_block();
         let txs = Vec::new();
         let txs_root = block::get_hash_from_txs(txs.clone());
         let header: Header = Header{
@@ -77,17 +85,17 @@ impl simple_client {
         let b = Block::new(header,txs,Vec::new(),Vec::new());
         b
     }
-    pub fn insert_block(&self,b: Block) -> Result<(),Error> {
+    pub fn insert_block(&mut self,b: Block) -> Result<(),Error> {
         Ok(())
     }
-    pub fn get_current_block(&self) -> Block {
-        Block::default()
+    pub fn get_current_block(&mut self) -> Block {
+        self.block_chain.current_block()
     }
-    pub fn get_current_height(&self) -> u64 {
-        100u64
+    pub fn get_current_height(&mut self) -> u64 {
+        self.block_chain.current_block().height()
     }
-    pub fn get_block_by_height(&self,height: u64) -> Block {
-        Block::default()
+    pub fn get_block_by_height(&self,height: u64) -> Option<Block> {
+        self.block_chain.get_block_by_number(height)
     }
 }
  
