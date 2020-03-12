@@ -146,7 +146,7 @@ impl Default for Block {
 }
 
 impl  Block {
-    fn new(mut header: Header,txs: Vec<Transaction>,signs: Vec<VerificationItem>,proofs: Vec<BlockProof>) -> Self {
+    pub fn new(mut header: Header,txs: Vec<Transaction>,signs: Vec<VerificationItem>,proofs: Vec<BlockProof>) -> Self {
         header.tx_root = get_hash_from_txs(txs.clone());
         header.sign_root = get_hash_from_signs(signs.clone());
         Block{header,signs,txs,proofs}

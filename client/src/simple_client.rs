@@ -17,7 +17,7 @@
 extern crate core;
 extern crate consensus;
 
-use core::block::{Block,BlockProof,VerificationItem};
+use core::block::{self,Block,BlockProof,VerificationItem,Header,Hash};
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
 use consensus::{Error,poa::POA};
 use std::thread;
@@ -64,10 +64,30 @@ impl simple_client {
         // 2. exc txs
         // 3. get pre_block info
         // 4. finalize block
-        simple_client::new_empty_block()
+        let cur_block = self.get_current_block();
+        let txs = Vec::new();
+        let txs_root = block::get_hash_from_txs(txs.clone());
+        let header: Header = Header{
+            height: cur_block.height() + 1,
+            parent_hash: cur_block.get_hash().clone(),
+            tx_root:    txs_root,
+            sign_root:  Hash([0;32]),
+			time: 0,
+        };
+        let b = Block::new(header,txs,Vec::new(),Vec::new());
+        b
     }
     pub fn insert_block(&self,b: Block) -> Result<(),Error> {
         Ok(())
+    }
+    pub fn get_current_block(&self) -> Block {
+        Block::default()
+    }
+    pub fn get_current_height(&self) -> u64 {
+        100u64
+    }
+    pub fn get_block_by_height(&self,height: u64) -> Block {
+        Block::default()
     }
 }
  
