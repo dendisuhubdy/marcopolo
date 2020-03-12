@@ -145,6 +145,11 @@ impl Validator {
         if header.height != pre.header.height + 1 {
             return Err(Error::InvalidBlockHeight);
         }
+
+        // Ensure block time interval
+        if header.time <= pre.header.time {
+            return Err(Error::InvalidBlockTime);
+        }
         Ok(())
     }
 }
@@ -152,6 +157,7 @@ impl Validator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::SystemTime;
 
     #[test]
     fn test_init() {
@@ -182,6 +188,16 @@ mod tests {
             let mut block = Block::default();
             block.header.height = 1;
             block.header.parent_hash = chain.genesis_hash();
+            let ret = chain.insert_block(block);
+            assert!(ret.is_err());
+        }
+
+        {
+            let mut block = Block::default();
+            block.header.height = 1;
+            block.header.parent_hash = chain.genesis_hash();
+            block.header.time = SystemTime::now().duration_since(
+                SystemTime::UNIX_EPOCH).unwrap().as_secs();
             let ret = chain.insert_block(block);
             assert!(ret.is_err());
         }
