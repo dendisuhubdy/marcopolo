@@ -19,7 +19,7 @@ extern crate ed25519;
 
 use super::{Error,ErrorKind,ConsensusErrorKind};
 use super::traits::IConsensus;
-use core::block::{Block,BlockProof,VerificationItem,Hash};
+use core::block::{self,Block,BlockProof,VerificationItem,Hash};
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 
@@ -61,6 +61,9 @@ impl POA {
     fn add_signs_to_block(h:Hash,signs: SignatureInfo,mut b: Block) -> Result<(),Error> {
         let signs = VerificationItem::new(h,signs);
         b.add_verify_item(signs);
+        let signs = b.get_signs();
+        let h = block::get_hash_from_signs(signs);
+        b.set_sign_hash(h);
         Ok(())
     }
     fn add_proof_to_block(t: u8,pk: &[u8],mut b: Block) -> Result<(),Error> {
