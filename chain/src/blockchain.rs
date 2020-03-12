@@ -131,6 +131,11 @@ impl Validator {
         if block.header.sign_root != map_core::block::get_hash_from_signs(block.signs.clone()) {
             return Err(Error::MismatchHash);
         }
+
+        if block.header.tx_root != map_core::block::get_hash_from_txs(block.txs.clone()) {
+            return Err(Error::MismatchHash);
+        }
+
         Ok(())
     }
 

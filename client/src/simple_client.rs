@@ -25,7 +25,7 @@ use chain::blockchain::{BlockChain,Error};
 use std::thread;
 use std::panic;
 use std::fmt;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 
 //#[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
@@ -80,7 +80,7 @@ impl simple_client {
             parent_hash: cur_block.get_hash().clone(),
             tx_root:    txs_root,
             sign_root:  Hash([0;32]),
-			time: 0,
+			time: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs(),
         };
         let b = Block::new(header,txs,Vec::new(),Vec::new());
         b
@@ -98,4 +98,3 @@ impl simple_client {
         self.block_chain.get_block_by_number(height)
     }
 }
- 
