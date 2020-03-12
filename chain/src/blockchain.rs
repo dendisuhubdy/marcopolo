@@ -16,6 +16,7 @@
 
 use crate::store::ChainDB;
 use map_store;
+use map_core;
 use map_core::block::{Block, Header, Hash};
 use map_core::genesis;
 use map_consensus::poa;
@@ -110,10 +111,10 @@ impl BlockChain {
         }
 
         self.validator.validate_header(self, &block.header)?;
+        self.validator.validate_block(self, &block)?;
         if self.consensus.verify(&block).is_err() {
             return Err(Error::InvalidAuthority)
         }
-        self.validator.validate_block(self, &block)?;
 
         self.db.write_block(&block).expect("can not write block");
         self.db.write_head_hash(block.header.hash()).expect("can not wirte head");
@@ -126,6 +127,9 @@ pub struct Validator;
 impl Validator {
     #[allow(unused_variables)]
     pub fn validate_block(&self, chain: &BlockChain, block: &Block) -> Result<(), Error> {
+        if block.header.sign_root != map_core::block::get_hash_from_signs(block.signs.clone()) {
+            return Err(Error::MismatchHash);
+        }
         Ok(())
     }
 
