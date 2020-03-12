@@ -154,7 +154,9 @@ impl  Block {
     fn header(&self) -> &Header {
 		&self.header
     }
-
+    pub fn set_sign_hash(&mut self,h: Hash) {
+        self.header.sign_root = h;
+    }
     pub fn height(&self) -> u64 {
         self.header.height
     }
@@ -174,6 +176,9 @@ impl  Block {
     }
     pub fn add_verify_item(&mut self,item: VerificationItem) {
         self.signs.push(item)
+    }
+    pub fn get_signs(&self) -> Vec<VerificationItem> {
+        self.signs.clone()
     }
     pub fn sign_one(&self) ->Option<&VerificationItem> {
         self.signs.get(0)
