@@ -19,6 +19,7 @@
 use clap::{App, Arg, SubCommand};
 
 use logger::LogConfig;
+use client::simple_client::simple_client;
 
 pub fn run() {
     let matches = App::new("map")
@@ -64,6 +65,9 @@ pub fn run() {
         println!("Remove the whole chain data");
         return;
     }
+
+    let node = simple_client::new_client();
+    node.start();
 }
 
 #[cfg(test)]

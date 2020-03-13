@@ -42,7 +42,8 @@ impl simple_client {
         }
     }
     pub fn start(mut self) -> bool {
-        thread::spawn(move || {
+        self.block_chain.load();
+        let builder = thread::spawn(move || {
             self.running = true;
             loop {
                 let b = self.generate_block();
@@ -58,6 +59,7 @@ impl simple_client {
                 }
             }
         });
+        builder.join();
         true
     }
     pub fn stop(&mut self) -> bool {

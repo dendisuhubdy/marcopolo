@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 clap = "2.33.0"
 logger = { package = "map-logger", path = "../common/logger" }
+client = { package = "map-client", path = "../client" }
