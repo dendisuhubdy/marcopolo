@@ -98,3 +98,18 @@ impl simple_client {
         self.block_chain.get_block_by_number(height)
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ::bincode;
+
+    #[test]
+    fn test_simple_client() {
+        let client = simple_client::new_client();
+        client.start();
+        thread::sleep(Duration::from_millis(60*1000));
+        client.stop();
+    }
+}
