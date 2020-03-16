@@ -22,8 +22,8 @@ extern crate chain;
 
 use core::block::{self,Block,BlockProof,VerificationItem,Header,Hash};
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
-use consensus::{poa::POA};
-use chain::blockchain::{BlockChain,Error};
+use consensus::{poa::POA,Error};
+use chain::blockchain::{BlockChain,};
 use std::thread;
 use std::panic;
 use std::fmt;
@@ -49,13 +49,17 @@ impl Service {
         let builder = thread::spawn(move || {
             self.running = true;
             loop {
-                let b = self.generate_block();
-                // let res = &self.insert_block();
-                let res = self.block_chain.insert_block(b);
-                match res {
-                    Ok(()) => println!("insert a block"),
-                    Err(e) => println!("Error: {:?}", e),
-                };
+                let res2 = self.generate_block();
+                match res2 {
+                    Ok(b) => {
+                        let res = self.block_chain.insert_block(b);
+                        match res {
+                            Ok(()) => println!("insert a block"),
+                            Err(e) => println!("insert_block Error: {:?}", e),
+                        };
+                    },
+                    Err(e) => println!("generate_block,Error: {:?}", e),
+                };  
                 thread::sleep(Duration::from_millis(POA::get_interval()));
                 if !self.running {
                     break;
@@ -72,7 +76,7 @@ impl Service {
     pub fn new_empty_block() -> Block {
         Block::default()
     }
-    pub fn generate_block(&mut self) -> Block {
+    pub fn generate_block(&mut self) -> Result<Block,Error> {
         // 1. get txs from txpool
         // 2. exc txs
         // 3. get pre_block info
@@ -87,11 +91,9 @@ impl Service {
             sign_root:  Hash([0;32]),
 			time: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs(),
         };
-        let b = Block::new(header,txs,Vec::new(),Vec::new());
-        b
-    }
-    pub fn insert_block(&mut self,b: Block) -> Result<(),Error> {
-        Ok(())
+        let mut b = Block::new(header,txs,Vec::new(),Vec::new());
+        let finalize = POA{};
+        finalize.finalize_block(b)
     }
     pub fn get_current_block(&mut self) -> Block {
         self.block_chain.current_block()
