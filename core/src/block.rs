@@ -124,7 +124,7 @@ impl BlockProof {
             BlockProof(o1,o2,t)
         }
     }
-    pub fn get_pk(&self,mut pk: [u8;64]) -> u8 {
+    pub fn get_pk(&self, pk: &mut [u8;64]) -> u8 {
         if self.2 == 0u8 {
             pk[0..32].copy_from_slice(&self.0[..]);
         } else {

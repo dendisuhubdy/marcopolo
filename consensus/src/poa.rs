@@ -104,10 +104,11 @@ impl POA {
 
     fn poa_verify(&self,proof: &BlockProof,vInfo: &VerificationItem) -> Result<(),Error> {
         let mut pk0 = [0u8;64];
-        let t = proof.get_pk(pk0);
+        let t = proof.get_pk(&mut pk0);
         if t == 0u8 {       // ed25519
-            // let pk = Pubkey::from_bytes(&pk0);
-            let pk = Pubkey::from_bytes(&ed_genesis_pub_key);
+            let mut a1 = [0u8;32];
+            a1[..].copy_from_slice(&pk0[0..32]);
+            let pk = Pubkey::from_bytes(&a1);
             let msg = vInfo.to_msg();
             let res = pk.verify(&msg,&vInfo.signs);
             match res {
