@@ -110,13 +110,14 @@ impl Service {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::bincode;
+    use std::fmt;
 
     #[test]
-    fn test_simple_client() {
+    fn test_service() {
+        println!("begin service,for 60 seconds");
         let service = Service::new_service();
         service.start();
         thread::sleep(Duration::from_millis(60*1000));
-        service.stop();
+        println!("end service");
     }
 }

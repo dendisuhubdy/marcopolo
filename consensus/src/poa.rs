@@ -22,7 +22,7 @@ use super::traits::IConsensus;
 use core::block::{self,Block,BlockProof,VerificationItem,Hash};
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
-
+use std::fmt;
 
 const poa_Version: u32 = 1;
 pub struct POA {}
@@ -41,6 +41,7 @@ impl POA {
                 if t == 0u8 {
                     let h = b.get_hash();
                     let signs = p.sign(h.to_slice());
+                    println!("sign block with genesis privkey,height:{},hash:{:?},signs:{:?}",b.height(),h,signs);
                     POA::add_signs_to_block(h,signs,b)
                 } else {
                     Ok(b)
@@ -51,6 +52,7 @@ impl POA {
                     let pkey = PrivKey::from_bytes(&ed_genesis_priv_key);
                     let h = b.get_hash();
                     let signs = pkey.sign(h.to_slice());
+                    println!("sign block with genesis privkey,height:{},hash:{:?},signs:{:?}",b.height(),h,signs);
                     POA::add_signs_to_block(h,signs,b)
                 } else {
                     Ok(b)
@@ -79,6 +81,7 @@ impl POA {
         let proof = b.proof_one();
         match proof {
             Some(&v) => {
+                println!("verify block with proof privkey in block");
                 let sign_info = b.sign_one();
                 match sign_info {
                     Some(&v2) => self.poa_verify(&v,&v2),
@@ -87,6 +90,8 @@ impl POA {
             },
             None => {
                 // get proof from genesis
+                println!("verify block with genesis privkey");
+                
                 let proof = BlockProof::new(0u8,&ed_genesis_pub_key);
                 let sign_info = b.sign_one();
                 match sign_info {
@@ -101,11 +106,15 @@ impl POA {
         let mut pk0 = [0u8;64];
         let t = proof.get_pk(pk0);
         if t == 0u8 {       // ed25519
-            let pk = Pubkey::from_bytes(&pk0);
+            // let pk = Pubkey::from_bytes(&pk0);
+            let pk = Pubkey::from_bytes(&ed_genesis_pub_key);
             let msg = vInfo.to_msg();
             let res = pk.verify(&msg,&vInfo.signs);
             match res {
-                Ok(()) => Ok(()),
+                Ok(()) => {
+                    println!("verify block ok");
+                    Ok(())
+                },
                 Err(e) => Err(ConsensusErrorKind::Verify.into()),
             }
         } else {
