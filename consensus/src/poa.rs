@@ -116,3 +116,25 @@ impl POA {
         2000u64
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fmt;
+    #[test]
+    fn test_verify() {
+        println!("begin verify");
+        let h = Hash([0u8;32]);
+        let pkey = PrivKey::from_bytes(&ed_genesis_priv_key);
+        let signs = pkey.sign(&h.0);
+
+        let pk = Pubkey::from_bytes(&ed_genesis_pub_key);
+        let msg = h.to_msg();
+        let res = pk.verify(&msg,&signs);
+        match res {
+            Ok(()) => println!("verify ok"),
+            Err(e) => println!("Error: {:?}", e),
+        }
+        println!("end verify");
+    }
+}
