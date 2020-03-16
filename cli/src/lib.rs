@@ -55,6 +55,8 @@ pub fn run() {
             filter: Some(log_filter.to_string()),
         };
         logger::init(log_config).expect("Logger must be successfully initialized");
+    } else {
+        logger::init(LogConfig::default()).expect("Logger must be successfully initialized");
     }
 
     if matches.is_present("single") {
