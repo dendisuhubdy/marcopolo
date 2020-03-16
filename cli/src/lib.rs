@@ -19,7 +19,7 @@
 use clap::{App, Arg, SubCommand};
 
 use logger::LogConfig;
-use client::simple_client::simple_client;
+use service::Service;
 
 pub fn run() {
     let matches = App::new("map")
@@ -66,7 +66,7 @@ pub fn run() {
         return;
     }
 
-    let node = simple_client::new_client();
+    let node = Service::new_service();
     node.start();
 }
 

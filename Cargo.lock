@@ -385,17 +385,8 @@ name = "map-cli"
 version = "0.1.0"
 dependencies = [
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "map-client 0.1.0",
  "map-logger 0.1.0",
-]
-
-[[package]]
-name = "map-client"
-version = "0.1.0"
-dependencies = [
- "chain 0.1.0",
- "map-consensus 0.1.0",
- "map-core 0.1.0",
+ "map-service 0.1.0",
 ]
 
 [[package]]
@@ -446,6 +437,15 @@ version = "0.1.0"
 dependencies = [
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "map-service"
+version = "0.1.0"
+dependencies = [
+ "chain 0.1.0",
+ "map-consensus 0.1.0",
+ "map-core 0.1.0",
 ]
 
 [[package]]

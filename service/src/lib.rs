@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
+
+
 extern crate core;
 extern crate consensus;
 extern crate chain;
@@ -27,16 +29,17 @@ use std::panic;
 use std::fmt;
 use std::time::{Duration, Instant, SystemTime};
 
+// pub mod Service;
 
 //#[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub struct simple_client {
+pub struct Service {
     pub running: bool,
     pub block_chain: BlockChain,
 }
 
-impl simple_client {
-    pub fn new_client() -> Self {
-        simple_client{
+impl Service {
+    pub fn new_service() -> Self {
+        Service{
             running:        false,
             block_chain:    BlockChain::new(),
         }
@@ -109,9 +112,9 @@ mod tests {
 
     #[test]
     fn test_simple_client() {
-        let client = simple_client::new_client();
-        client.start();
+        let service = Service::new_service();
+        service.start();
         thread::sleep(Duration::from_millis(60*1000));
-        client.stop();
+        service.stop();
     }
 }
