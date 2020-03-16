@@ -34,7 +34,7 @@ impl IConsensus for POA {
 }
 
 impl POA {
-    pub fn sign_block(t: u8,pkey: Option<PrivKey>,mut b: Block) -> Result<(),Error> {
+    pub fn sign_block(t: u8,pkey: Option<PrivKey>,mut b: Block) -> Result<Block,Error> {
         let h = b.get_hash();
         match pkey {
             Some(p) => {
@@ -43,7 +43,7 @@ impl POA {
                     let signs = p.sign(h.to_slice());
                     POA::add_signs_to_block(h,signs,b)
                 } else {
-                    Ok(())
+                    Ok(b)
                 }
             },
             None => {
@@ -53,25 +53,25 @@ impl POA {
                     let signs = pkey.sign(h.to_slice());
                     POA::add_signs_to_block(h,signs,b)
                 } else {
-                    Ok(())
+                    Ok(b)
                 }
             },
         }
     }
-    fn add_signs_to_block(h:Hash,signs: SignatureInfo,mut b: Block) -> Result<(),Error> {
+    fn add_signs_to_block(h:Hash,signs: SignatureInfo,mut b: Block) -> Result<Block,Error> {
         let signs = VerificationItem::new(h,signs);
         b.add_verify_item(signs);
         let signs = b.get_signs();
         let h = block::get_hash_from_signs(signs);
         b.set_sign_hash(h);
-        Ok(())
+        Ok(b)
     }
-    fn add_proof_to_block(t: u8,pk: &[u8],mut b: Block) -> Result<(),Error> {
+    fn add_proof_to_block(t: u8,pk: &[u8],mut b: Block) -> Result<Block,Error> {
         let proof = BlockProof::new(t,pk);
         b.add_proof(proof);
-        Ok(())
+        Ok(b)
     }
-    pub fn finalize_block(&self,mut b: Block) -> Result<(),Error> {
+    pub fn finalize_block(&self,mut b: Block) -> Result<Block,Error> {
         // sign with default priv key
         POA::sign_block(0u8,None,b)
     }
