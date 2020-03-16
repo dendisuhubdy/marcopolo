@@ -16,12 +16,33 @@
 
 //! MarcoPolo ED25519.
 
+use std::fmt;
+
 pub mod generator;
 pub mod privkey;
 pub mod pubkey;
 pub mod signature;
 
 
-#[derive(Debug,PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub struct H256(pub [u8; 32]);
+
+impl fmt::Debug for H256{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for i in self.0.iter() {
+            write!(f, "{:02x}", i)?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for H256 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for i in self.0[..4].iter() {
+            write!(f, "{:02x}", i)?;
+        }
+        Ok(())
+    }
+}
+
 pub type Message = H256;

@@ -59,7 +59,7 @@ impl Service {
                         };
                     },
                     Err(e) => println!("generate_block,Error: {:?}", e),
-                };  
+                };
                 thread::sleep(Duration::from_millis(POA::get_interval()));
                 if !self.running {
                     break;

@@ -113,8 +113,9 @@ impl BlockChain {
 
         self.validator.validate_header(self, &block.header)?;
         self.validator.validate_block(self, &block)?;
-        if self.consensus.verify(&block).is_err() {
-            return Err(Error::InvalidAuthority)
+        if let Err(e) = self.consensus.verify(&block) {
+            println!("consensus err {:?}", e);
+            return Err(Error::InvalidAuthority);
         }
 
         self.db.write_block(&block).expect("can not write block");
