@@ -54,7 +54,7 @@ impl Service {
                     Ok(b) => {
                         let res = self.block_chain.insert_block(b);
                         match res {
-                            Ok(()) => println!("insert a block"),
+                            Ok(()) => {},
                             Err(e) => println!("insert_block Error: {:?}", e),
                         };
                     },
@@ -91,6 +91,7 @@ impl Service {
             sign_root:  Hash([0;32]),
 			time: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs(),
         };
+        println!("seal block, height={}, parent={}, tx={}", header.height, header.parent_hash, txs.len());
         let mut b = Block::new(header,txs,Vec::new(),Vec::new());
         let finalize = POA{};
         finalize.finalize_block(b)

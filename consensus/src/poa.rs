@@ -41,7 +41,7 @@ impl POA {
                 if t == 0u8 {
                     let h = b.get_hash();
                     let signs = p.sign(h.to_slice());
-                    println!("sign block with genesis privkey,height:{},hash:{:?},signs:{:?}",b.height(),h,signs);
+                    println!("sign block with genesis privkey, height={}, hash={}", b.height(), h);
                     POA::add_signs_to_block(h,signs,b)
                 } else {
                     Ok(b)
@@ -52,7 +52,7 @@ impl POA {
                     let pkey = PrivKey::from_bytes(&ed_genesis_priv_key);
                     let h = b.get_hash();
                     let signs = pkey.sign(h.to_slice());
-                    println!("sign block with genesis privkey,height:{},hash:{:?},signs:{:?}",b.height(),h,signs);
+                    println!("sign block with genesis privkey, height={}, hash={}", b.height(), h);
                     POA::add_signs_to_block(h,signs,b)
                 } else {
                     Ok(b)
@@ -81,7 +81,6 @@ impl POA {
         let proof = b.proof_one();
         match proof {
             Some(&v) => {
-                println!("verify block with proof privkey in block");
                 let sign_info = b.sign_one();
                 match sign_info {
                     Some(&v2) => self.poa_verify(&v,&v2),
@@ -90,8 +89,6 @@ impl POA {
             },
             None => {
                 // get proof from genesis
-                println!("verify block with genesis privkey");
-                
                 let proof = BlockProof::new(0u8,&ed_genesis_pub_key);
                 let sign_info = b.sign_one();
                 match sign_info {
@@ -113,7 +110,6 @@ impl POA {
             let res = pk.verify(&msg,&vInfo.signs);
             match res {
                 Ok(()) => {
-                    println!("verify block ok");
                     Ok(())
                 },
                 Err(e) => Err(ConsensusErrorKind::Verify.into()),
