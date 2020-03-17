@@ -50,13 +50,12 @@ pub fn run() {
     }
 
     if let Some(log_filter) = matches.value_of("log") {
-        println!("Run map with {} log", log_filter);
         let log_config = LogConfig {
             filter: Some(log_filter.to_string()),
         };
-        logger::init(log_config).expect("Logger must be successfully initialized");
+        logger::init(log_config);
     } else {
-        logger::init(LogConfig::default()).expect("Logger must be successfully initialized");
+        logger::init(LogConfig::default());
     }
 
     if matches.is_present("single") {
