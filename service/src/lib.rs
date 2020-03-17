@@ -111,8 +111,12 @@ mod tests {
     fn test_service() {
         println!("begin service,for 60 seconds");
         let service = Service::new_service();
-        service.start();
+        let (tx,th_handle) = service.start();
         thread::sleep(Duration::from_millis(60*1000));
+        thread::spawn(move || {
+            tx.send(1).unwrap();
+        });
+        th_handle.join();
         println!("end service");
     }
 }
