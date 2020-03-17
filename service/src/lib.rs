@@ -25,31 +25,27 @@ extern crate log;
 use core::block::{self,Block,BlockProof,VerificationItem,Header,Hash};
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
 use consensus::{poa::POA,Error};
-use chain::blockchain::{BlockChain,};
-use std::thread;
-use std::panic;
-use std::fmt;
+use chain::blockchain::{BlockChain};
+use std::{thread,thread::JoinHandle,sync::mpsc};
 use std::time::{Duration, Instant, SystemTime};
 
 // pub mod Service;
 
 //#[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Service {
-    pub running: bool,
     pub block_chain: BlockChain,
 }
 
 impl Service {
     pub fn new_service() -> Self {
         Service{
-            running:        false,
             block_chain:    BlockChain::new(),
         }
     }
-    pub fn start(mut self) -> bool {
+    pub fn start(mut self) -> (mpsc::Sender<i32>,JoinHandle<()>) {
         self.block_chain.load();
+        let (tx,rx): (mpsc::Sender<i32>,mpsc::Receiver<i32>) = mpsc::channel();
         let builder = thread::spawn(move || {
-            self.running = true;
             loop {
                 let res2 = self.generate_block();
                 match res2 {
@@ -63,17 +59,13 @@ impl Service {
                     Err(e) => error!("generate_block,Error: {:?}", e),
                 };
                 thread::sleep(Duration::from_millis(POA::get_interval()));
-                if !self.running {
+                if rx.try_recv().is_ok() {
                     break;
                 }
             }
         });
-        builder.join();
-        true
-    }
-    pub fn stop(&mut self) -> bool {
-        self.running = false;
-        true
+        (tx,builder)
+        // builder.join();
     }
     pub fn new_empty_block() -> Block {
         Block::default()
