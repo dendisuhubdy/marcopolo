@@ -9,8 +9,6 @@ edition = "2018"
 
 [dependencies]
 cli = { package = "map-cli", path = "cli" }
-logger = { package = "map-logger", path = "common/logger" }
-log = "0.4.8"
 
 [workspace]
 # This should only list projects that are not
