@@ -100,8 +100,8 @@ impl POA {
     }
 
     fn poa_verify(&self,proof: &BlockProof,vInfo: &VerificationItem) -> Result<(),Error> {
-        let mut pk0 = [0u8;64];
-        let t = proof.get_pk(&mut pk0);
+        let pk0 = &mut [0u8;64];
+        let t = proof.get_pk(pk0);
         if t == 0u8 {       // ed25519
             let mut a1 = [0u8;32];
             a1[..].copy_from_slice(&pk0[0..32]);
