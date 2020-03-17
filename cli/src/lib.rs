@@ -68,7 +68,8 @@ pub fn run() {
     }
 
     let node = Service::new_service();
-    node.start();
+    let (tx,th_handle) = node.start();
+    th_handle.join();
 }
 
 #[cfg(test)]
