@@ -14,27 +14,31 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
-extern crate env_logger;
-extern crate log;
-
-use env_logger::{Builder, Target};
-use log::{Log, Record, LevelFilter, Metadata, SetLoggerError};
+use env_logger::{Builder, Target, Env};
+#[allow(unused_imports)]
+use log::LevelFilter;
 
 pub struct LogConfig {
-    pub filter: Option<String>,
+    pub filter: String,
 }
 
 impl Default for LogConfig {
     fn default() -> Self {
         LogConfig {
-            filter: None,
+            filter: "info".into(),
         }
     }
 }
 
 pub fn init(config: LogConfig) {
-    let mut builder = Builder::from_default_env();
+    let env = Env::default()
+        .filter_or("RUST_LOG", config.filter)
+        .write_style_or("RUST_LOG_STYLE", "never");
+
+    let mut builder = Builder::from_env(env);
     builder.target(Target::Stdout);
-    builder.filter(None, LevelFilter::Info);
+    // builder.filter(None, LevelFilter::Info);
+    // builder.write_style(WriteStyle::Never);
+    builder.format_module_path(false);
     builder.init();
 }

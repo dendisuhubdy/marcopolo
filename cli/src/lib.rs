@@ -51,7 +51,7 @@ pub fn run() {
 
     if let Some(log_filter) = matches.value_of("log") {
         let log_config = LogConfig {
-            filter: Some(log_filter.to_string()),
+            filter: log_filter.to_string(),
         };
         logger::init(log_config);
     } else {
