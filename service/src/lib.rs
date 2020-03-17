@@ -19,6 +19,8 @@
 extern crate core;
 extern crate consensus;
 extern crate chain;
+#[macro_use]
+extern crate log;
 
 use core::block::{self,Block,BlockProof,VerificationItem,Header,Hash};
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
@@ -55,10 +57,10 @@ impl Service {
                         let res = self.block_chain.insert_block(b);
                         match res {
                             Ok(()) => {},
-                            Err(e) => println!("insert_block Error: {:?}", e),
+                            Err(e) => error!("insert_block Error: {:?}", e),
                         };
                     },
-                    Err(e) => println!("generate_block,Error: {:?}", e),
+                    Err(e) => error!("generate_block,Error: {:?}", e),
                 };
                 thread::sleep(Duration::from_millis(POA::get_interval()));
                 if !self.running {
@@ -91,7 +93,7 @@ impl Service {
             sign_root:  Hash([0;32]),
 			time: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs(),
         };
-        println!("seal block, height={}, parent={}, tx={}", header.height, header.parent_hash, txs.len());
+        info!("seal block, height={}, parent={}, tx={}", header.height, header.parent_hash, txs.len());
         let mut b = Block::new(header,txs,Vec::new(),Vec::new());
         let finalize = POA{};
         finalize.finalize_block(b)

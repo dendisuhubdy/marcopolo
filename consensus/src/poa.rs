@@ -41,7 +41,7 @@ impl POA {
                 if t == 0u8 {
                     let h = b.get_hash();
                     let signs = p.sign(h.to_slice());
-                    println!("sign block with genesis privkey, height={}, hash={}", b.height(), h);
+                    info!("sign block with genesis privkey, height={}, hash={}", b.height(), h);
                     POA::add_signs_to_block(h,signs,b)
                 } else {
                     Ok(b)
@@ -52,7 +52,7 @@ impl POA {
                     let pkey = PrivKey::from_bytes(&ed_genesis_priv_key);
                     let h = b.get_hash();
                     let signs = pkey.sign(h.to_slice());
-                    println!("sign block with genesis privkey, height={}, hash={}", b.height(), h);
+                    info!("sign block with genesis privkey, height={}, hash={}", b.height(), h);
                     POA::add_signs_to_block(h,signs,b)
                 } else {
                     Ok(b)
