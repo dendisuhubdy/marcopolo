@@ -19,7 +19,7 @@ extern crate rocksdb;
 pub mod mapdb;
 pub use rocksdb::Error;
 
-pub mod config {
+// pub mod config {
     use std::path::PathBuf;
     use std::env;
 
@@ -46,5 +46,5 @@ pub mod config {
             }
         }
     }
-}
+// }
 

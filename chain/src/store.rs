@@ -15,7 +15,7 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use map_store::mapdb::MapDB;
-use map_store::config::Config;
+use map_store::Config;
 use map_store::Error;
 use map_core::block::{Header, Hash, Block};
 // use map_core::block;

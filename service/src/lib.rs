@@ -30,10 +30,19 @@ use std::{thread,thread::JoinHandle,sync::mpsc};
 use std::time::{Duration, Instant, SystemTime};
 use std::path::PathBuf;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct NodeConfig {
     pub log: String,
     pub data_dir: PathBuf,
+}
+
+impl Default for NodeConfig {
+    fn default() -> Self {
+        NodeConfig {
+            log: "info".into(),
+            data_dir: PathBuf::from("."),
+        }
+    }
 }
 
 // pub mod Service;
@@ -93,7 +102,7 @@ impl Service {
 			time: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs(),
         };
         info!("seal block, height={}, parent={}, tx={}", header.height, header.parent_hash, txs.len());
-        let mut b = Block::new(header,txs,Vec::new(),Vec::new());
+        let b = Block::new(header,txs,Vec::new(),Vec::new());
         let finalize = POA{};
         finalize.finalize_block(b)
     }

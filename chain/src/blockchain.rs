@@ -42,8 +42,8 @@ pub struct BlockChain {
 
 impl BlockChain {
     pub fn new(datadir: PathBuf) -> Self {
-        let db_cfg = map_store::config::Config::new(datadir.clone());
-        info!("chain data {:?}", datadir);
+        info!("using datadir {}", datadir.display());
+        let db_cfg = map_store::Config::new(datadir.clone());
         BlockChain {
             db: ChainDB::new(db_cfg).unwrap(),
             genesis: genesis::to_genesis(),

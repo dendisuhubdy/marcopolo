@@ -3,6 +3,7 @@
 # .gitignore file locally for IDE/Emacs/Vim generated files.
 **/target
 **/*.rs.bk
+**/mapdata
 
 # MacOS specific ignores
 .DS_Store

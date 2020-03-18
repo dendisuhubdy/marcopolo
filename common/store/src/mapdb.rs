@@ -16,13 +16,11 @@
 
 use std::sync::{Arc, RwLock};
 use rocksdb::{Error, DB};
-use crate::config::Config;
-
+use crate::Config;
 
 pub struct MapDB{
     inner:     Arc<RwLock<DB>>,
 }
-
 
 impl MapDB {
     pub fn open(cfg: Config) -> Result<Self, Error> {
