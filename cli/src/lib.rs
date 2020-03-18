@@ -18,9 +18,11 @@
 
 use std::path::PathBuf;
 use clap::{App, Arg, SubCommand};
-
+use signal_hook::{iterator::Signals, SIGINT};
 use logger::LogConfig;
 use service::{Service, NodeConfig};
+use std::thread;
+use std::fmt;
 
 pub fn run() {
     let matches = App::new("map")
@@ -73,6 +75,14 @@ pub fn run() {
 
     let node = Service::new_service(config);
     let (tx, th_handle) = node.start();
+    let signals = Signals::new(&[SIGINT]);
+    thread::spawn(move||{
+        for sig in &signals {
+            tx.send(1).unwrap();
+            println!("Received signal {:?}", sig);
+            break;
+        }
+    }).join().unwrap();
     th_handle.join();
 }
 
