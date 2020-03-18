@@ -31,9 +31,18 @@ pub mod config {
     impl Default for Config {
         fn default() -> Self {
             let mut cur = env::current_dir().unwrap();
-            cur.push("map_db");
+            cur.push("mapdata");
             Config{
                 path:   cur,
+            }
+        }
+    }
+
+    impl Config {
+        pub fn new(mut dir: PathBuf) -> Self {
+            dir.push("mapdata");
+            Config {
+                path: dir,
             }
         }
     }

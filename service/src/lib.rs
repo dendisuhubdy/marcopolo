@@ -28,6 +28,13 @@ use consensus::{poa::POA,Error};
 use chain::blockchain::{BlockChain};
 use std::{thread,thread::JoinHandle,sync::mpsc};
 use std::time::{Duration, Instant, SystemTime};
+use std::path::PathBuf;
+
+#[derive(Clone, Debug, Default)]
+pub struct NodeConfig {
+    pub log: String,
+    pub data_dir: PathBuf,
+}
 
 // pub mod Service;
 
@@ -37,9 +44,9 @@ pub struct Service {
 }
 
 impl Service {
-    pub fn new_service() -> Self {
+    pub fn new_service(cfg: NodeConfig) -> Self {
         Service{
-            block_chain:    BlockChain::new(),
+            block_chain:    BlockChain::new(cfg.data_dir),
         }
     }
     pub fn start(mut self) -> (mpsc::Sender<i32>,JoinHandle<()>) {
@@ -110,7 +117,7 @@ mod tests {
     #[test]
     fn test_service() {
         println!("begin service,for 60 seconds");
-        let service = Service::new_service();
+        let service = Service::new_service(NodeConfig::default());
         let (tx,th_handle) = service.start();
         thread::sleep(Duration::from_millis(60*1000));
         thread::spawn(move || {

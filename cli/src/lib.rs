@@ -16,17 +16,18 @@
 
 //! MarcoPolo CLI.
 
+use std::path::PathBuf;
 use clap::{App, Arg, SubCommand};
 
 use logger::LogConfig;
-use service::Service;
+use service::{Service, NodeConfig};
 
 pub fn run() {
     let matches = App::new("map")
         .version("0.1.0")
         .about("MarcoPolo Protocol - A new P2P e-cash system")
         .arg(Arg::with_name("data_dir")
-            .long("data-dir")
+            .long("datadir")
             .short("d")
             .value_name("PATH")
             .takes_value(true)
@@ -45,14 +46,17 @@ pub fn run() {
             .about("Remove the whole chain data"))
         .get_matches();
 
+    let mut config = NodeConfig::default();
+
     if let Some(data_dir) = matches.value_of("data_dir") {
-        println!("Run map under path {}", data_dir);
+        config.data_dir = PathBuf::from(data_dir);
     }
 
     if let Some(log_filter) = matches.value_of("log") {
         let log_config = LogConfig {
             filter: log_filter.to_string(),
         };
+        config.log = log_filter.to_string();
         logger::init(log_config);
     } else {
         logger::init(LogConfig::default());
@@ -67,8 +71,8 @@ pub fn run() {
         return;
     }
 
-    let node = Service::new_service();
-    let (tx,th_handle) = node.start();
+    let node = Service::new_service(config);
+    let (tx, th_handle) = node.start();
     th_handle.join();
 }
 

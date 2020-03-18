@@ -37,7 +37,6 @@ impl ChainDB {
 
     pub fn new(cfg: Config) -> Result<Self, Error> {
         let m = MapDB::open(cfg).unwrap();
-
         Ok(ChainDB{db: m})
     }
 

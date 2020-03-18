@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::path::PathBuf;
 use crate::store::ChainDB;
 use map_store;
 use map_core;
@@ -40,9 +41,9 @@ pub struct BlockChain {
 }
 
 impl BlockChain {
-    pub fn new() -> Self {
-        let db_cfg = map_store::config::Config::default();
-
+    pub fn new(datadir: PathBuf) -> Self {
+        let db_cfg = map_store::config::Config::new(datadir.clone());
+        info!("chain data {:?}", datadir);
         BlockChain {
             db: ChainDB::new(db_cfg).unwrap(),
             genesis: genesis::to_genesis(),
@@ -168,7 +169,7 @@ mod tests {
 
     #[test]
     fn test_init() {
-        let mut chain = BlockChain::new();
+        let mut chain = BlockChain::new(PathBuf::from("./mapdata"));
         chain.load();
         assert_eq!(chain.genesis.height(), 0);
         assert_eq!(chain.genesis.header.parent_hash, Hash::default());
@@ -177,7 +178,7 @@ mod tests {
 
     #[test]
     fn test_insert_empty() {
-        let mut chain = BlockChain::new();
+        let mut chain = BlockChain::new(PathBuf::from("./mapdata"));
         chain.load();
         {
             let block = Block {
