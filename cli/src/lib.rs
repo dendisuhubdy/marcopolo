@@ -79,7 +79,7 @@ pub fn run() {
     let (tx, th_handle) = node.start();
     let signals = Signals::new(&[signal_hook::SIGINT,signal_hook::SIGQUIT]).unwrap();
     thread::spawn(move||{
-        for sig in signals.pending() {
+        for sig in &signals {
             match sig as libc::c_int {
                 signal_hook::SIGINT | signal_hook::SIGQUIT => {
                     tx.send(1).unwrap();
