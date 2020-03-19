@@ -14,8 +14,24 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
-pub mod types;
-pub mod block;
-pub mod genesis;
-pub mod transaction;
-pub mod traits;
+use std::fmt;
+use serde::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize)]
+#[derive(Default, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub struct Address(pub [u8; 20]);
+
+impl Address {
+    pub fn as_slice(&self) -> &[u8] {
+        return &self.0
+    }
+}
+
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for i in self.0.iter() {
+            write!(f, "{:02x}", i)?;
+        }
+        Ok(())
+    }
+}
