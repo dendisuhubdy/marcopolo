@@ -17,7 +17,7 @@
 extern crate starling;
 extern crate serde;
 
-// pub mod mapTree;
+pub mod mapTree;
 
 use std::error::Error;
 use std::path::PathBuf;

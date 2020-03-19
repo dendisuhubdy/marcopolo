@@ -6,6 +6,6 @@ authors = ["MAP <developers@marcopolo.link>"]
 edition = "2018"
 
 [dependencies]
-starling = { version = "3.1.4", features = ["use_serde","use_hashbrown"] }
+starling = { version = "3.1.4", features = ["use_serde","use_serialization","use_bincode"] }
 map-store = { path = "../store" }
 serde = { version = "1.0.102", features = ["derive"] }
