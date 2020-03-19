@@ -15,10 +15,12 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 //! MarcoPolo CLI.
+extern crate libc;
+extern crate signal_hook;
 
 use std::path::PathBuf;
 use clap::{App, Arg, SubCommand};
-use signal_hook::{iterator::Signals, SIGINT};
+use signal_hook::iterator::Signals;
 use logger::LogConfig;
 use service::{Service, NodeConfig};
 use std::thread;
@@ -75,12 +77,17 @@ pub fn run() {
 
     let node = Service::new_service(config);
     let (tx, th_handle) = node.start();
-    let signals = Signals::new(&[SIGINT]);
+    let signals = Signals::new(&[signal_hook::SIGINT,signal_hook::SIGQUIT]).unwrap();
     thread::spawn(move||{
-        for sig in &signals {
-            tx.send(1).unwrap();
-            println!("Received signal {:?}", sig);
-            break;
+        for sig in signals.pending() {
+            match sig as libc::c_int {
+                signal_hook::SIGINT | signal_hook::SIGQUIT => {
+                    tx.send(1).unwrap();
+                    println!("Received signal {:?}", sig);
+                    return;
+                },
+                _ => {},
+            };
         }
     }).join().unwrap();
     th_handle.join();

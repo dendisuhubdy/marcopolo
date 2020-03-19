@@ -8,6 +8,9 @@ edition = "2018"
 
 [dependencies]
 clap = "2.33.0"
-signal-hook = "0.1.11"
+signal-hook = "0.1.13"
 logger = { package = "map-logger", path = "../common/logger" }
 service = { package = "map-service", path = "../service" }
+
+[dependencies.libc]
+version = "~0.2"
