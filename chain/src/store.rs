@@ -17,8 +17,8 @@
 use map_store::mapdb::MapDB;
 use map_store::Config;
 use map_store::Error;
-use map_core::block::{Header, Hash, Block};
-// use map_core::block;
+use map_core::block::{Header, Block};
+use map_core::types::Hash;
 use bincode;
 
 const HEADER_PREFIX: u8 = 'h' as u8;

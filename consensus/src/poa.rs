@@ -19,7 +19,8 @@ extern crate ed25519;
 
 use super::{Error,ErrorKind,ConsensusErrorKind};
 use super::traits::IConsensus;
-use core::block::{self,Block,BlockProof,VerificationItem,Hash};
+use core::block::{self,Block,BlockProof,VerificationItem};
+use core::types::Hash;
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 use std::fmt;

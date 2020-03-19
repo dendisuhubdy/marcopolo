@@ -16,6 +16,41 @@
 
 use std::fmt;
 use serde::{Serialize, Deserialize};
+use ed25519::{H256, Message};
+
+#[derive(Serialize, Deserialize)]
+#[derive(Default, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub struct Hash(pub [u8; 32]);
+
+impl Hash {
+    pub fn to_slice(&self) -> &[u8] {
+        return &self.0
+    }
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.0.to_vec()
+    }
+    pub fn to_msg(&self) -> Message {
+        H256(self.0)
+    }
+}
+
+impl fmt::Debug for Hash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for i in self.0.iter() {
+            write!(f, "{:02x}", i)?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for Hash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for i in self.0[..4].iter() {
+            write!(f, "{:02x}", i)?;
+        }
+        Ok(())
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 #[derive(Default, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]

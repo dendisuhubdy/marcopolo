@@ -18,7 +18,8 @@ use std::path::PathBuf;
 use crate::store::ChainDB;
 use map_store;
 use map_core;
-use map_core::block::{Block, Header, Hash};
+use map_core::block::{Block, Header};
+use map_core::types::Hash;
 use map_core::genesis;
 use map_consensus::poa;
 

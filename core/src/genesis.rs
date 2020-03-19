@@ -15,8 +15,9 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::{traits::TxMsg};
+use super::types::Hash;
 use super::block;
-use super::block::{Block,Hash,BlockProof};
+use super::block::{Block, BlockProof};
 
 pub const ed_genesis_priv_key: [u8; 32] = [
     249, 203, 126, 161, 115, 132, 10, 235, 164, 252, 129, 70, 116, 52, 100, 205, 174, 62, 85,

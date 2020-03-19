@@ -22,7 +22,8 @@ extern crate chain;
 #[macro_use]
 extern crate log;
 
-use core::block::{self,Block,BlockProof,VerificationItem,Header,Hash};
+use core::block::{self,Block,BlockProof,VerificationItem,Header};
+use core::types::Hash;
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
 use consensus::{poa::POA,Error};
 use chain::blockchain::{BlockChain};
