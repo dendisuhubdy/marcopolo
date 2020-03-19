@@ -17,6 +17,8 @@
 use std::fmt;
 use serde::{Serialize, Deserialize};
 use ed25519::{H256, Message};
+use ed25519::pubkey::Pubkey;
+use hash;
 
 #[derive(Serialize, Deserialize)]
 #[derive(Default, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
@@ -68,5 +70,14 @@ impl fmt::Display for Address {
             write!(f, "{:02x}", i)?;
         }
         Ok(())
+    }
+}
+
+impl From<Pubkey> for Address {
+    fn from(pk: Pubkey) -> Self {
+        let raw = pk.to_bytes();
+        let mut addr = Address::default();
+        addr.0.copy_from_slice(&(hash::blake2b_256(&raw)[12..]));
+        addr
     }
 }

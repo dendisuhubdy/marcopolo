@@ -24,7 +24,6 @@ use signal_hook::iterator::Signals;
 use logger::LogConfig;
 use service::{Service, NodeConfig};
 use std::thread;
-use std::fmt;
 
 pub fn run() {
     let matches = App::new("map")
