@@ -85,39 +85,57 @@ where
 
     #[inline]
     fn get_node(&self, key: ArrayType) -> Result<Option<Self::NodeType>, Exception> {
-        // if let Some(buffer) = self.db.get(&key)? {
-        //     Ok(Some(Self::NodeType::decode(buffer.as_ref())?))
-        // } else {
-        //     Ok(None)
-        // }
-        Ok(None)
+        if let Some(buffer) = self.db.get(key.as_ref()) {
+            Ok(Some(Self::NodeType::decode(buffer.as_ref())?))
+        } else {
+            Ok(None)
+        }
     }
 
     #[inline]
     fn insert(&mut self, key: ArrayType, value: Self::NodeType) -> Result<(), Exception> {
-        // let serialized = value.encode()?;
-        // if let Some(wb) = &mut self.pending_inserts {
-        //     wb.put(key, serialized)?;
-        // } else {
-        //     let mut wb = WriteBatch::default();
-        //     wb.put(key, serialized)?;
-        //     self.pending_inserts = Some(wb);
-        // }
-        Ok(())
+        let serialized = value.encode()?;
+        if let Some(wb) = &mut self.pending_inserts {
+            let res = wb.0.put(key, serialized);
+            match res {
+                Ok(()) => Ok(()),
+                Err(e) => Err(MError(e).into()),
+            }
+        } else {
+            let mut wb = MWriteBatch::default();
+            let res = wb.0.put(key, serialized);
+            match res {
+                Ok(()) => {
+                    self.pending_inserts = Some(wb);
+                    Ok(())
+                },
+                Err(e) => Err(MError(e).into()),
+            }
+        }
     }
 
     #[inline]
     fn remove(&mut self, key: &ArrayType) -> Result<(), Exception> {
-        // Ok(self.db.delete(key)?)
-        Ok(())
+        let res = self.db.remove(key.as_ref());
+        match res {
+            Ok(()) => Ok(()),
+            Err(e) => Err(MError(e).into()),
+        }
     }
 
     #[inline]
     fn batch_write(&mut self) -> Result<(), Exception> {
-        // if let Some(wb) = self.pending_inserts.replace(WriteBatch::default()) {
-        //     self.db.write(wb)?;
-        // }
-        // self.pending_inserts = None;
-        Ok(())
+        if let Some(wb) = self.pending_inserts.replace(MWriteBatch::default()) {
+            let res = self.db.write_batch(wb.0);
+            match res {
+                Ok(()) => {
+                    self.pending_inserts = None;
+                    Ok(())
+                },
+                Err(e) => Err(MError(e).into()),
+            }
+        } else {
+            Ok(())
+        }
     }
 }
