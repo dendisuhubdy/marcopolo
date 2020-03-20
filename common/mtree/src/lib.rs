@@ -135,7 +135,7 @@ where
                 Err(e) => Err(MError(e).into()),
             }
         } else {
-            Ok(())
+            Err(Exception::new("wrong replace on pending_inserts"))
         }
     }
 }
