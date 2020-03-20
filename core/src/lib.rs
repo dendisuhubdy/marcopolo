@@ -18,4 +18,5 @@ pub mod types;
 pub mod block;
 pub mod genesis;
 pub mod transaction;
+pub mod balance;
 pub mod traits;

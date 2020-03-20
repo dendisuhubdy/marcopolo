@@ -16,8 +16,9 @@
 
 use std::fmt;
 use serde::{Serialize, Deserialize};
-use ed25519::{H256, Message};
+use ed25519::Message;
 use ed25519::pubkey::Pubkey;
+pub use ed25519::H256;
 use hash;
 
 #[derive(Serialize, Deserialize)]
@@ -33,6 +34,16 @@ impl Hash {
     }
     pub fn to_msg(&self) -> Message {
         H256(self.0)
+    }
+
+    pub fn from_bytes(src: &[u8]) -> Self {
+        let mut h = Self::default();
+        if src.len() <= 32 {
+            h.0[(32-src.len())..].copy_from_slice(src);
+        } else {
+            h.0.copy_from_slice(&src[(src.len()-32)..])
+        }
+        h
     }
 }
 

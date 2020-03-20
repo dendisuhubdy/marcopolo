@@ -24,7 +24,7 @@ pub mod pubkey;
 pub mod signature;
 
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(Default, PartialEq, Eq, Clone, Copy)]
 pub struct H256(pub [u8; 32]);
 
 impl fmt::Debug for H256{
