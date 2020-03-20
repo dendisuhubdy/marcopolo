@@ -16,24 +16,25 @@
 
 extern crate starling;
 extern crate serde;
-
-pub mod mapTree;
+extern crate map_store;
 
 use std::error::Error;
 use std::path::PathBuf;
-
-// use rocksdb::{WriteBatch, DB};
-
 use starling::traits::{Array, Database, Decode, Encode, Exception};
 use starling::tree::tree_node::TreeNode;
 use std::marker::PhantomData;
+use map_store::mapdb;
 
-// impl From<rocksdb::Error> for Exception {
-//     #[inline]
-//     fn from(error: rocksdb::Error) -> Self {
-//         Self::new(error.description())
-//     }
-// }
+pub struct MError(map_store::Error);
+pub struct MWriteBatch(map_store::WriteBatch);
+pub mod mapTree;
+
+impl From<MError> for Exception {
+    #[inline]
+    fn from(error: MError) -> Self {
+        Self::new(error.0.description())
+    }
+}
 
 pub struct TreeDB<ArrayType>
 where

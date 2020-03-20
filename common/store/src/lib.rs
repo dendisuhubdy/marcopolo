@@ -17,6 +17,7 @@
 extern crate rocksdb;
 pub mod mapdb;
 pub type Error = rocksdb::Error;
+pub type WriteBatch = rocksdb::WriteBatch;
 
 // pub mod config {
 use std::path::PathBuf;
