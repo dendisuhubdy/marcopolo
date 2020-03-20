@@ -15,36 +15,35 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 extern crate rocksdb;
-
 pub mod mapdb;
-pub use rocksdb::Error;
+pub type Error = rocksdb::Error;
 
 // pub mod config {
-    use std::path::PathBuf;
-    use std::env;
+use std::path::PathBuf;
+use std::env;
 
-    #[derive(Clone,Debug)]
-    pub struct Config {
-        pub path: PathBuf,
-    }
+#[derive(Clone,Debug)]
+pub struct Config {
+    pub path: PathBuf,
+}
 
-    impl Default for Config {
-        fn default() -> Self {
-            let mut cur = env::current_dir().unwrap();
-            cur.push("mapdata");
-            Config{
-                path:   cur,
-            }
+impl Default for Config {
+    fn default() -> Self {
+        let mut cur = env::current_dir().unwrap();
+        cur.push("mapdata");
+        Config{
+            path:   cur,
         }
     }
+}
 
-    impl Config {
-        pub fn new(mut dir: PathBuf) -> Self {
-            dir.push("mapdata");
-            Config {
-                path: dir,
-            }
+impl Config {
+    pub fn new(mut dir: PathBuf) -> Self {
+        dir.push("mapdata");
+        Config {
+            path: dir,
         }
     }
+}
 // }
 

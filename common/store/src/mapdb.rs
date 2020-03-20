@@ -15,8 +15,9 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::sync::{Arc, RwLock};
-use rocksdb::{Error, DB};
+use rocksdb::DB;
 use crate::Config;
+use super::Error;
 
 pub struct MapDB{
     inner:     Arc<RwLock<DB>>,
