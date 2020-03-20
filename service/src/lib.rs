@@ -19,6 +19,7 @@
 extern crate core;
 extern crate consensus;
 extern crate chain;
+extern crate rpc;
 #[macro_use]
 extern crate log;
 
@@ -27,6 +28,7 @@ use core::types::Hash;
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
 use consensus::{poa::POA,Error};
 use chain::blockchain::{BlockChain};
+use rpc::http_server;
 use std::{thread,thread::JoinHandle,sync::mpsc};
 use std::time::{Duration, Instant, SystemTime};
 use std::path::PathBuf;
@@ -35,6 +37,8 @@ use std::path::PathBuf;
 pub struct NodeConfig {
     pub log: String,
     pub data_dir: PathBuf,
+    pub rpc_addr: String,
+    pub rpc_port: u16,
 }
 
 impl Default for NodeConfig {
@@ -42,6 +46,8 @@ impl Default for NodeConfig {
         NodeConfig {
             log: "info".into(),
             data_dir: PathBuf::from("."),
+            rpc_addr:"127.0.0.1".into(),
+            rpc_port:9545,
         }
     }
 }
@@ -59,8 +65,11 @@ impl Service {
             block_chain:    BlockChain::new(cfg.data_dir),
         }
     }
-    pub fn start(mut self) -> (mpsc::Sender<i32>,JoinHandle<()>) {
+    pub fn start(mut self,cfg: NodeConfig) -> (mpsc::Sender<i32>,JoinHandle<()>) {
         self.block_chain.load();
+
+        http_server::start_http(cfg.rpc_addr,cfg.rpc_port);
+
         let (tx,rx): (mpsc::Sender<i32>,mpsc::Receiver<i32>) = mpsc::channel();
         let builder = thread::spawn(move || {
             loop {
@@ -127,8 +136,9 @@ mod tests {
     #[test]
     fn test_service() {
         println!("begin service,for 60 seconds");
-        let service = Service::new_service(NodeConfig::default());
-        let (tx,th_handle) = service.start();
+        let mut config = NodeConfig::default();
+        let service = Service::new_service(config);
+        let (tx,th_handle) = service.start(config.clone());
         thread::sleep(Duration::from_millis(60*1000));
         thread::spawn(move || {
             tx.send(1).unwrap();

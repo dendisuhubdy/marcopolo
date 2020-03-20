@@ -41,6 +41,15 @@ pub fn run() {
             .value_name("LOG_FILTER")
             .takes_value(true)
             .help("Sets logging filter with <LOG_FILTER>."))
+        .arg(Arg::with_name("rpcaddr")
+            .long("rpc-addr")
+            .takes_value(true)
+            .help("Customize RPC listening address"))
+        .arg(
+            Arg::with_name("rpcport")
+                .default_value("9545")
+                .help("Customize RPC listening port"),
+        )
         .arg(Arg::with_name("single")
             .long("single")
             .short("s")
@@ -65,6 +74,9 @@ pub fn run() {
         logger::init(LogConfig::default());
     }
 
+    config.rpc_addr = matches.value_of("rpcaddr").unwrap().to_string();
+    config.rpc_port = matches.value_of("rpcport").unwrap().parse::<u16>().unwrap_or_default();
+
     if matches.is_present("single") {
         println!("Run map with single node");
     }
@@ -74,8 +86,8 @@ pub fn run() {
         return;
     }
 
-    let node = Service::new_service(config);
-    let (tx, th_handle) = node.start();
+    let node = Service::new_service(config.clone());
+    let (tx, th_handle) = node.start(config.clone());
     let signals = Signals::new(&[signal_hook::SIGINT,signal_hook::SIGQUIT]).unwrap();
     thread::spawn(move||{
         for sig in &signals {
