@@ -15,7 +15,7 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::sync::{Arc, RwLock};
-use rocksdb::DB;
+use rocksdb::{DB,WriteBatch};
 use crate::Config;
 use super::Error;
 
@@ -51,6 +51,10 @@ impl MapDB {
         db.get(key)
             .map_err(Into::into)
             .and_then(|val| Ok(val.is_some()))
+    }
+    pub fn write_batch(&mut self,wb :WriteBatch) -> Result<(),Error> {
+        let db = self.inner.write().unwrap();
+        db.write(wb)
     }
 }
 
