@@ -23,10 +23,16 @@ use std::path::PathBuf;
 use starling::traits::{Array, Database, Decode, Encode, Exception};
 use starling::tree::tree_node::TreeNode;
 use std::marker::PhantomData;
-use map_store::mapdb;
+use map_store::{mapdb::MapDB,Config};
 
 pub struct MError(map_store::Error);
 pub struct MWriteBatch(map_store::WriteBatch);
+impl Default for MWriteBatch {
+    fn default() -> Self {
+        MWriteBatch(map_store::WriteBatch::default())
+    }
+}
+
 pub mod mapTree;
 
 impl From<MError> for Exception {
@@ -35,13 +41,12 @@ impl From<MError> for Exception {
         Self::new(error.0.description())
     }
 }
-
 pub struct TreeDB<ArrayType>
 where
     ArrayType: Array,
 {
-    // db: DB,
-    // pending_inserts: Option<WriteBatch>,
+    db: MapDB,
+    pending_inserts: Option<MWriteBatch>,
     array: PhantomData<ArrayType>,
 }
 
@@ -50,15 +55,10 @@ where
     ArrayType: Array,
 {
     #[inline]
-    // pub fn new(db: DB) -> Self {
-    //     Self {
-    //         db,
-    //         pending_inserts: Some(WriteBatch::default()),
-    //         array: PhantomData,
-    //     }
-    // }
-    pub fn new() -> Self {
+    pub fn new(db: MapDB) -> Self {
         Self {
+            db,
+            pending_inserts: Some(MWriteBatch::default()),
             array: PhantomData,
         }
     }
@@ -74,8 +74,13 @@ where
 
     #[inline]
     fn open(path: &PathBuf) -> Result<Self, Exception> {
-        // Ok(Self::new(DB::open_default(path)?))
-        Ok(Self::new())
+        let mut p = path.clone();
+        let cfg = Config::new(p);
+        let res = MapDB::open(cfg);
+        match res {
+            Ok(db) => Ok(Self::new(db)),
+            Err(e) => Err(MError(e).into()),
+        }
     }
 
     #[inline]
