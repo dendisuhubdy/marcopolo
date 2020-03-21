@@ -34,7 +34,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use super::TreeDB;
 
-pub struct mapTree<ArrayType = [u8; 32], ValueType = Vec<u8>>
+pub struct MapTree<ArrayType = [u8; 32], ValueType = Vec<u8>>
 where
     ArrayType: Array + Serialize + DeserializeOwned,
     ValueType: Encode + Decode,
@@ -51,7 +51,7 @@ where
     >,
 }
 
-impl<ArrayType, ValueType> mapTree<ArrayType, ValueType>
+impl<ArrayType, ValueType> MapTree<ArrayType, ValueType>
 where
     ArrayType: Array + Serialize + DeserializeOwned,
     ValueType: Encode + Decode,
@@ -68,7 +68,7 @@ where
         let tree = MerkleBIT::from_db(db, depth)?;
         Ok(Self { tree })
     }
-
+    /// Get items from the `MapTree`.  Returns a map of `Option`s which may include the corresponding values.
     #[inline]
     pub fn get(
         &self,
@@ -78,6 +78,7 @@ where
         self.tree.get(root_hash, keys)
     }
 
+    /// Gets a single key from the tree.
     #[inline]
     pub fn get_one(
         &self,
@@ -87,6 +88,7 @@ where
         self.tree.get_one(&root, &key)
     }
 
+    /// Insert items into the `MapTree`.  Keys must be sorted.  Returns a new root hash for the `MapTree`.
     #[inline]
     pub fn insert(
         &mut self,
@@ -97,6 +99,7 @@ where
         self.tree.insert(previous_root, keys, values)
     }
 
+    /// Inserts a single value into a tree.
     #[inline]
     pub fn insert_one(
         &mut self,
@@ -107,11 +110,14 @@ where
         self.tree.insert_one(previous_root, key, value)
     }
 
+    /// Remove all items with less than 1 reference under the given root.
     #[inline]
     pub fn remove(&mut self, root_hash: &ArrayType) -> BinaryMerkleTreeResult<()> {
         self.tree.remove(root_hash)
     }
 
+    /// Generates an inclusion proof.  The proof consists of a list of hashes beginning with the key/value
+    /// pair and traveling up the tree until the level below the root is reached.
     #[inline]
     pub fn generate_inclusion_proof(
         &self,
