@@ -22,7 +22,7 @@ pub use ed25519::H256;
 use hash;
 
 #[derive(Serialize, Deserialize)]
-#[derive(Default, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Default, Copy, Clone, Eq, Ord, PartialEq, PartialOrd, Hash)]
 pub struct Hash(pub [u8; 32]);
 
 impl Hash {

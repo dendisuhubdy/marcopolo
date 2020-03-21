@@ -17,12 +17,11 @@
 extern crate ed25519;
 extern crate hash;
 
-use std::fmt;
 use serde::{Serialize, Deserialize};
 // use super::traits::{TxMsg};
 use super::transaction::{Transaction};
 use super::types::Hash;
-use ed25519::{signature::SignatureInfo,Message,H256};
+use ed25519::{signature::SignatureInfo,Message};
 // use hash;
 use bincode;
 

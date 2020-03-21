@@ -14,25 +14,72 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::types::{Hash, Address, H256};
+use std::collections::HashMap;
+use serde::{Serialize, Deserialize};
+use bincode;
 use hash;
+use crate::types::{Hash, Address, H256};
 
 const BALANCE_POS: u64 = 1;
 const NONCE_POS: u64 = 2;
 
+#[derive(Serialize, Deserialize)]
 #[derive(Default, Copy, Clone)]
 pub struct Account {
     // Available balance of eth account
     balance: u128,
     // Nonce of the account transaction count
-    nonce: H256,
+    nonce: u64,
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default)]
 pub struct Balance {
+    memdb: HashMap<Hash, Vec<u8>>,
 }
 
 impl Balance {
+
+    pub fn new() -> Self {
+        return Balance {
+            memdb: HashMap::new(),
+        }
+    }
+
+    pub fn balance(&self, addr: Address) -> u128 {
+        let account = self.get_account(addr);
+        account.balance
+    }
+
+    pub fn nonce(&self, addr: Address) -> u64 {
+        let account = self.get_account(addr);
+        account.nonce
+    }
+
+    #[allow(unused_variables)]
+    pub fn transfer(&self, from_addr: Address, to_addr: Address) {
+    }
+
+    pub fn get_account(&self, addr: Address) -> Account {
+        let serialized = match self.memdb.get(&Self::address_key(addr)) {
+            Some(s) => s,
+            None => return Account::default(),
+        };
+
+        let obj: Account = bincode::deserialize(&serialized).unwrap();
+        obj
+    }
+
+    pub fn set_account(&mut self, addr: Address, account: &Account) {
+        let encoded: Vec<u8> = bincode::serialize(account).unwrap();
+        self.memdb.insert(Self::address_key(addr), encoded);
+    }
+
+    /// Storage hash key of account
+    pub fn address_key(addr: Address) -> Hash {
+        let h = Hash::from_bytes(addr.as_slice());
+        Hash(hash::blake2b_256(&h.to_slice()))
+    }
+
     /// Storage hash key of account balance
     pub fn balance_key(addr: Address) -> Hash {
         let mut raw = vec![];
