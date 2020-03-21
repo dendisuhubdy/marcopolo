@@ -3,19 +3,26 @@ use std::io;
 use jsonrpc_core::{IoHandler, Params, Value};
 use jsonrpc_core::Result;
 use jsonrpc_derive::rpc;
-use jsonrpc_http_server::{Server, ServerBuilder};
+use jsonrpc_http_server::{AccessControlAllowOrigin, DomainsValidation, RestApi, Server, ServerBuilder};
+
+use crate::module::{
+    TxPool, TxPoolClient};
 
 pub fn start_http(ip: String, port: u16) {
     let url = format!("{}:{}", ip, port);
     let addr = url.parse().map_err(|_| format!("Invalid  listen host/port given: {}", url)).unwrap();
 
-    let mut io = IoHandler::new();
-    io.add_method("send_transaction", |_params: Params| {
+    let mut handler = IoHandler::new();
+    handler.add_method("send_transaction", |_params: Params| {
         Ok(Value::String("transaction".to_string()))
     });
+    handler.extend_with(TxPoolClient::new().to_delegate());
 
-    let server = ServerBuilder::new(io)
+
+    let server = ServerBuilder::new(handler)
         .threads(4)
+        .rest_api(RestApi::Unsecure)
+        .cors(DomainsValidation::AllowOnly(vec![AccessControlAllowOrigin::Any]))
         .start_http(&addr)
         .unwrap();
 
