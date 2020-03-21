@@ -56,7 +56,13 @@ impl Balance {
     }
 
     #[allow(unused_variables)]
-    pub fn transfer(&self, from_addr: Address, to_addr: Address) {
+    pub fn transfer(&self, from_addr: Address, to_addr: Address, amount: u128) {
+        let mut caller = self.get_account(from_addr);
+        let mut receiver = self.get_account(to_addr);
+        if caller.balance >= amount {
+            caller.balance -= amount;
+            receiver.balance += amount;
+        }
     }
 
     pub fn get_account(&self, addr: Address) -> Account {
