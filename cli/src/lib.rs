@@ -74,7 +74,13 @@ pub fn run() {
         logger::init(LogConfig::default());
     }
 
-    config.rpc_addr = matches.value_of("rpcaddr").unwrap().to_string();
+    if let Some(rpc_addr) = matches.value_of("rpcaddr") {
+        config.rpc_addr = rpc_addr.to_string();
+    }
+    if let Some(rpc_port) = matches.value_of("rpcport") {
+        config.rpc_port = rpc_port.parse::<u16>().unwrap_or_default();
+    }
+
     config.rpc_port = matches.value_of("rpcport").unwrap().parse::<u16>().unwrap_or_default();
 
     if matches.is_present("single") {

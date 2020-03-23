@@ -10,3 +10,7 @@ edition = "2018"
 jsonrpc-http-server = "14.0.6"
 jsonrpc-core = "14.0.5"
 jsonrpc-derive = "14.0.5"
+chain = { package = "chain", path = "../chain" }
+map-core = { path = "../core" }
+serde = { version = "1.0.102", features = ["derive"] }
+log = "0.4.8"

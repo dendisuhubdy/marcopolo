@@ -1,6 +1,8 @@
 use jsonrpc_core::Result;
 use jsonrpc_derive::rpc;
 
+use map_core::transaction::Transaction;
+
 /// TxPool rpc interface.
 #[rpc(server)]
 pub trait TxPool {
@@ -10,21 +12,21 @@ pub trait TxPool {
 }
 
 /// TxPool rpc implementation.
-pub(crate) struct TxPoolClient {
-    tx_count: u64,
+pub struct TxPoolClient {
+    pub txs: Vec<Transaction>,
 }
 
 impl TxPoolClient {
     /// Creates new NetClient.
     pub fn new() -> Self {
         TxPoolClient {
-            tx_count: 0,
+            txs: Vec::new(),
         }
     }
 }
 
 impl TxPool for TxPoolClient {
     fn send_transaction(&self) -> Result<String> {
-        Ok(format!("{}", self.tx_count))
+        Ok(format!("{}", self.txs.len()))
     }
 }

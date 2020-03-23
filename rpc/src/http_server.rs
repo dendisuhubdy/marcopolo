@@ -1,32 +1,39 @@
-use std::io;
+use std::sync::{Arc, RwLock};
 
-use jsonrpc_core::{IoHandler, Params, Value};
-use jsonrpc_core::Result;
-use jsonrpc_derive::rpc;
-use jsonrpc_http_server::{AccessControlAllowOrigin, DomainsValidation, RestApi, Server, ServerBuilder};
+use jsonrpc_http_server::{AccessControlAllowOrigin, DomainsValidation, RestApi, ServerBuilder};
 
-use crate::module::{
-    TxPool, TxPoolClient};
+use chain::blockchain::BlockChain;
 
-pub fn start_http(ip: String, port: u16) {
+use crate::rpc_build::RpcBuilder;
+
+pub struct RpcServer {
+    pub http: jsonrpc_http_server::Server,
+    pub url: String,
+}
+
+pub fn start_http(ip: String, port: u16, block_chain: Arc<RwLock<BlockChain>>) -> RpcServer {
     let url = format!("{}:{}", ip, port);
+
+    info!("using url {}", url);
+
     let addr = url.parse().map_err(|_| format!("Invalid  listen host/port given: {}", url)).unwrap();
 
-    let mut handler = IoHandler::new();
-    handler.add_method("send_transaction", |_params: Params| {
-        Ok(Value::String("transaction".to_string()))
-    });
-    handler.extend_with(TxPoolClient::new().to_delegate());
+    let handler = RpcBuilder::new().config_chain(block_chain).config_pool().build();
 
-
-    let server = ServerBuilder::new(handler)
+    let http = ServerBuilder::new(handler)
         .threads(4)
         .rest_api(RestApi::Unsecure)
         .cors(DomainsValidation::AllowOnly(vec![AccessControlAllowOrigin::Any]))
         .start_http(&addr)
-        .unwrap();
+        .expect("Start json rpc HTTP service failed");
+    RpcServer { http, url }
+}
 
-    server.wait();
+impl RpcServer {
+    pub fn close(self) {
+        self.http.close();
+        info!(" rpc http stop {} ", self.url);
+    }
 }
 
 #[cfg(test)]

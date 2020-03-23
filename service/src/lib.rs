@@ -32,6 +32,7 @@ use rpc::http_server;
 use std::{thread,thread::JoinHandle,sync::mpsc};
 use std::time::{Duration, Instant, SystemTime};
 use std::path::PathBuf;
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 #[derive(Clone, Debug)]
 pub struct NodeConfig {
@@ -56,27 +57,32 @@ impl Default for NodeConfig {
 
 //#[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Service {
-    pub block_chain: BlockChain,
+    pub block_chain: Arc<RwLock<BlockChain>>,
 }
 
 impl Service {
     pub fn new_service(cfg: NodeConfig) -> Self {
         Service{
-            block_chain:    BlockChain::new(cfg.data_dir),
+            block_chain:    Arc::new(RwLock::new(BlockChain::new(cfg.data_dir))),
         }
     }
     pub fn start(mut self,cfg: NodeConfig) -> (mpsc::Sender<i32>,JoinHandle<()>) {
-        self.block_chain.load();
+        self.get_write_blockchain().load();
 
-        http_server::start_http(cfg.rpc_addr,cfg.rpc_port);
+        let rpc = http_server::start_http(cfg.rpc_addr,cfg.rpc_port,self.block_chain.clone());
 
         let (tx,rx): (mpsc::Sender<i32>,mpsc::Receiver<i32>) = mpsc::channel();
+        let shared_block_chain = self.block_chain.clone();
+
         let builder = thread::spawn(move || {
             loop {
                 let res2 = self.generate_block();
                 match res2 {
                     Ok(b) => {
-                        let res = self.block_chain.insert_block(b);
+                        let res = shared_block_chain
+                            .write()
+                            .expect("acquiring shared_block_chain write lock")
+                            .insert_block(b);
                         match res {
                             Ok(()) => {},
                             Err(e) => error!("insert_block Error: {:?}", e),
@@ -86,6 +92,7 @@ impl Service {
                 };
                 thread::sleep(Duration::from_millis(POA::get_interval()));
                 if rx.try_recv().is_ok() {
+                    rpc.close();
                     break;
                 }
             }
@@ -101,7 +108,7 @@ impl Service {
         // 2. exc txs
         // 3. get pre_block info
         // 4. finalize block
-        let cur_block = self.block_chain.current_block();
+        let cur_block = self.get_write_blockchain().current_block();
         let txs = Vec::new();
         let txs_root = block::get_hash_from_txs(txs.clone());
         let header: Header = Header{
@@ -117,13 +124,21 @@ impl Service {
         finalize.finalize_block(b)
     }
     pub fn get_current_block(&mut self) -> Block {
-        self.block_chain.current_block()
+        self.get_write_blockchain().current_block()
     }
     pub fn get_current_height(&mut self) -> u64 {
-        self.block_chain.current_block().height()
+        self.get_write_blockchain().current_block().height()
     }
     pub fn get_block_by_height(&self,height: u64) -> Option<Block> {
-        self.block_chain.get_block_by_number(height)
+        self.get_readblockchain().get_block_by_number(height)
+    }
+
+    fn get_readblockchain(&self) -> RwLockReadGuard<BlockChain> {
+        self.block_chain.read().expect("acquiring block_chain read lock")
+    }
+
+    fn get_write_blockchain(&self) -> RwLockWriteGuard<BlockChain> {
+        self.block_chain.write().expect("acquiring block_chain write lock")
     }
 }
 
