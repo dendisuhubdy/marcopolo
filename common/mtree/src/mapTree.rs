@@ -138,3 +138,78 @@ where
         self.tree.verify_inclusion_proof(root, key, value, proof)
     }
 }
+
+
+#[cfg(test)]
+pub mod tests {
+    use std::path::PathBuf;
+    use rand::rngs::StdRng;
+    use rand::{Rng, SeedableRng};
+
+    use starling::constants::KEY_LEN;
+    use starling::merkle_bit::BinaryMerkleTreeResult;
+    use starling::traits::Exception;
+
+    fn generate_path(seed: [u8; KEY_LEN]) -> PathBuf {
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let suffix = rng.gen_range(1000, 100000);
+        let path_string = format!("Test_DB_{}", suffix);
+        PathBuf::from(path_string)
+    }
+    fn tear_down(_path: &PathBuf) {
+        use std::fs::remove_dir_all;
+        remove_dir_all(&_path).unwrap();
+    }
+
+    #[test]
+    #[cfg(feature = "use_serialization")]
+    fn test01_real_database() -> BinaryMerkleTreeResult<()> {
+        let seed = [0x00u8; KEY_LEN];
+        let path = generate_path(seed);
+        let key = [0xAAu8; KEY_LEN];
+        let retrieved_value;
+        let removed_retrieved_value;
+        let data = vec![0xFFu8];
+        {
+            let values = vec![data.clone()];
+            let mut tree = MapTree::open(&path, 160)?;
+            let root;
+            match tree.insert(None, &mut [key], &values) {
+                Ok(r) => root = r,
+                Err(e) => {
+                    drop(tree);
+                    tear_down(&path);
+                    panic!("{:?}", e.description());
+                }
+            }
+            match tree.get(&root, &mut [key]) {
+                Ok(v) => retrieved_value = v,
+                Err(e) => {
+                    drop(tree);
+                    tear_down(&path);
+                    panic!("{:?}", e.description());
+                }
+            }
+            match tree.remove(&root) {
+                Ok(_) => {}
+                Err(e) => {
+                    drop(tree);
+                    tear_down(&path);
+                    panic!("{:?}", e.description());
+                }
+            }
+            match tree.get(&root, &mut [key]) {
+                Ok(v) => removed_retrieved_value = v,
+                Err(e) => {
+                    drop(tree);
+                    tear_down(&path);
+                    panic!("{:?}", e.description());
+                }
+            }
+        }
+        tear_down(&path);
+        assert_eq!(retrieved_value[&key], Some(data));
+        assert_eq!(removed_retrieved_value[&key], None);
+        Ok(())
+    }
+}
