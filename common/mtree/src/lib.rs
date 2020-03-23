@@ -139,3 +139,17 @@ where
         }
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use super::MWriteBatch;
+    #[test]
+    fn test_replace_field() {
+        let mut pending_inserts = Some(MWriteBatch::default());
+        if let Some(wb) = pending_inserts.replace(MWriteBatch::default()) {
+            println!("ok");
+        } else {
+            println!("wrong replace on pending_inserts");
+        }
+    }
+}
