@@ -9,3 +9,5 @@ edition = "2018"
 starling = { version = "3.1.4", features = ["use_serde","use_serialization","use_bincode"] }
 map-store = { path = "../store" }
 serde = { version = "1.0.102", features = ["derive"] }
+rand = "0.6.5"
+#rand_os = "0.1"

@@ -142,6 +142,7 @@ where
 
 #[cfg(test)]
 pub mod tests {
+    extern crate rand;
     use std::path::PathBuf;
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
