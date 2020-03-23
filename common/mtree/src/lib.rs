@@ -142,14 +142,31 @@ where
 
 #[cfg(test)]
 pub mod tests {
-    use super::MWriteBatch;
+    type keyType = [u8;8];
+    use super::{MWriteBatch,TreeDB};
+    use std::path::PathBuf;
+    use map_store::{mapdb::MapDB,Config};
+    
     #[test]
-    fn test_replace_field() {
+    fn test01_replace_field() {
         let mut pending_inserts = Some(MWriteBatch::default());
         if let Some(wb) = pending_inserts.replace(MWriteBatch::default()) {
             println!("ok");
         } else {
             println!("wrong replace on pending_inserts");
+        }
+    }
+    fn test02_wb_replace_field() {
+        let path_string = format!("Test_DB_{}", 100);
+        let path = PathBuf::from(path_string);
+        let cfg = Config::new(path);
+        let res = MapDB::open(cfg);
+        match res {
+            Ok(db) => {
+                let tdb = TreeDB::<keyType>::new(db);
+                println!("ok...");
+            },
+            Err(e) => println!("{:?}", e),
         }
     }
 }
