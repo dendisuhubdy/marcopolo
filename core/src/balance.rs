@@ -15,16 +15,19 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
 use bincode;
 use hash;
-use crate::types::{Hash, Address, H256};
+use crate::types::{Hash, Address};
+use map_store::mapdb::MapDB;
+use map_tree::mapTree::MapTree;
 
 const BALANCE_POS: u64 = 1;
 const NONCE_POS: u64 = 2;
 
 #[derive(Serialize, Deserialize)]
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, Debug, PartialEq)]
 pub struct Account {
     // Available balance of eth account
     balance: u128,
@@ -32,16 +35,23 @@ pub struct Account {
     nonce: u64,
 }
 
-#[derive(Default)]
 pub struct Balance {
+    #[allow(dead_code)]
     memdb: HashMap<Hash, Vec<u8>>,
+    treedb: MapTree,
+
+    #[allow(dead_code)]
+    root_hash: Hash,
 }
 
 impl Balance {
 
     pub fn new() -> Self {
-        return Balance {
+        let tree = MapTree::open(&PathBuf::from("./data"), 256).unwrap();
+        Balance {
             memdb: HashMap::new(),
+            treedb: tree,
+            root_hash: Hash::default(),
         }
     }
 
@@ -66,7 +76,12 @@ impl Balance {
     }
 
     pub fn get_account(&self, addr: Address) -> Account {
-        let serialized = match self.memdb.get(&Self::address_key(addr)) {
+        // let serialized = match self.memdb.get(&Self::address_key(addr)) {
+        //     Some(s) => s,
+        //     None => return Account::default(),
+        // };
+        let serialized = match self.treedb.get_one(&self.root_hash.0,
+            &Self::address_key(addr).0).expect("tree read exception") {
             Some(s) => s,
             None => return Account::default(),
         };
@@ -75,9 +90,12 @@ impl Balance {
         obj
     }
 
-    pub fn set_account(&mut self, addr: Address, account: &Account) {
+    pub fn set_account(&mut self, addr: Address, account: &Account) -> Hash {
         let encoded: Vec<u8> = bincode::serialize(account).unwrap();
-        self.memdb.insert(Self::address_key(addr), encoded);
+        // self.memdb.insert(Self::address_key(addr), encoded);
+        let root = self.treedb.insert_one(None, &Self::address_key(addr).0, &encoded).unwrap();
+        self.root_hash = Hash(root);
+        self.root_hash
     }
 
     /// Storage hash key of account
@@ -112,5 +130,25 @@ impl Balance {
             raw.extend_from_slice(h.to_slice());
         }
         Hash(hash::blake2b_256(&raw))
+    }
+}
+
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_set_balance() {
+        let addr = Address::default();
+        let mut state = Balance::new();
+        let mut account = state.get_account(addr);
+        assert_eq!(account, Account::default());
+
+        let v1 = Account {
+            balance: 1,
+            nonce: 1
+        };
+        state.set_account(addr, &v1);
+        account = state.get_account(addr);
+        assert_eq!(account, v1);
     }
 }

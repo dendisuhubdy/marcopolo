@@ -692,6 +692,8 @@ dependencies = [
  "bytes 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "map-ed25519 0.1.0-pre",
  "map-hash 0.1.0-pre",
+ "map-store 0.1.0-pre",
+ "map-tree 0.1.0-pre",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -756,6 +758,7 @@ name = "map-tree"
 version = "0.1.0-pre"
 dependencies = [
  "map-store 0.1.0-pre",
+ "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "starling 3.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
