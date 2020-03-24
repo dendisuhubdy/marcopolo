@@ -32,4 +32,7 @@ impl Transaction {
 	pub fn get_nonce(&self) -> u64 {
 		self.nonce
 	}
+	pub fn get_value(&self) -> u64 {
+		self.value
+	}
 }

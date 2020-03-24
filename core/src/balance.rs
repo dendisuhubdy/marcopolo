@@ -34,6 +34,14 @@ pub struct Account {
     // Nonce of the account transaction count
     nonce: u64,
 }
+impl Account {
+    pub fn get_balance(&self) -> u128 {
+        self.balance
+    }
+    pub fn get_nonce(&self) -> u64 {
+        self.nonce
+    }
+}
 
 pub struct Balance {
     #[allow(dead_code)]
