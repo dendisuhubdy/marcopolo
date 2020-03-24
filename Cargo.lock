@@ -761,6 +761,7 @@ dependencies = [
 name = "map-rpc"
 version = "0.1.0"
 dependencies = [
+ "bytes 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "chain 0.1.0",
  "jsonrpc-core 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-derive 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",

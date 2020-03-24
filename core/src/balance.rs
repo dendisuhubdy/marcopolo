@@ -127,15 +127,18 @@ impl Balance {
     }
 
     pub fn commit(&mut self) -> Hash {
-        let mut root_hash = self.root_hash;
         for (addr_hash, account) in self.cache.iter() {
             let encoded: Vec<u8> = bincode::serialize(&account).unwrap();
-            let root = self.treedb.insert_one(None, &addr_hash.0, &encoded).unwrap();
-            root_hash = Hash(root);
+            if self.root_hash == Hash::default() {
+                self.root_hash = Hash(self.treedb.insert_one(
+                    None, &addr_hash.0, &encoded).unwrap());
+            } else {
+                self.root_hash = Hash(self.treedb.insert_one(
+                    Some(&self.root_hash.0), &addr_hash.0, &encoded).unwrap());
+            }
         }
         self.cache.clear();
-        self.root_hash = root_hash;
-        root_hash
+        self.root_hash
     }
 
     pub fn get_account(&self, addr: Address) -> Account {
@@ -240,13 +243,17 @@ mod tests {
     fn test_transfer() {
         let mut state = Balance::new();
         let addr = Address::default();
-        let v1 = Account {
+        state.set_account(addr, &Account {
             balance: 1,
-            nonce: 0
-        };
-        state.set_account(addr, &v1);
+            nonce: 1,
+        });
 
         let receiver = Address([1; 20]);
+        state.set_account(receiver, &Account {
+            balance: 0,
+            nonce: 0,
+        });
+
         state.transfer(addr, receiver, 1);
         state.commit();
         let account = state.get_account(receiver);
