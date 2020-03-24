@@ -14,3 +14,4 @@ chain = { package = "chain", path = "../chain" }
 map-core = { path = "../core" }
 serde = { version = "1.0.102", features = ["derive"] }
 log = "0.4.8"
+bytes = { version="0.5.4", features = ["serde"] }

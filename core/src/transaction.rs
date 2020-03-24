@@ -1,16 +1,21 @@
 extern crate serde;
-use serde::{Serialize, Deserialize};
+
+use std::fmt;
+
 use bytes::Bytes;
 use super::types::{Address};
 use ed25519::{signature::SignatureInfo,Message};
+use serde::{Deserialize, Serialize};
+
+use super::types::Hash;
 
 /// Represents a transaction
-#[derive(Default, Debug, Clone, PartialEq, Eq,Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Transaction {
 	/// sender.
-	pub sender: String,
+	pub sender: Address,
 	/// recipient.
-	pub recipient: String,
+	pub recipient: Address,
 	/// Nonce.
 	pub nonce: u64,
 	/// Gas price.
@@ -41,4 +46,24 @@ impl Transaction {
 	pub fn get_sign_data(&self) -> SignatureInfo {
 		SignatureInfo::make(self.sign_r,self.sign_s)
 	}
+    pub fn new(sender: Address, recipient: Address, nonce: u64, gas_price: u64, gas: u64, value: u64, data: Bytes) -> Transaction {
+		let mut r = [0u8;32];
+		let mut s = [0u8;32];
+        Transaction {
+           sender: sender,
+            recipient:recipient,
+            nonce:nonce,
+            gas_price:gas_price,
+            gas:gas,
+            value:value,
+            sign_r: r,
+            sign_s: s,
+            data:data,
+        }
+    }
+
+    pub fn hash(&self) -> Hash {
+        let encoded: Vec<u8> = bincode::serialize(&self).unwrap();
+        Hash(hash::blake2b_256(encoded))
+    }
 }
