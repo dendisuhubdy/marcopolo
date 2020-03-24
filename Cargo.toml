@@ -19,6 +19,7 @@ members = [
 	"common/logger",
 	"common/store",
 	"common/mtree",
+	"executor",
 	"core",
     "chain",
 	"consensus",

@@ -37,6 +37,9 @@ impl SignatureInfo {
     pub fn s(&self) -> &[u8] {
         &self.1[..]
     }
+    pub fn make(r:[u8;32],s:[u8;32]) -> Self {
+        SignatureInfo(r,s)
+    }
     pub fn to_signature(&self) -> Result<Signature, SignatureError> {
         let mut sig = [0u8; 64];
         sig[0..32].copy_from_slice(&self.0[..]);
