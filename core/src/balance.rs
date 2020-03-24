@@ -155,8 +155,12 @@ impl Balance {
 
     pub fn set_account(&mut self, addr: Address, account: &Account) -> Hash {
         let encoded: Vec<u8> = bincode::serialize(account).unwrap();
-        // self.cache.insert(Self::address_key(addr), encoded);
-        let root = self.treedb.insert_one(None, &Self::address_key(addr).0, &encoded).unwrap();
+        let root;
+        if self.root_hash == Hash::default() {
+            root = self.treedb.insert_one(None, &Self::address_key(addr).0, &encoded).unwrap();
+        } else {
+            root = self.treedb.insert_one(Some(&self.root_hash.0), &Self::address_key(addr).0, &encoded).unwrap();
+        }
         self.root_hash = Hash(root);
         self.root_hash
     }
