@@ -14,5 +14,49 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
-pub struct executor;
+// use std::error::Error;
+use core::transaction::Transaction;
+use core::balance::{Account,Balance};
+use core::types::{Hash};
 
+const transfer_fee: u128 = 10000;
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Error {
+    BalanceNotEnough,
+    InvalidTxNonce,
+}
+pub struct Executor;
+
+impl Executor {
+    pub fn exc_txs(txs: Vec<Transaction>, state: &mut Balance) -> Result<(),Error> {
+        Ok(())
+    }
+    // handle the state for the tx,caller handle the gas of tx
+    pub fn exc_transfer_tx(tx: &Transaction, state: &mut Balance) -> Result<(Hash),Error> {
+        // 1. version check
+        // 2. nonce check
+        // 3. balance check
+        // 4. sign check
+        // 5. update state
+        let from_account = state.get_account(tx.get_from_address());
+        if tx.get_nonce() != from_account.get_nonce() + 1 {
+            return Err(Error::InvalidTxNonce);
+        }
+        if tx.get_value() as u128 + transfer_fee > from_account.get_balance() {
+            return Err(Error::BalanceNotEnough);
+        }
+        Executor::verify_tx_sign(&tx)?;
+        let to_account = state.get_account(tx.get_to_address());
+        state.transfer(tx.get_from_address(),tx.get_to_address(),tx.get_value() as u128);
+
+        state.set_account(tx.get_from_address(),&from_account);
+        Ok(state.set_account(tx.get_to_address(),&to_account))
+    }
+    // handle the state for the contract
+    pub fn exc_contract_tx() -> Result<(),Error> {
+        Ok(())
+    }
+    fn verify_tx_sign(tx: &Transaction) -> Result<(),Error> {
+        Ok(())
+    }
+}
