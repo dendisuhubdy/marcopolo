@@ -216,6 +216,23 @@ mod tests {
     }
 
     #[test]
+    fn test_change() {
+        let from = Address([0; 20]);
+        let to = Address([1; 20]);
+        let mut state = Balance::new();
+        state.set_account(from, &Account {
+            balance: 1,
+            nonce: 1,
+        });
+        state.set_account(to, &Account {
+            balance: 2,
+            nonce: 1,
+        });
+        let account = state.get_account(from);
+        assert_eq!(account.balance, 1);
+    }
+
+    #[test]
     fn test_transfer() {
         let mut state = Balance::new();
         let addr = Address::default();
