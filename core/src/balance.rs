@@ -44,11 +44,8 @@ impl Account {
 }
 
 pub struct Balance {
-    #[allow(dead_code)]
-    memdb: HashMap<Hash, Vec<u8>>,
+    cache: HashMap<Hash, Account>,
     treedb: MapTree,
-
-    #[allow(dead_code)]
     root_hash: Hash,
 }
 
@@ -57,34 +54,87 @@ impl Balance {
     pub fn new() -> Self {
         let tree = MapTree::open(&PathBuf::from("./data"), 256).unwrap();
         Balance {
-            memdb: HashMap::new(),
+            cache: HashMap::new(),
             treedb: tree,
             root_hash: Hash::default(),
         }
     }
 
     pub fn balance(&self, addr: Address) -> u128 {
-        let account = self.get_account(addr);
+        let addr_hash = Self::address_key(addr);
+        let account = match self.cache.get(&addr_hash) {
+            Some(v) => v.clone(),
+            None => self.get_account(addr),
+        };
         account.balance
     }
 
     pub fn nonce(&self, addr: Address) -> u64 {
-        let account = self.get_account(addr);
+        let addr_hash = Self::address_key(addr);
+        let account = match self.cache.get(&addr_hash) {
+            Some(v) => v.clone(),
+            None => self.get_account(addr),
+        };
         account.nonce
     }
 
-    #[allow(unused_variables)]
-    pub fn transfer(&self, from_addr: Address, to_addr: Address, amount: u128) {
-        let mut caller = self.get_account(from_addr);
-        let mut receiver = self.get_account(to_addr);
+    pub fn inc_nonce(&mut self, addr: Address) {
+        let addr_hash = Self::address_key(addr);
+        let mut account = match self.cache.get(&addr_hash) {
+            Some(v) => v.clone(),
+            None => self.get_account(addr),
+        };
+        account.nonce += 1;
+        self.cache.insert(addr_hash, account);
+    }
+
+    pub fn add_balance(&mut self, addr: Address, value: u128) {
+        let addr_hash = Self::address_key(addr);
+        let mut account = match self.cache.get(&addr_hash) {
+            Some(v) => v.clone(),
+            None => self.get_account(addr),
+        };
+        account.balance += value;
+        self.cache.insert(addr_hash, account);
+    }
+
+    pub fn sub_balance(&mut self, addr: Address, value: u128) {
+        let addr_hash = Self::address_key(addr);
+        let mut account = match self.cache.get(&addr_hash) {
+            Some(v) => v.clone(),
+            None => self.get_account(addr),
+        };
+        account.balance -= value;
+        self.cache.insert(addr_hash, account);
+    }
+
+    pub fn transfer(&mut self, from_addr: Address, to_addr: Address, amount: u128) {
+        let caller = self.get_account(from_addr);
+        let receiver = self.get_account(to_addr);
         if caller.balance >= amount {
-            caller.balance -= amount;
-            receiver.balance += amount;
+            // caller.balance -= amount;
+            // receiver.balance += amount;
+            self.sub_balance(from_addr, amount);
+            self.add_balance(to_addr, amount);
+        } else {
+            // take transaction fee
         }
     }
 
+    pub fn commit(&mut self) -> Hash {
+        let mut root_hash = self.root_hash;
+        for (addr_hash, account) in self.cache.iter() {
+            let encoded: Vec<u8> = bincode::serialize(&account).unwrap();
+            let root = self.treedb.insert_one(None, &addr_hash.0, &encoded).unwrap();
+            root_hash = Hash(root);
+        }
+        self.cache.clear();
+        self.root_hash = root_hash;
+        root_hash
+    }
+
     pub fn get_account(&self, addr: Address) -> Account {
-        // let serialized = match self.memdb.get(&Self::address_key(addr)) {
+        // let serialized = match self.cache.get(&Self::address_key(addr)) {
         //     Some(s) => s,
         //     None => return Account::default(),
         // };
@@ -100,7 +150,7 @@ impl Balance {
 
     pub fn set_account(&mut self, addr: Address, account: &Account) -> Hash {
         let encoded: Vec<u8> = bincode::serialize(account).unwrap();
-        // self.memdb.insert(Self::address_key(addr), encoded);
+        // self.cache.insert(Self::address_key(addr), encoded);
         let root = self.treedb.insert_one(None, &Self::address_key(addr).0, &encoded).unwrap();
         self.root_hash = Hash(root);
         self.root_hash
@@ -145,7 +195,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_set_balance() {
+    fn test_set_account() {
         let addr = Address::default();
         let mut state = Balance::new();
         let mut account = state.get_account(addr);
@@ -158,5 +208,23 @@ mod tests {
         state.set_account(addr, &v1);
         account = state.get_account(addr);
         assert_eq!(account, v1);
+    }
+
+    #[test]
+    fn test_transfer() {
+        let mut state = Balance::new();
+        let addr = Address::default();
+        let v1 = Account {
+            balance: 1,
+            nonce: 0
+        };
+        state.set_account(addr, &v1);
+
+        let receiver = Address([1; 20]);
+        state.transfer(addr, receiver, 1);
+        state.commit();
+        let account = state.get_account(receiver);
+        assert_eq!(account.balance, 1);
+        assert_eq!(state.balance(receiver), 1);
     }
 }

@@ -84,6 +84,15 @@ impl fmt::Display for Address {
     }
 }
 
+impl fmt::Debug for Address {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for i in self.0.iter() {
+            write!(f, "{:02x}", i)?;
+        }
+        Ok(())
+    }
+}
+
 impl From<Pubkey> for Address {
     fn from(pk: Pubkey) -> Self {
         let raw = pk.to_bytes();
