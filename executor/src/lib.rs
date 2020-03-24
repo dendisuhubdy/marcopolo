@@ -17,7 +17,8 @@
 // use std::error::Error;
 use core::transaction::Transaction;
 use core::balance::{Account,Balance};
-use core::types::{Hash};
+use core::types::{Hash,Address};
+use core::block::{Block};
 
 const transfer_fee: u128 = 10000;
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -28,8 +29,19 @@ pub enum Error {
 pub struct Executor;
 
 impl Executor {
-    pub fn exc_txs(txs: Vec<Transaction>, state: &mut Balance) -> Result<(),Error> {
-        Ok(())
+    pub fn exc_txs_in_block(b: &Block, state: &mut Balance,miner_addr: &Address) -> Result<Hash,Error> {
+        let txs = b.get_txs();
+        // let mut h = Hash([0u8;32]);
+        for tx in txs {
+            let res = Executor::exc_transfer_tx(tx,state);
+            match res {
+                Ok(v) => {},
+                Err(e) => return Err(e),
+            };
+        }
+        let gas = transfer_fee * txs.len() as u128;
+        state.add_balance(*miner_addr,gas);
+        Ok(state.commit())
     }
     // handle the state for the tx,caller handle the gas of tx
     pub fn exc_transfer_tx(tx: &Transaction, state: &mut Balance) -> Result<(Hash),Error> {

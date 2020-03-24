@@ -167,6 +167,9 @@ impl  Block {
     pub fn sign_one(&self) ->Option<&VerificationItem> {
         self.signs.get(0)
     }
+    pub fn get_txs(&self) -> &Vec<Transaction> {
+        &self.txs
+    }
 }
 
 pub fn is_equal_hash(hash1: Option<Hash>,hash2: Option<Hash>) -> bool {
