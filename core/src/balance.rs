@@ -34,6 +34,7 @@ pub struct Account {
     // Nonce of the account transaction count
     nonce: u64,
 }
+
 impl Account {
     pub fn get_balance(&self) -> u128 {
         self.balance
@@ -106,6 +107,10 @@ impl Balance {
         };
         account.balance -= value;
         self.cache.insert(addr_hash, account);
+    }
+
+    pub fn reset(&mut self) {
+        self.cache.clear();
     }
 
     pub fn transfer(&mut self, from_addr: Address, to_addr: Address, amount: u128) {
