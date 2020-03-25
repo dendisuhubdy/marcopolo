@@ -201,16 +201,15 @@ pub mod tests {
             }
             println!("get test,root:{:?}",root);
 
-            
-            // match tree.remove(&root) {
-            //     Ok(_) => {}
-            //     Err(e) => {
-            //         drop(tree);
-            //         tear_down(&path);
-            //         panic!("{:?}", e.description());
-            //     }
-            // }
-            // println!("remove test,root:{:?}",root);
+            match tree.remove(&root) {
+                Ok(_) => {}
+                Err(e) => {
+                    drop(tree);
+                    tear_down(&path);
+                    panic!("{:?}", e.description());
+                }
+            }
+            println!("remove test,root:{:?}",root);
             
             match tree.get(&root, &mut [key]) {
                 Ok(v) => removed_retrieved_value = v,
@@ -220,7 +219,7 @@ pub mod tests {
                     panic!("{:?}", e.description());
                 }
             }
-            println!("get test after remove,root:{:?}",root);
+            println!("get test after remove,root:{:?},v:{:?}",root,removed_retrieved_value);
         }
         tear_down(&path);
         assert_eq!(retrieved_value[&key], Some(data));

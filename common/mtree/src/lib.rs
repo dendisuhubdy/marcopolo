@@ -135,7 +135,8 @@ where
                 Err(e) => Err(MError(e).into()),
             }
         } else {
-            Err(Exception::new("wrong replace on pending_inserts"))
+            self.pending_inserts = None;
+            Ok(())
         }
     }
 }
@@ -146,7 +147,8 @@ pub mod tests {
     use super::{MWriteBatch,TreeDB};
     use std::path::PathBuf;
     use map_store::{mapdb::MapDB,Config};
-    
+    use starling::traits::{Array, Database, Decode, Encode, Exception};
+
     #[test]
     fn test01_replace_field() {
         let mut pending_inserts = Some(MWriteBatch::default());
@@ -156,17 +158,20 @@ pub mod tests {
             println!("wrong replace on pending_inserts");
         }
     }
+    #[test]
     fn test02_wb_replace_field() {
         let path_string = format!("Test_DB_{}", 100);
         let path = PathBuf::from(path_string);
         let cfg = Config::new(path);
-        let res = MapDB::open(cfg);
+        let db = MapDB::open(cfg).unwrap();
+        let mut tdb = TreeDB::<keyType>::new(db);
+        println!("create treedb ok...");
+        println!("test write batch.....");
+        let res = tdb.batch_write();
         match res {
-            Ok(db) => {
-                let tdb = TreeDB::<keyType>::new(db);
-                println!("ok...");
-            },
-            Err(e) => println!("{:?}", e),
+            Ok(()) => println!("write batch finish"),
+            Err(e) => println!("write batch error:{:?}",e),
         }
+        println!("end of test.....");
     }
 }
