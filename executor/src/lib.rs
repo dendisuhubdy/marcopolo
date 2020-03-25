@@ -54,7 +54,7 @@ impl Executor {
         if tx.get_nonce() != from_account.get_nonce() + 1 {
             return Err(Error::InvalidTxNonce);
         }
-        if tx.get_value() as u128 + transfer_fee > from_account.get_balance() {
+        if tx.get_value() + transfer_fee > from_account.get_balance() {
             return Err(Error::BalanceNotEnough);
         }
         Executor::verify_tx_sign(&tx)?;

@@ -10,7 +10,7 @@ use map_core::types::Address;
 pub trait TxPool {
     /// Returns protocol version.
     #[rpc(name = "map_sendTransaction")]
-    fn send_transaction(&self, from: String, to: String, value: u64) -> Result<String>;
+    fn send_transaction(&self, from: String, to: String, value: u128) -> Result<String>;
 }
 
 /// TxPool rpc implementation.
@@ -28,7 +28,7 @@ impl TxPoolClient {
 }
 
 impl TxPool for TxPoolClient {
-    fn send_transaction(&self, from: String, to: String, value: u64) -> Result<String> {
+    fn send_transaction(&self, from: String, to: String, value: u128) -> Result<String> {
         let f = Address::default();
         let t = Address::default();
         let b = Bytes::new();
