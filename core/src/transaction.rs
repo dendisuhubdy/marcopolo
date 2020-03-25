@@ -82,11 +82,7 @@ impl Transaction {
         }
     }
 
-    pub fn hash(&self) -> Hash {
-        let encoded: Vec<u8> = bincode::serialize(&self).unwrap();
-        Hash(hash::blake2b_256(encoded))
-	}
-	pub fn sign_hash(&self) -> Hash {
+	pub fn hash(&self) -> Hash {
 		let data = tx_hash_type::new(self);
 		let encoded: Vec<u8> = bincode::serialize(&data).unwrap();
         Hash(hash::blake2b_256(encoded))
@@ -97,14 +93,14 @@ impl Transaction {
 		self.sign_data.2[..].copy_from_slice(data.p());
 	}
 	pub fn sign(&mut self,priv_data: &[u8]) {
-		let h = self.sign_hash();
+		let h = self.hash();
 		let priv_key = PrivKey::from_bytes(priv_data);
 		let data = priv_key.sign(h.to_slice());
 		self.set_sign_data(&data);
 	}
 	pub fn verify_sign(&self) -> bool {
 		let pk = Pubkey::from_bytes(&self.sign_data.2[..]);
-		if pk.verify(&self.sign_hash().to_msg(), &self.get_sign_data()).is_err() {
+		if pk.verify(&self.hash().to_msg(), &self.get_sign_data()).is_err() {
 			return  false;
 		}
 		return true;
