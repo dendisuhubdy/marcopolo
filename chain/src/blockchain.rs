@@ -20,6 +20,7 @@ use map_store;
 use map_core;
 use map_core::block::{Block, Header};
 use map_core::types::Hash;
+use map_core::balance::Balance;
 use map_core::genesis;
 use map_consensus::poa;
 
@@ -36,6 +37,7 @@ pub enum Error {
 
 pub struct BlockChain {
     db: ChainDB,
+    state: Balance,
     validator: Validator,
     genesis: Block,
     consensus: poa::POA
@@ -47,6 +49,7 @@ impl BlockChain {
         let db_cfg = map_store::Config::new(datadir.clone());
         BlockChain {
             db: ChainDB::new(db_cfg).unwrap(),
+            state: Balance::new(datadir),
             genesis: genesis::to_genesis(),
             validator: Validator{},
             consensus: poa::POA{},

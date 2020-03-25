@@ -12,6 +12,7 @@ core = { package = "map-core", path = "../core" }
 consensus = { package = "map-consensus", path = "../consensus" }
 chain = { package = "chain", path = "../chain" }
 rpc = { package = "map-rpc", path = "../rpc" }
+executor = { package = "map-executor", path = "../executor" }
 #serde = { version = "1.0.102", features = ["derive"] }
 #bincode = "1.2.0"
 #ed25519 = { package = "map-ed25519", path = "../common/ed25519" }

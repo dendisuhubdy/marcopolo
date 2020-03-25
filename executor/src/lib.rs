@@ -14,9 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
+#[macro_use]
+extern crate log;
 // use std::error::Error;
 use core::transaction::Transaction;
-use core::balance::{Account, Balance};
+use core::balance::Balance;
 use core::types::{Hash, Address};
 use core::block::{Block};
 
@@ -44,7 +46,7 @@ impl Executor {
         }
 
         let gas = transfer_fee * txs.len() as u128;
-        state.add_balance(miner_addr, gas);
+        state.add_balance(*miner_addr, gas);
 
         Ok(state.commit())
     }
@@ -68,7 +70,7 @@ impl Executor {
             return Err(Error::BalanceNotEnough);
         }
 
-        state.sub_balance(from_addr, transfer_fee * txs.len());
+        state.sub_balance(from_addr, transfer_fee);
         state.inc_nonce(from_addr);
 
         // Executor::verify_tx_sign(&tx)?;

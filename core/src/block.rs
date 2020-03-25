@@ -34,6 +34,7 @@ pub struct Header {
     pub parent_hash: Hash,
     pub tx_root: Hash,
     pub sign_root: Hash,
+    pub state_root: Hash,
     pub time: u64,
 }
 
@@ -44,6 +45,7 @@ impl Default for Header {
             parent_hash: Hash([0; 32]),
             tx_root:  Hash([0;32]),
             sign_root:  Hash([0;32]),
+            state_root:  Hash([0;32]),
 			time: 0,
 		}
 	}

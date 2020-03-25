@@ -115,6 +115,7 @@ impl Service {
             height: cur_block.height() + 1,
             parent_hash: cur_block.get_hash().clone(),
             tx_root:    txs_root,
+            state_root: Hash([0;32]),
             sign_root:  Hash([0;32]),
 			time: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs(),
         };
