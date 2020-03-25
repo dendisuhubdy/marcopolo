@@ -15,15 +15,14 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 //! MarcoPolo CLI.
-extern crate libc;
-extern crate signal_hook;
+extern crate ctrlc;
 
 use std::path::PathBuf;
 use clap::{App, Arg, SubCommand};
-use signal_hook::iterator::Signals;
 use logger::LogConfig;
 use service::{Service, NodeConfig};
-use std::thread;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 pub fn run() {
     let matches = App::new("map")
@@ -94,20 +93,18 @@ pub fn run() {
 
     let node = Service::new_service(config.clone());
     let (tx, th_handle) = node.start(config.clone());
-    let signals = Signals::new(&[signal_hook::SIGINT,signal_hook::SIGQUIT]).unwrap();
-    thread::spawn(move||{
-        for sig in &signals {
-            match sig as libc::c_int {
-                signal_hook::SIGINT | signal_hook::SIGQUIT => {
-                    tx.send(1).unwrap();
-                    println!("Received signal {:?}", sig);
-                    return;
-                },
-                _ => {},
-            };
-        }
-    }).join().unwrap();
-    th_handle.join();
+
+    let running = Arc::new(AtomicBool::new(true));
+    let r = running.clone();
+    ctrlc::set_handler(move || {
+        r.store(false, Ordering::SeqCst);
+    }).expect("Error setting Ctrl-C handler");
+
+    while running.load(Ordering::SeqCst) {
+        tx.send(1).unwrap();
+    }
+    println!("Got it! Exiting...");
+    th_handle.join().unwrap();
 }
 
 #[cfg(test)]
