@@ -32,6 +32,8 @@ impl Default for MWriteBatch {
         MWriteBatch(map_store::WriteBatch::default())
     }
 }
+unsafe impl Send for MWriteBatch {}
+unsafe impl Sync for MWriteBatch {}
 
 pub mod mapTree;
 
