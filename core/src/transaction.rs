@@ -4,10 +4,10 @@ use std::fmt;
 
 use bytes::Bytes;
 use super::types::{Address};
-use ed25519::{signature::SignatureInfo,Message};
+use ed25519::{signature::SignatureInfo,Message,privkey::PrivKey};
 use serde::{Deserialize, Serialize};
 
-use super::types::Hash;
+use super::types::{Hash,chain_id};
 
 /// Represents a transaction
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -62,5 +62,19 @@ impl Transaction {
     pub fn hash(&self) -> Hash {
         let encoded: Vec<u8> = bincode::serialize(&self).unwrap();
         Hash(hash::blake2b_256(encoded))
-    }
+	}
+	pub fn sign_hash(&self) -> Hash {
+		Hash([0u8;32])
+	}
+	fn set_sign_data(&mut self,data: &SignatureInfo) {
+		self.sign_data.0[..].copy_from_slice(data.r());
+		self.sign_data.1[..].copy_from_slice(data.s());
+		self.sign_data.2[..].copy_from_slice(data.p());
+	}
+	pub fn sign(&mut self,priv_data: &[u8]) {
+		let h = self.sign_hash();
+		let priv_key = PrivKey::from_bytes(priv_data);
+		let data = priv_key.sign(h.to_slice());
+		self.set_sign_data(&data);
+	}
 }
