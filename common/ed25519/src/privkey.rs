@@ -58,6 +58,8 @@ impl PrivKey {
         let expanded_secret: ExpandedSecretKey = ExpandedSecretKey::from_secret_key::<Sha512>(&sk);
         let pk: PublicKey = self.to_pubkey().to_pubkey().unwrap();
         let sign_data = expanded_secret.sign::<Sha512>(&message,&pk);
-        SignatureInfo::from_signature(&sign_data)
+        let mut p = [0u8;32];
+        p[..].copy_from_slice(&pk.to_bytes()[..]);
+        SignatureInfo::from_signature(&sign_data,p)
     }
 }

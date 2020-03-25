@@ -28,7 +28,7 @@ use std::str::FromStr;
 
 #[derive(Serialize, Deserialize)]
 #[derive(Debug, Default,Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub struct SignatureInfo([u8; 32], [u8;32]);
+pub struct SignatureInfo([u8; 32], [u8;32],[u8;32]);
 
 impl SignatureInfo {
     pub fn r(&self) -> &[u8] {
@@ -37,8 +37,11 @@ impl SignatureInfo {
     pub fn s(&self) -> &[u8] {
         &self.1[..]
     }
-    pub fn make(r:[u8;32],s:[u8;32]) -> Self {
-        SignatureInfo(r,s)
+    pub fn p(&self) -> &[u8] {
+        &self.2[..]
+    }
+    pub fn make(r:[u8;32],s:[u8;32],p:[u8;32]) -> Self {
+        SignatureInfo(r,s,p)
     }
     pub fn to_signature(&self) -> Result<Signature, SignatureError> {
         let mut sig = [0u8; 64];
@@ -47,19 +50,23 @@ impl SignatureInfo {
         let res = Signature::from_bytes(&sig);
         res
     }
-    pub fn from_signature(sign: &Signature) -> Self {
+    pub fn from_signature(sign: &Signature,p:[u8;32]) -> Self {
         let data = sign.to_bytes();
         let mut r = [0u8;32];
         let mut s = [0u8;32];
         r[..].copy_from_slice(&data[0..32]);
         s[..].copy_from_slice(&data[32..64]);
-        SignatureInfo(r,s)
+        SignatureInfo(r,s,p)
     }
     pub fn from_slice(data: &[u8]) -> Result<Self, SignatureError> {
         // let mut sig = [0u8; SIGNATURE_LENGTH];
         // sig[..].copy_from_slice(data);
-        let sig: Signature = Signature::from_bytes(data).unwrap();
-        Ok(SignatureInfo::from_signature(&sig))
+        let mut sign_data = [0u8;64];
+        let mut p = [0u8;32];
+        sign_data[..].copy_from_slice(&data[0..64]);
+        p[..].copy_from_slice(&data[64..96]);
+        let sig: Signature = Signature::from_bytes(&sign_data).unwrap();
+        Ok(SignatureInfo::from_signature(&sig,p))
     }
 }
 
