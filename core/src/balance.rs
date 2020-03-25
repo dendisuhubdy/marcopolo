@@ -52,8 +52,10 @@ pub struct Balance {
 
 impl Balance {
 
-    pub fn new() -> Self {
-        let tree = MapTree::open(&PathBuf::from("./data"), 256).unwrap();
+    pub fn new(datadir: PathBuf) -> Self {
+        let mut dir = datadir.clone();
+        dir.push("data");
+        let tree = MapTree::open(&dir, 256).unwrap();
         Balance {
             cache: HashMap::new(),
             treedb: tree,
@@ -214,7 +216,7 @@ mod tests {
     #[test]
     fn test_set_account() {
         let addr = Address::default();
-        let mut state = Balance::new();
+        let mut state = Balance::new(PathBuf::from("."));
         let mut account = state.load_account(addr);
         assert_eq!(account, Account::default());
 
@@ -231,7 +233,7 @@ mod tests {
     fn test_change_accounts() {
         let from = Address([0; 20]);
         let to = Address([1; 20]);
-        let mut state = Balance::new();
+        let mut state = Balance::new(PathBuf::from("."));
         state.set_account(from, &Account {
             balance: 1,
             nonce: 1,
@@ -246,7 +248,7 @@ mod tests {
 
     #[test]
     fn test_transfer() {
-        let mut state = Balance::new();
+        let mut state = Balance::new(PathBuf::from("."));
         let addr = Address::default();
         state.set_account(addr, &Account {
             balance: 1,
