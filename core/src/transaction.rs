@@ -28,13 +28,36 @@ pub struct Transaction {
 	/// Transaction data.
 	pub data: Bytes,
 }
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct tx_hash_type {
+	chainid: 	u32,
+	recipient: Address,
+	nonce: u64,
+	gas_price: u64,
+	gas: u64,
+	value: u128,
+	data: Bytes,
+}
+impl tx_hash_type {
+	fn new(tx: &Transaction) -> Self {
+		tx_hash_type{
+			chainid:chain_id,
+			recipient: tx.recipient,
+			nonce: tx.nonce,
+			gas_price: tx.gas_price,
+			gas: tx.gas,
+			value: tx.value,
+			data: tx.data.clone(),
+		}
+	}
+}
 
 impl Transaction {
 	pub fn get_to_address(&self) -> Address {
-		Address([0u8;20])
+		self.sender
 	}
 	pub fn get_from_address(&self) -> Address {
-		Address([0u8;20])
+		self.recipient
 	}
 	pub fn get_nonce(&self) -> u64 {
 		self.nonce
@@ -64,7 +87,9 @@ impl Transaction {
         Hash(hash::blake2b_256(encoded))
 	}
 	pub fn sign_hash(&self) -> Hash {
-		Hash([0u8;32])
+		let data = tx_hash_type::new(self);
+		let encoded: Vec<u8> = bincode::serialize(&data).unwrap();
+        Hash(hash::blake2b_256(encoded))
 	}
 	fn set_sign_data(&mut self,data: &SignatureInfo) {
 		self.sign_data.0[..].copy_from_slice(data.r());
