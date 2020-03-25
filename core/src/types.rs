@@ -16,6 +16,8 @@
 
 use std::fmt;
 use serde::{Serialize, Deserialize};
+use hex;
+pub use hex::FromHexError as HexError;
 use ed25519::Message;
 use ed25519::pubkey::Pubkey;
 pub use ed25519::H256;
@@ -74,6 +76,17 @@ impl Address {
     pub fn as_slice(&self) -> &[u8] {
         return &self.0
     }
+
+    pub fn from_hex(text: &str) -> Result<Self, HexError> {
+        let mut addr = Self::default();
+        let mut from = text;
+        if text.starts_with("0x") || text.starts_with("0X") {
+            from = &text[2..];
+        }
+        let b = hex::decode(from)?;
+        addr.0.copy_from_slice(&b);
+        Ok(addr)
+    }
 }
 
 impl fmt::Display for Address {
@@ -100,5 +113,29 @@ impl From<Pubkey> for Address {
         let mut addr = Address::default();
         addr.0.copy_from_slice(&(hash::blake2b_256(&raw)[12..]));
         addr
+    }
+}
+
+
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_hex_address() {
+        {
+            let hex_addr = "0000000000000000000000000000000000000000";
+            let addr = Address::from_hex(hex_addr).unwrap();
+            assert_eq!(addr, Address::default());
+        }
+        {
+            let hex_addr = "0x0000000000000000000000000000000000000000";
+            let addr = Address::from_hex(hex_addr).unwrap();
+            assert_eq!(addr, Address::default());
+        }
+        {
+            let hex_addr = "0X0000000000000000000000000000000000000000";
+            let addr = Address::from_hex(hex_addr).unwrap();
+            assert_eq!(addr, Address::default());
+        }
     }
 }
