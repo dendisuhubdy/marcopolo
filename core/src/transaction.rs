@@ -4,7 +4,7 @@ use std::fmt;
 
 use bytes::Bytes;
 use super::types::{Address};
-use ed25519::{signature::SignatureInfo,Message,privkey::PrivKey};
+use ed25519::{signature::SignatureInfo,Message,privkey::PrivKey,pubkey::Pubkey};
 use serde::{Deserialize, Serialize};
 
 use super::types::{Hash,chain_id};
@@ -76,5 +76,12 @@ impl Transaction {
 		let priv_key = PrivKey::from_bytes(priv_data);
 		let data = priv_key.sign(h.to_slice());
 		self.set_sign_data(&data);
+	}
+	pub fn verify_sign(&self) -> bool {
+		let pk = Pubkey::from_bytes(&self.sign_data.2[..]);
+		if pk.verify(&self.sign_hash().to_msg(), &self.get_sign_data()).is_err() {
+			return  false;
+		}
+		return true;
 	}
 }

@@ -23,6 +23,7 @@ use core::block::{Block};
 const transfer_fee: u128 = 10000;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Error {
+    InvalidSignData,
     BalanceNotEnough,
     InvalidTxNonce,
 }
@@ -69,6 +70,10 @@ impl Executor {
         Ok(())
     }
     fn verify_tx_sign(tx: &Transaction) -> Result<(),Error> {
-        Ok(())
+        if tx.verify_sign() {
+            Ok(())
+        } else {
+            Err(Error::InvalidSignData)
+        }
     }
 }
