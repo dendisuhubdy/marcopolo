@@ -24,8 +24,7 @@ pub struct Transaction {
 	pub gas: u64,
 	/// Transfered value.
 	pub value: u64,
-	pub sign_r: [u8;32],
-	pub sign_s: [u8;32],
+	pub sign_data: ([u8;32],[u8;32],[u8;32]),
 	/// Transaction data.
 	pub data: Bytes,
 }
@@ -44,11 +43,10 @@ impl Transaction {
 		self.value
 	}
 	pub fn get_sign_data(&self) -> SignatureInfo {
-		SignatureInfo::make(self.sign_r,self.sign_s)
+		SignatureInfo::make(self.sign_data.0,self.sign_data.1,self.sign_data.2)
 	}
-    pub fn new(sender: Address, recipient: Address, nonce: u64, gas_price: u64, gas: u64, value: u64, data: Bytes) -> Transaction {
-		let mut r = [0u8;32];
-		let mut s = [0u8;32];
+	pub fn new(sender: Address, recipient: Address, nonce: u64, gas_price: u64, gas: u64, 
+		value: u64, data: Bytes) -> Transaction {
         Transaction {
            sender: sender,
             recipient:recipient,
@@ -56,8 +54,7 @@ impl Transaction {
             gas_price:gas_price,
             gas:gas,
             value:value,
-            sign_r: r,
-            sign_s: s,
+            sign_data: ([0u8;32],[0u8;32],[0u8;32]),
             data:data,
         }
     }
