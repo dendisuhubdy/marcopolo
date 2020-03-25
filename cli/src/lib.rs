@@ -21,8 +21,9 @@ use std::path::PathBuf;
 use clap::{App, Arg, SubCommand};
 use logger::LogConfig;
 use service::{Service, NodeConfig};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use parking_lot::{Condvar, Mutex};
+use std::sync::mpsc;
 
 pub fn run() {
     let matches = App::new("map")
@@ -91,20 +92,25 @@ pub fn run() {
         return;
     }
 
+    let exit = Arc::new((Mutex::new(()), Condvar::new()));
     let node = Service::new_service(config.clone());
     let (tx, th_handle) = node.start(config.clone());
 
-    let running = Arc::new(AtomicBool::new(true));
-    let r = running.clone();
-    ctrlc::set_handler(move || {
-        r.store(false, Ordering::SeqCst);
-    }).expect("Error setting Ctrl-C handler");
-
-    while running.load(Ordering::SeqCst) {
-        tx.send(1).unwrap();
-    }
+    wait_exit(exit,tx);
     println!("Got it! Exiting...");
     th_handle.join().unwrap();
+}
+
+pub fn wait_exit(exit: Arc<(Mutex<()>, Condvar)>,tx : mpsc::Sender<i32>) {
+    let e = Arc::<(Mutex<()>, Condvar)>::clone(&exit);
+    let _ = ctrlc::set_handler(move || {
+        tx.send(1).expect("stop block chain");
+        e.1.notify_all();
+    });
+
+    // Wait for signal
+    let mut l = exit.0.lock();
+    exit.1.wait(&mut l);
 }
 
 #[cfg(test)]
