@@ -65,7 +65,7 @@ impl Balance {
         let addr_hash = Self::address_key(addr);
         let account = match self.cache.get(&addr_hash) {
             Some(v) => v.clone(),
-            None => self.get_account(addr),
+            None => self.load_account(addr),
         };
         account.balance
     }
@@ -74,16 +74,25 @@ impl Balance {
         let addr_hash = Self::address_key(addr);
         let account = match self.cache.get(&addr_hash) {
             Some(v) => v.clone(),
-            None => self.get_account(addr),
+            None => self.load_account(addr),
         };
         account.nonce
+    }
+
+    pub fn get_account(&self, addr: Address) -> Account {
+        let addr_hash = Self::address_key(addr);
+        let account = match self.cache.get(&addr_hash) {
+            Some(v) => v.clone(),
+            None => self.load_account(addr),
+        };
+        account
     }
 
     pub fn inc_nonce(&mut self, addr: Address) {
         let addr_hash = Self::address_key(addr);
         let mut account = match self.cache.get(&addr_hash) {
             Some(v) => v.clone(),
-            None => self.get_account(addr),
+            None => self.load_account(addr),
         };
         account.nonce += 1;
         self.cache.insert(addr_hash, account);
@@ -93,7 +102,7 @@ impl Balance {
         let addr_hash = Self::address_key(addr);
         let mut account = match self.cache.get(&addr_hash) {
             Some(v) => v.clone(),
-            None => self.get_account(addr),
+            None => self.load_account(addr),
         };
         account.balance += value;
         self.cache.insert(addr_hash, account);
@@ -103,7 +112,7 @@ impl Balance {
         let addr_hash = Self::address_key(addr);
         let mut account = match self.cache.get(&addr_hash) {
             Some(v) => v.clone(),
-            None => self.get_account(addr),
+            None => self.load_account(addr),
         };
         account.balance -= value;
         self.cache.insert(addr_hash, account);
@@ -114,11 +123,7 @@ impl Balance {
     }
 
     pub fn transfer(&mut self, from_addr: Address, to_addr: Address, amount: u128) {
-        let caller = self.get_account(from_addr);
-        let receiver = self.get_account(to_addr);
-        if caller.balance >= amount {
-            // caller.balance -= amount;
-            // receiver.balance += amount;
+        if self.balance(from_addr) >= amount {
             self.sub_balance(from_addr, amount);
             self.add_balance(to_addr, amount);
         } else {
@@ -141,7 +146,7 @@ impl Balance {
         self.root_hash
     }
 
-    pub fn get_account(&self, addr: Address) -> Account {
+    pub fn load_account(&self, addr: Address) -> Account {
         // let serialized = match self.cache.get(&Self::address_key(addr)) {
         //     Some(s) => s,
         //     None => return Account::default(),
@@ -210,7 +215,7 @@ mod tests {
     fn test_set_account() {
         let addr = Address::default();
         let mut state = Balance::new();
-        let mut account = state.get_account(addr);
+        let mut account = state.load_account(addr);
         assert_eq!(account, Account::default());
 
         let v1 = Account {
@@ -218,12 +223,12 @@ mod tests {
             nonce: 1
         };
         state.set_account(addr, &v1);
-        account = state.get_account(addr);
+        account = state.load_account(addr);
         assert_eq!(account, v1);
     }
 
     #[test]
-    fn test_change() {
+    fn test_change_accounts() {
         let from = Address([0; 20]);
         let to = Address([1; 20]);
         let mut state = Balance::new();
@@ -235,7 +240,7 @@ mod tests {
             balance: 2,
             nonce: 1,
         });
-        let account = state.get_account(from);
+        let account = state.load_account(from);
         assert_eq!(account.balance, 1);
     }
 
@@ -256,7 +261,7 @@ mod tests {
 
         state.transfer(addr, receiver, 1);
         state.commit();
-        let account = state.get_account(receiver);
+        let account = state.load_account(receiver);
         assert_eq!(account.balance, 1);
         assert_eq!(state.balance(receiver), 1);
     }
