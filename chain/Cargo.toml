@@ -12,3 +12,4 @@ bincode = "1.2.0"
 map-core = { path = "../core" }
 map-store = { path = "../common/store" }
 map-consensus = { path = "../consensus" }
+futures = "0.1"

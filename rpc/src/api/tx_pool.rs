@@ -1,7 +1,10 @@
+use std::sync::{Arc, RwLock, RwLockReadGuard};
+
 use bytes::Bytes;
 use jsonrpc_core::Result;
 use jsonrpc_derive::rpc;
 
+use chain::tx_pool::TxPoolManager;
 use ed25519::{privkey::PrivKey, pubkey::Pubkey};
 use map_core::genesis::{ed_genesis_priv_key, ed_genesis_pub_key};
 use map_core::transaction::Transaction;
@@ -17,14 +20,14 @@ pub trait TxPool {
 
 /// TxPool rpc implementation.
 pub struct TxPoolClient {
-    pub txs: Vec<Transaction>,
+    pub tx_pool: Arc<RwLock<TxPoolManager>>,
 }
 
 impl TxPoolClient {
     /// Creates new NetClient.
-    pub fn new() -> Self {
+    pub fn new(tx_pool: Arc<RwLock<TxPoolManager>>) -> Self {
         TxPoolClient {
-            txs: Vec::new(),
+            tx_pool,
         }
     }
 }
@@ -60,7 +63,7 @@ impl TxPool for TxPoolClient {
         let mut tx = Transaction::new(sign_address, to, 1, 1000, 1000, value, b);
 
         tx.sign(&pkey.to_bytes());
-        // self.txs.push(tx.clone());
+        self.tx_pool.write().expect("acquiring tx pool write lock").submit_txs(tx.clone());
         Ok(format!("{}", tx.hash()))
     }
 }

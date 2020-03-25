@@ -16,6 +16,8 @@
 
 #[macro_use]
 extern crate log;
+extern crate futures;
 
 pub mod store;
 pub mod blockchain;
+pub mod tx_pool;

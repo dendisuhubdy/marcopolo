@@ -28,6 +28,7 @@ use core::types::Hash;
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
 use consensus::{poa::POA,Error};
 use chain::blockchain::{BlockChain};
+use chain::tx_pool::TxPoolManager;
 use rpc::http_server;
 use std::{thread,thread::JoinHandle,sync::mpsc};
 use std::time::{Duration, Instant, SystemTime};
@@ -69,7 +70,8 @@ impl Service {
     pub fn start(mut self,cfg: NodeConfig) -> (mpsc::Sender<i32>,JoinHandle<()>) {
         self.get_write_blockchain().load();
 
-        let rpc = http_server::start_http(cfg.rpc_addr,cfg.rpc_port,self.block_chain.clone());
+        let tx_pool = Arc::new(RwLock::new(TxPoolManager::start()));
+        let rpc = http_server::start_http(cfg.rpc_addr,cfg.rpc_port,self.block_chain.clone(),tx_pool);
 
         let (tx,rx): (mpsc::Sender<i32>,mpsc::Receiver<i32>) = mpsc::channel();
         let shared_block_chain = self.block_chain.clone();

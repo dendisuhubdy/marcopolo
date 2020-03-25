@@ -3,6 +3,7 @@ use std::sync::{Arc, RwLock};
 use jsonrpc_http_server::{AccessControlAllowOrigin, DomainsValidation, RestApi, ServerBuilder};
 
 use chain::blockchain::BlockChain;
+use chain::tx_pool::TxPoolManager;
 
 use crate::rpc_build::RpcBuilder;
 
@@ -11,14 +12,14 @@ pub struct RpcServer {
     pub url: String,
 }
 
-pub fn start_http(ip: String, port: u16, block_chain: Arc<RwLock<BlockChain>>) -> RpcServer {
+pub fn start_http(ip: String, port: u16, block_chain: Arc<RwLock<BlockChain>>,tx_pool : Arc<RwLock<TxPoolManager>>) -> RpcServer {
     let url = format!("{}:{}", ip, port);
 
     info!("using url {}", url);
 
     let addr = url.parse().map_err(|_| format!("Invalid  listen host/port given: {}", url)).unwrap();
 
-    let handler = RpcBuilder::new().config_chain(block_chain).config_pool().build();
+    let handler = RpcBuilder::new().config_chain(block_chain).config_pool(tx_pool).build();
 
     let http = ServerBuilder::new(handler)
         .threads(4)
