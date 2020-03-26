@@ -21,9 +21,10 @@ use core::transaction::Transaction;
 use core::balance::Balance;
 use core::types::{Hash, Address};
 use core::block::{Block};
-use std::sync::{Arc, RwLock};
 
+#[allow(non_upper_case_globals)]
 const transfer_fee: u128 = 10000;
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Error {
     InvalidSignData,
@@ -33,11 +34,11 @@ pub enum Error {
 pub struct Executor;
 
 impl Executor {
-    pub fn exc_txs_in_block(b: &Block, state: Arc<RwLock<Balance>>, miner_addr: &Address) -> Result<Hash,Error> {
+    pub fn exc_txs_in_block(b: &Block, state: &mut Balance, miner_addr: &Address) -> Result<Hash,Error> {
         let txs = b.get_txs();
         // let mut h = Hash([0u8;32]);
         for tx in txs {
-            let res = Executor::exc_transfer_tx(tx,state.clone());
+            let res = Executor::exc_transfer_tx(tx,state);
             match res {
                 Ok(v) => {},
                 Err(e) => {
@@ -47,21 +48,13 @@ impl Executor {
         }
 
         let gas = transfer_fee * txs.len() as u128;
-        state
-        .write()
-        .expect("acquiring state write lock")
-        .add_balance(*miner_addr, gas);
+        state.add_balance(*miner_addr, gas);
 
-        Ok(
-            state
-            .write()
-            .expect("acquiring state write lock")
-            .commit()
-        )
+        Ok(state.commit())
     }
 
     // handle the state for the tx,caller handle the gas of tx
-    pub fn exc_transfer_tx(tx: &Transaction, state: Arc<RwLock<Balance>>) -> Result<Hash, Error> {
+    pub fn exc_transfer_tx(tx: &Transaction, state: &mut Balance) -> Result<Hash, Error> {
         // 1. version check
         // 2. nonce check
         // 3. balance check
@@ -71,11 +64,7 @@ impl Executor {
         let to_addr = tx.get_to_address();
 
         // Ensure balance and nance field available
-        let from_account = state
-                                        .write()
-                                        .expect("acquiring state write lock")
-                                        .get_account(from_addr);
-
+        let from_account = state.get_account(from_addr);
         if tx.get_nonce() != from_account.get_nonce() + 1 {
             return Err(Error::InvalidTxNonce);
         }
@@ -83,21 +72,11 @@ impl Executor {
             return Err(Error::BalanceNotEnough);
         }
 
-        state
-        .write()
-        .expect("acquiring state write lock")
-        .sub_balance(from_addr, transfer_fee);
-
-        state
-        .write()
-        .expect("acquiring state write lock")
-        .inc_nonce(from_addr);
+        state.sub_balance(from_addr, transfer_fee);
+        state.inc_nonce(from_addr);
 
         Executor::verify_tx_sign(&tx)?;
-        state
-        .write()
-        .expect("acquiring state write lock")
-        .transfer(from_addr, to_addr, tx.get_value());
+        state.transfer(from_addr, to_addr, tx.get_value());
         Ok(Hash::default())
     }
 

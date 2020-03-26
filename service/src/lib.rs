@@ -134,7 +134,8 @@ impl Service {
         info!("seal block, height={}, parent={}, tx={}", header.height, header.parent_hash, txs.len());
         let b = Block::new(header,txs,Vec::new(),Vec::new());
         let finalize = POA{};
-        let res = Executor::exc_txs_in_block(&b,self.state.clone(),&POA::get_default_miner());
+        let mut statedb = self.state.write().unwrap();
+        let res = Executor::exc_txs_in_block(&b, &mut statedb, &POA::get_default_miner());
         match res {
             Ok(h) => finalize.finalize_block(b,h),
             Err(e) => Err(ConsensusErrorKind::Execute.into()),
