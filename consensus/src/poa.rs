@@ -74,8 +74,9 @@ impl POA {
         b.add_proof(proof);
         Ok(b)
     }
-    pub fn finalize_block(&self,mut b: Block) -> Result<Block,Error> {
+    pub fn finalize_block(&self,mut b: Block,h: Hash) -> Result<Block,Error> {
         // sign with default priv key
+        b.set_state_root(h);
         POA::sign_block(0u8,None,b)
     }
     pub fn verify(&self,b: &Block) -> Result<(),Error> {

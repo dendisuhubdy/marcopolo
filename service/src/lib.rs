@@ -25,10 +25,10 @@ extern crate executor;
 extern crate log;
 
 use core::block::{self,Block,Header};
-use core::types::{Hash,Address};
+use core::types::Hash;
 use core::balance::Balance;
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
-use consensus::{poa::POA,Error};
+use consensus::{poa::POA,Error,ConsensusErrorKind};
 use chain::blockchain::{BlockChain};
 use chain::tx_pool::TxPoolManager;
 use executor::Executor;
@@ -133,11 +133,12 @@ impl Service {
         };
         info!("seal block, height={}, parent={}, tx={}", header.height, header.parent_hash, txs.len());
         let b = Block::new(header,txs,Vec::new(),Vec::new());
-        let hex_addr = "0x0000000000000000000000000000000000000011";
-        let addr = Address::from_hex(hex_addr).unwrap();
-        Executor::exc_txs_in_block(&b,self.state.clone(),&addr);
         let finalize = POA{};
-        finalize.finalize_block(b)
+        let res = Executor::exc_txs_in_block(&b,self.state.clone(),&POA::get_default_miner());
+        match res {
+            Ok(h) => finalize.finalize_block(b,h),
+            Err(e) => Err(ConsensusErrorKind::Execute.into()),
+        }
     }
     pub fn get_current_block(&mut self) -> Block {
         self.get_write_blockchain().current_block()

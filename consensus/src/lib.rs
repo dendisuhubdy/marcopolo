@@ -32,7 +32,6 @@ pub enum ErrorKind {
     Header,
     Block,
     Internal,
-    Execute,
     Consensus,
 }
 
@@ -93,6 +92,7 @@ pub enum ConsensusErrorKind {
     Block,
     Verify,
     NoneSign,
+    Execute,
 }
 
 impl fmt::Display for ConsensusError {

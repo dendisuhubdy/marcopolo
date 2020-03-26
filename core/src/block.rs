@@ -143,6 +143,9 @@ impl  Block {
     pub fn set_sign_hash(&mut self,h: Hash) {
         self.header.sign_root = h;
     }
+    pub fn set_state_root(&mut self,h:Hash) {
+        self.header.state_root = h;
+    }
     pub fn height(&self) -> u64 {
         self.header.height
     }
