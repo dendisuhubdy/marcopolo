@@ -13,9 +13,6 @@
 
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
-
-
-
 extern crate core;
 extern crate consensus;
 extern crate chain;
@@ -70,10 +67,12 @@ pub struct Service {
 
 impl Service {
     pub fn new_service(cfg: NodeConfig) -> Self {
-        Service{
-            block_chain:    Arc::new(RwLock::new(BlockChain::new(cfg.data_dir.clone()))),
-            state: Arc::new(RwLock::new(Balance::new(cfg.data_dir.clone()))),
-            tx_pool: Arc::new(RwLock::new(TxPoolManager::start())),
+        let state = Arc::new(RwLock::new(Balance::new(cfg.data_dir.clone())));
+
+        Service {
+            block_chain: Arc::new(RwLock::new(BlockChain::new(cfg.data_dir.clone()))),
+            state: state.clone(),
+            tx_pool: Arc::new(RwLock::new(TxPoolManager::start(state.clone()))),
         }
     }
     pub fn start(mut self,cfg: NodeConfig) -> (mpsc::Sender<i32>,JoinHandle<()>) {

@@ -31,6 +31,7 @@ pub const ed_genesis_pub_key: [u8; 32] = [
 
 const allocation: &[(&str, u128)] = &[
     ("0x0000000000000000000000000000000000000000", 1000000000000000000),
+    ("0xd2480451ef35ff2fdd7c69cad058719b9dc4d631", 1000000000000000000),
 ];
 
 pub fn to_genesis() -> Block {

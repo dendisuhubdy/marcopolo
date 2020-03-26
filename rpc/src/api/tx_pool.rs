@@ -13,7 +13,8 @@ use map_core::types::Address;
 /// TxPool rpc interface.
 #[rpc(server)]
 pub trait TxPool {
-    /// Returns protocol version.
+    /// Send transaction.
+    /// curl -d '{"id": 2, "jsonrpc": "2.0", "method":"map_sendTransaction","params": ["0xd2480451ef35ff2fdd7c69cad058719b9dc4d631","0x0000000000000000000000000000000000000011",100000]}' -H 'content-type:application/json' 'http://localhost:9545'
     #[rpc(name = "map_sendTransaction")]
     fn send_transaction(&self, from: String, to: String, value: u128) -> Result<String>;
 }
@@ -24,7 +25,7 @@ pub struct TxPoolClient {
 }
 
 impl TxPoolClient {
-    /// Creates new NetClient.
+    /// Creates new TxPoolClient.
     pub fn new(tx_pool: Arc<RwLock<TxPoolManager>>) -> Self {
         TxPoolClient {
             tx_pool,
@@ -34,10 +35,10 @@ impl TxPoolClient {
 
 impl TxPool for TxPoolClient {
     fn send_transaction(&self, from: String, to: String, value: u128) -> Result<String> {
-        if is_hex(from.as_str()).is_ok() {
+        if !is_hex(from.as_str()).is_ok() {
             return Ok(format!("from address is not hex {}", from));
         }
-        if is_hex(to.as_str()).is_ok() {
+        if !is_hex(to.as_str()).is_ok() {
             return Ok(format!("to address is not hex {}", to));
         }
 
@@ -86,5 +87,19 @@ fn is_hex(hex: &str) -> core::result::Result<(), String> {
         Ok(())
     } else {
         Err("Must 0x-prefix hex string".to_string())
+    }
+}
+
+mod tx_pool {
+    use super::*;
+
+    #[test]
+    fn test_is_hex() {
+        {
+            let pk = Pubkey::from_bytes(&ed_genesis_pub_key);
+            let address = Address::from(pk);
+            assert_eq!("d2480451ef35ff2fdd7c69cad058719b9dc4d631", address.to_string().as_str());
+            assert!(is_hex("0xd2480451ef35ff2fdd7c69cad058719b9dc4d631").is_ok())
+        }
     }
 }

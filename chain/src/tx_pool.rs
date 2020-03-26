@@ -1,15 +1,20 @@
 use std::collections::HashMap;
-use map_core::types::Hash;
+use std::sync::{Arc, RwLock};
+
+use map_core::balance::Balance;
 use map_core::block::Block;
 use map_core::transaction::Transaction;
+use map_core::types::Hash;
 
 #[derive(Clone)]
 pub struct TxPoolManager {
     txs: HashMap<Hash, Transaction>,
+    state: Arc<RwLock<Balance>>,
 }
 
 impl TxPoolManager {
-    pub fn submit_txs(&mut self, tx: Transaction)  {
+    pub fn submit_txs(&mut self, tx: Transaction) {
+        self.validate_tx(&tx);
         self.txs.insert(tx.hash(), tx);
     }
 
@@ -23,9 +28,14 @@ impl TxPoolManager {
         }
     }
 
-    pub fn start() -> TxPoolManager {
+    pub fn start(state: Arc<RwLock<Balance>>) -> TxPoolManager {
         TxPoolManager {
             txs: HashMap::new(),
+            state,
         }
+    }
+
+    fn validate_tx(&self, tx: &Transaction){
+        println!("balance {} ",self.state.read().expect("state lock").balance(tx.sender))
     }
 }
