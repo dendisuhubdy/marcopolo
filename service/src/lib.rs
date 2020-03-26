@@ -20,16 +20,18 @@ extern crate core;
 extern crate consensus;
 extern crate chain;
 extern crate rpc;
+extern crate executor;
 #[macro_use]
 extern crate log;
 
-use core::block::{self,Block,BlockProof,VerificationItem,Header};
-use core::types::Hash;
+use core::block::{self,Block,Header};
+use core::types::{Hash,Address};
 use core::balance::Balance;
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
 use consensus::{poa::POA,Error};
 use chain::blockchain::{BlockChain};
 use chain::tx_pool::TxPoolManager;
+use executor::Executor;
 use rpc::http_server;
 use std::{thread,thread::JoinHandle,sync::mpsc};
 use std::time::{Duration, SystemTime};
@@ -131,6 +133,9 @@ impl Service {
         };
         info!("seal block, height={}, parent={}, tx={}", header.height, header.parent_hash, txs.len());
         let b = Block::new(header,txs,Vec::new(),Vec::new());
+        let hex_addr = "0x0000000000000000000000000000000000000011";
+        let addr = Address::from_hex(hex_addr).unwrap();
+        Executor::exc_txs_in_block(&b,self.state.clone(),&addr);
         let finalize = POA{};
         finalize.finalize_block(b)
     }
