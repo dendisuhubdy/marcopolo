@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use super::types::{Hash,chain_id};
 
 /// Represents a transaction
-#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Hash, Deserialize)]
 pub struct Transaction {
 	/// sender.
 	pub sender: Address,

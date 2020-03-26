@@ -120,7 +120,7 @@ impl Service {
         let tx_pool = self.tx_pool.clone();
 
         let txs =
-            tx_pool.read().expect("acquiring block_chain read lock").get_txs().to_vec();
+            tx_pool.read().expect("acquiring tx_pool read lock").get_txs();
 
         let txs_root = block::get_hash_from_txs(&txs);
         let header: Header = Header{
@@ -137,8 +137,11 @@ impl Service {
         let mut statedb = self.state.write().unwrap();
         let res = Executor::exc_txs_in_block(&b, &mut statedb, &POA::get_default_miner());
         match res {
-            Ok(h) => finalize.finalize_block(b,h),
-            Err(e) => Err(ConsensusErrorKind::Execute.into()),
+            Ok(h) => {
+                tx_pool.write().expect("acquiring tx_pool write lock").notify_block(&b);
+                finalize.finalize_block(b,h)
+            },
+            Err(_) => Err(ConsensusErrorKind::Execute.into()),
         }
     }
     pub fn get_current_block(&mut self) -> Block {

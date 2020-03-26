@@ -1,4 +1,4 @@
-use std::sync::{Arc, RwLock, RwLockReadGuard};
+use std::sync::{Arc, RwLock};
 
 use bytes::Bytes;
 use jsonrpc_core::Result;

@@ -69,7 +69,7 @@ impl fmt::Display for Hash {
 }
 
 #[derive(Serialize, Deserialize)]
-#[derive(Default, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Default, Copy, Clone, Eq, Ord, PartialEq, PartialOrd, Hash)]
 pub struct Address(pub [u8; 20]);
 
 impl Address {
