@@ -14,6 +14,7 @@ cli = { package = "map-cli", path = "cli" }
 # This should only list projects that are not
 # in the dependency tree in any other way
 members = [
+	"common/errors",
 	"common/ed25519",
 	"common/hash",
 	"common/logger",
