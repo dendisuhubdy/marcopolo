@@ -25,6 +25,7 @@ extern crate log;
 
 use core::block::{self,Block,BlockProof,VerificationItem,Header};
 use core::types::Hash;
+use core::balance::Balance;
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
 use consensus::{poa::POA,Error};
 use chain::blockchain::{BlockChain};
@@ -59,13 +60,15 @@ impl Default for NodeConfig {
 //#[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Service {
     pub block_chain: Arc<RwLock<BlockChain>>,
+    pub state: Arc<RwLock<Balance>>,
     pub tx_pool : Arc<RwLock<TxPoolManager>>,
 }
 
 impl Service {
     pub fn new_service(cfg: NodeConfig) -> Self {
         Service{
-            block_chain:    Arc::new(RwLock::new(BlockChain::new(cfg.data_dir))),
+            block_chain:    Arc::new(RwLock::new(BlockChain::new(cfg.data_dir.clone()))),
+            state: Arc::new(RwLock::new(Balance::new(cfg.data_dir.clone()))),
             tx_pool: Arc::new(RwLock::new(TxPoolManager::start())),
         }
     }
