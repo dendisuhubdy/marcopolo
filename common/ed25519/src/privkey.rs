@@ -18,8 +18,10 @@
 
 extern crate ed25519_dalek;
 extern crate sha2;
+extern crate errors;
 
-use ed25519_dalek::{SecretKey,Signature,PublicKey,SignatureError,ExpandedSecretKey};
+use errors::{Error,InternalErrorKind};
+use ed25519_dalek::{SecretKey,Signature,PublicKey,ExpandedSecretKey};
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
 use super::{H256,Message,pubkey::Pubkey,signature::SignatureInfo};
 use sha2::Sha512;
@@ -39,27 +41,27 @@ impl PrivKey {
         pkey.copy_from_slice(&bytes[..32]);
         PrivKey{inner: H256(pkey)}
     }
-    pub fn to_secrit_key(&self) -> Result<SecretKey, SignatureError> {
+    pub fn to_secrit_key(&self) -> Result<SecretKey, Error> {
         let data = self.inner.0;
-        let res = SecretKey::from_bytes(&data[..]);
-        res
+        SecretKey::from_bytes(&data[..])
+        .map_err(|e|InternalErrorKind::Other(e.to_string()).into())
     }
 
     pub fn from_secret_key(key: &SecretKey) -> Self {
         PrivKey{inner: H256(key.to_bytes())}
     }
-    pub fn to_pubkey(&self) -> Pubkey {
-        let sk: SecretKey = self.to_secrit_key().unwrap();
+    pub fn to_pubkey(&self) -> Result<Pubkey,Error> {
+        let sk: SecretKey = self.to_secrit_key()?;
         let public_key: PublicKey = PublicKey::from_secret::<Sha512>(&sk);
-        Pubkey::from_pubkey(&public_key)
+        Ok(Pubkey::from_pubkey(&public_key))
     }
-    pub fn sign(&self,message: &[u8]) -> SignatureInfo {
-        let sk: SecretKey = self.to_secrit_key().unwrap();
+    pub fn sign(&self,message: &[u8]) -> Result<SignatureInfo,Error> {
+        let sk: SecretKey = self.to_secrit_key()?;
         let expanded_secret: ExpandedSecretKey = ExpandedSecretKey::from_secret_key::<Sha512>(&sk);
-        let pk: PublicKey = self.to_pubkey().to_pubkey().unwrap();
+        let pk: PublicKey = self.to_pubkey()?.to_pubkey()?;
         let sign_data = expanded_secret.sign::<Sha512>(&message,&pk);
         let mut p = [0u8;32];
         p[..].copy_from_slice(&pk.to_bytes()[..]);
-        SignatureInfo::from_signature(&sign_data,p)
+        Ok(SignatureInfo::from_signature(&sign_data,p))
     }
 }

@@ -79,11 +79,12 @@ pub struct InternalError {
     kind: Context<InternalErrorKind>,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Display)]
+#[derive(Debug, Clone, Eq, PartialEq, Display)]
 pub enum InternalErrorKind {
     Verify,
     NoneSign,
     Execute,
+    Other(String),
 }
 
 impl fmt::Display for InternalError {

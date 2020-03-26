@@ -17,13 +17,14 @@
 //! MarcoPolo ED25519.
 extern crate ed25519_dalek;
 extern crate serde;
+extern crate errors;
 
+use errors::{Error,InternalErrorKind};
 use serde::{Serialize, Deserialize};
-use ed25519_dalek::{Signature,SignatureError};
+use ed25519_dalek::{Signature};
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, KEYPAIR_LENGTH, SIGNATURE_LENGTH};
 use std::fmt;
 use faster_hex::hex_string;
-use std::fmt::Error;
 use std::str::FromStr;
 
 #[derive(Serialize, Deserialize)]
@@ -43,12 +44,12 @@ impl SignatureInfo {
     pub fn make(r:[u8;32],s:[u8;32],p:[u8;32]) -> Self {
         SignatureInfo(r,s,p)
     }
-    pub fn to_signature(&self) -> Result<Signature, SignatureError> {
+    pub fn to_signature(&self) -> Result<Signature, Error> {
         let mut sig = [0u8; 64];
         sig[0..32].copy_from_slice(&self.0[..]);
         sig[32..64].copy_from_slice(&self.1[..]);
-        let res = Signature::from_bytes(&sig);
-        res
+        Signature::from_bytes(&sig)
+        .map_err(|e|InternalErrorKind::Other(e.to_string()).into())
     }
     pub fn from_signature(sign: &Signature,p:[u8;32]) -> Self {
         let data = sign.to_bytes();
@@ -58,20 +59,17 @@ impl SignatureInfo {
         s[..].copy_from_slice(&data[32..64]);
         SignatureInfo(r,s,p)
     }
-    pub fn from_slice(data: &[u8]) -> Result<Self, SignatureError> {
-        // let mut sig = [0u8; SIGNATURE_LENGTH];
-        // sig[..].copy_from_slice(data);
+    pub fn from_slice(data: &[u8]) -> Result<Self, Error> {
         let mut sign_data = [0u8;64];
         let mut p = [0u8;32];
         sign_data[..].copy_from_slice(&data[0..64]);
         p[..].copy_from_slice(&data[64..96]);
-        let sig: Signature = Signature::from_bytes(&sign_data).unwrap();
+        let sig  = Signature::from_bytes(&sign_data)
+        .map_err(|e|InternalErrorKind::Other(e.to_string()))?;
         Ok(SignatureInfo::from_signature(&sig,p))
     }
 }
 
-// #[derive(Clone)]
-// pub struct SignatureInfo(pub [u8; SIGNATURE_LENGTH]);
 
 // impl Default for SignatureInfo {
 //     fn default() -> Self {
@@ -88,32 +86,3 @@ impl SignatureInfo {
 //     }
 // }
 
-// impl SignatureInfo {
-
-//     /// Get a slice into the 'r' portion of the data.
-//     pub fn r(&self) -> &[u8] {
-//         &self.0[0..32]
-//     }
-
-//     /// Get a slice into the 's' portion of the data.
-//     pub fn s(&self) -> &[u8] {
-//         &self.0[32..64]
-//     }
-
-//     pub fn to_signature(&self) -> Result<Signature, SignatureError> {
-//         let data = &self.0;
-//         let res = Signature::from_bytes(data);
-//         res
-//     }
-//     pub fn from_signature(sign: &Signature) -> Self {
-//         let data = sign.to_bytes();
-//         SignatureInfo(data)
-//     }
-
-//     pub fn from_slice(data: &[u8]) -> Result<Self, SignatureError> {
-//         // let mut sig = [0u8; SIGNATURE_LENGTH];
-//         // sig[..].copy_from_slice(data);
-//         let sig: Signature = Signature::from_bytes(data).unwrap();
-//         Ok(SignatureInfo::from_signature(&sig))
-//     }
-// }

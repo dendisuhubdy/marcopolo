@@ -17,13 +17,13 @@
 extern crate core;
 extern crate ed25519;
 
-use super::{Error,ErrorKind,ConsensusErrorKind};
-use super::traits::IConsensus;
+use super::{traits::IConsensus,ConsensusErrorKind};
 use core::block::{self,Block,BlockProof,VerificationItem};
 use core::types::{Hash,Address};
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 use std::fmt;
+use errors::Error;
 
 const poa_Version: u32 = 1;
 pub struct POA {}
@@ -41,7 +41,7 @@ impl POA {
             Some(p) => {
                 if t == 0u8 {
                     let h = b.get_hash();
-                    let signs = p.sign(h.to_slice());
+                    let signs = p.sign(h.to_slice())?;
                     info!("sign block with genesis privkey, height={}, hash={}", b.height(), h);
                     POA::add_signs_to_block(h,signs,b)
                 } else {
@@ -52,7 +52,7 @@ impl POA {
                 if t == 0u8 {
                     let pkey = PrivKey::from_bytes(&ed_genesis_priv_key);
                     let h = b.get_hash();
-                    let signs = pkey.sign(h.to_slice());
+                    let signs = pkey.sign(h.to_slice())?;
                     info!("sign block with genesis privkey, height={}, hash={}", b.height(), h);
                     POA::add_signs_to_block(h,signs,b)
                 } else {
@@ -109,13 +109,7 @@ impl POA {
             a1[..].copy_from_slice(&pk0[0..32]);
             let pk = Pubkey::from_bytes(&a1);
             let msg = vInfo.to_msg();
-            let res = pk.verify(&msg,&vInfo.signs);
-            match res {
-                Ok(()) => {
-                    Ok(())
-                },
-                Err(e) => Err(ConsensusErrorKind::Verify.into()),
-            }
+            pk.verify(&msg,&vInfo.signs)
         } else {
             Ok(())
         }

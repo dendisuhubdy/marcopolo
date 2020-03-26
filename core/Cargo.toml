@@ -15,3 +15,4 @@ ed25519 = { package = "map-ed25519", path = "../common/ed25519" }
 hash = { package = "map-hash", path = "../common/hash" }
 map-store = { path = "../common/store" }
 map-tree = { path = "../common/mtree" }
+errors = { package = "map-errors", path = "../common/errors" }

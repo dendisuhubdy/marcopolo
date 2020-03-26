@@ -19,14 +19,14 @@
 extern crate ed25519_dalek;
 extern crate bincode;
 extern crate sha2;
-// extern crate hash;
+extern crate errors;
 
+use errors::{Error,InternalErrorKind};
 use bincode::{serialize};
-use ed25519_dalek::{PublicKey,Signature,SignatureError};
+use ed25519_dalek::{PublicKey,Signature};
 use super::signature::SignatureInfo;
 use super::{H256,Message};
 use sha2::Sha512;
-
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Pubkey {
@@ -47,14 +47,36 @@ impl Pubkey {
         Pubkey{inner: H256(pk.to_bytes())}
     }
     #[inline]
-    pub fn to_pubkey(&self)->Result<PublicKey,SignatureError> {
+    pub fn to_pubkey(&self)->Result<PublicKey,Error> {
         PublicKey::from_bytes(&self.inner.0[..])
+        .map_err(|e|InternalErrorKind::Other(e.to_string()).into())
     }
-
-    pub fn verify(&self, message: &Message, signinfo: &SignatureInfo) -> Result<(), SignatureError> {
+    #[inline]
+    pub fn verify(&self, message: &Message, signinfo: &SignatureInfo) -> Result<(),Error> {
         let sign: Signature = signinfo.to_signature().unwrap();
-        let pubkey: PublicKey = self.to_pubkey().unwrap();
-        PublicKey::verify::<Sha512>(&pubkey,&message.0,&sign)?;
-        Ok(())
+        let pubkey: PublicKey = self.to_pubkey()?;
+        PublicKey::verify::<Sha512>(&pubkey,&message.0,&sign)
+        .map_err(|e|InternalErrorKind::Other(e.to_string()).into())
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    extern crate errors;
+    use errors::{Error,InternalErrorKind};
+    use super::{H256,Message,Pubkey};
+
+    #[test]
+    pub fn test_error_handle() -> Result<(),Error> {
+        let pk = Pubkey{inner: H256([0u8;32])};
+        let res = pk.to_pubkey();
+        match res {
+            Ok(p) => {
+                println!("ok....");
+                Ok(())
+            },
+            Err(e) => Err(InternalErrorKind::Other(e.to_string()).into()),
+        }
+    }
+}
+

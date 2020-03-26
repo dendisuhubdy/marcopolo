@@ -14,4 +14,4 @@ core = { package = "map-core", path = "../core" }
 #serde = { version = "1.0.102", features = ["derive"] }
 #bincode = "1.2.0"
 ed25519 = { package = "map-ed25519", path = "../common/ed25519" }
-#hash = { package = "map-hash", path = "../common/hash" }
+errors = { package = "map-errors", path = "../common/errors" }

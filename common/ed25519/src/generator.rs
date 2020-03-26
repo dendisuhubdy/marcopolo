@@ -20,7 +20,7 @@ extern crate rand_os;
 extern crate ed25519_dalek;
 
 use rand_os::OsRng;
-use ed25519_dalek::{PublicKey,SecretKey,Signature,SignatureError};
+use ed25519_dalek::{PublicKey,SecretKey,Signature};
 use super::{privkey::PrivKey,pubkey::Pubkey};
 
 pub struct Generator {}
@@ -36,7 +36,7 @@ impl Generator {
         let mut csprng: OsRng = OsRng::new().unwrap();
         let sk: SecretKey = SecretKey::generate(&mut csprng);
         let priv_key: PrivKey = PrivKey::from_secret_key(&sk);
-        (priv_key,priv_key.to_pubkey())
+        (priv_key,priv_key.to_pubkey().unwrap())
     }
 }
 

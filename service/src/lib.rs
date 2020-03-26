@@ -23,12 +23,13 @@ extern crate rpc;
 extern crate executor;
 #[macro_use]
 extern crate log;
+extern crate errors;
 
 use core::block::{self,Block,Header};
 use core::types::Hash;
 use core::balance::Balance;
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
-use consensus::{poa::POA,Error,ConsensusErrorKind};
+use consensus::{poa::POA,ConsensusErrorKind};
 use chain::blockchain::{BlockChain};
 use chain::tx_pool::TxPoolManager;
 use executor::Executor;
@@ -37,6 +38,7 @@ use std::{thread,thread::JoinHandle,sync::mpsc};
 use std::time::{Duration, SystemTime};
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use errors::Error;
 
 #[derive(Clone, Debug)]
 pub struct NodeConfig {

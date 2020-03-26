@@ -16,7 +16,6 @@
 
 #[macro_use]
 extern crate log;
-// use std::error::Error;
 use core::transaction::Transaction;
 use core::balance::Balance;
 use core::types::{Hash, Address};
@@ -85,7 +84,7 @@ impl Executor {
         Ok(())
     }
     fn verify_tx_sign(tx: &Transaction) -> Result<(),Error> {
-        if tx.verify_sign() {
+        if tx.verify_sign().is_ok() {
             Ok(())
         } else {
             Err(Error::InvalidSignData)

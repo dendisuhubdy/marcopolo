@@ -22,63 +22,10 @@ extern crate log;
 
 use failure::{Backtrace,err_msg, Context, Fail};
 use std::fmt::{self, Display,Debug};
+use errors::{Error,ErrorKind};
 
 pub mod poa;
 pub mod traits;
-
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Display)]
-pub enum ErrorKind {
-    Header,
-    Block,
-    Internal,
-    Consensus,
-}
-
-#[derive(Debug)]
-pub struct Error {
-    kind: Context<ErrorKind>,
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(cause) = self.cause() {
-            if f.alternate() {
-                write!(f, "{}: {}", self.kind(), cause)
-            } else {
-                write!(f, "{}({})", self.kind(), cause)
-            }
-        } else {
-            write!(f, "{}", self.kind())
-        }
-    }
-}
-
-impl From<Context<ErrorKind>> for Error {
-    fn from(inner: Context<ErrorKind>) -> Self {
-        Self { kind: inner }
-    }
-}
-
-impl Fail for Error {
-    fn cause(&self) -> Option<&dyn Fail> {
-        self.kind.cause()
-    }
-
-    fn backtrace(&self) -> Option<&Backtrace> {
-        self.kind.backtrace()
-    }
-}
-
-impl Error {
-    pub fn kind(&self) -> &ErrorKind {
-        self.kind.get_context()
-    }
-
-    pub fn downcast_ref<T: Fail>(&self) -> Option<&T> {
-        self.cause().and_then(|cause| cause.downcast_ref::<T>())
-    }
-}
 
 //////////////////////////////////////////////////////////////////
 #[derive(Debug)]
@@ -86,13 +33,14 @@ pub struct ConsensusError {
     kind: Context<ConsensusErrorKind>,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Display)]
+#[derive(Debug, Clone, Eq, PartialEq, Display)]
 pub enum ConsensusErrorKind {
     Header,
     Block,
     Verify,
     NoneSign,
     Execute,
+    Other(String),
 }
 
 impl fmt::Display for ConsensusError {
@@ -107,7 +55,7 @@ impl fmt::Display for ConsensusError {
 
 impl From<ConsensusError> for Error {
     fn from(error: ConsensusError) -> Self {
-        error.context(ErrorKind::Internal).into()
+        error.context(ErrorKind::Consensus).into()
     }
 }
 

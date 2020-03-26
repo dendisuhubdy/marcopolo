@@ -1,5 +1,7 @@
 extern crate serde;
+extern crate errors;
 
+use errors::{Error,InternalErrorKind};
 use std::fmt;
 
 use bytes::Bytes;
@@ -92,17 +94,15 @@ impl Transaction {
 		self.sign_data.1[..].copy_from_slice(data.s());
 		self.sign_data.2[..].copy_from_slice(data.p());
 	}
-	pub fn sign(&mut self,priv_data: &[u8]) {
+	pub fn sign(&mut self,priv_data: &[u8]) -> Result<(),Error> {
 		let h = self.hash();
 		let priv_key = PrivKey::from_bytes(priv_data);
-		let data = priv_key.sign(h.to_slice());
+		let data = priv_key.sign(h.to_slice())?;
 		self.set_sign_data(&data);
+		Ok(())
 	}
-	pub fn verify_sign(&self) -> bool {
+	pub fn verify_sign(&self) -> Result<(),Error> {
 		let pk = Pubkey::from_bytes(&self.sign_data.2[..]);
-		if pk.verify(&self.hash().to_msg(), &self.get_sign_data()).is_err() {
-			return  false;
-		}
-		return true;
+		pk.verify(&self.hash().to_msg(), &self.get_sign_data())
 	}
 }
