@@ -20,7 +20,7 @@ extern crate ed25519;
 use super::{Error,ErrorKind,ConsensusErrorKind};
 use super::traits::IConsensus;
 use core::block::{self,Block,BlockProof,VerificationItem};
-use core::types::Hash;
+use core::types::{Hash,Address};
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 use std::fmt;
@@ -121,6 +121,11 @@ impl POA {
     }
     pub fn get_interval() -> u64 {
         2000u64
+    }
+    pub fn get_default_miner() -> Address {
+        let mut pk = [0u8;32];
+        pk[..].copy_from_slice(&ed_genesis_pub_key[..]);
+        Pubkey::from_bytes(&pk[..]).into()
     }
 }
 

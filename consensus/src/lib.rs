@@ -32,6 +32,7 @@ pub enum ErrorKind {
     Header,
     Block,
     Internal,
+    Execute,
     Consensus,
 }
 
