@@ -154,6 +154,10 @@ impl  Block {
         self.header.hash()
     }
 
+    pub fn state_root(&self) -> Hash {
+        self.header.state_root
+    }
+
     pub fn get_hash(&self) -> Hash {
        self.header.hash()
     }

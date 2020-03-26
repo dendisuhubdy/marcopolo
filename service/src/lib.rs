@@ -77,7 +77,10 @@ impl Service {
         }
     }
     pub fn start(mut self,cfg: NodeConfig) -> (mpsc::Sender<i32>,JoinHandle<()>) {
-        self.get_write_blockchain().load();
+        {
+            let mut statedb = self.state.write().unwrap();
+            self.get_write_blockchain().load(&mut statedb);
+        }
 
         let rpc = http_server::start_http(cfg.rpc_addr,cfg.rpc_port,self.block_chain.clone(),self.tx_pool.clone());
 

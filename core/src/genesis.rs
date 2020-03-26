@@ -15,8 +15,9 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::{traits::TxMsg};
-use super::types::Hash;
+use super::types::{Hash, Address};
 use super::block;
+use super::balance::Balance;
 use super::block::{Block, BlockProof};
 
 pub const ed_genesis_priv_key: [u8; 32] = [
@@ -28,6 +29,10 @@ pub const ed_genesis_pub_key: [u8; 32] = [
     72, 114, 24, 80, 73, 118, 31, 251, 38, 82, 192, 147, 7,
 ];
 
+const allocation: &[(&str, u128)] = &[
+    ("0x0000000000000000000000000000000000000000", 1000000000000000000),
+];
+
 pub fn to_genesis() -> Block {
     let zore_hash = [0u8;32];
     let mut b = Block::default();
@@ -37,4 +42,11 @@ pub fn to_genesis() -> Block {
     b.header.tx_root = block::get_hash_from_txs(&b.txs);
     b.header.sign_root = block::get_hash_from_signs(b.signs.clone());
     return b
+}
+
+pub fn setup_allocation(state: &mut Balance) -> Hash {
+    for &(addr, value) in allocation {
+        state.add_balance(Address::from_hex(addr).unwrap(), value);
+    }
+    state.commit()
 }

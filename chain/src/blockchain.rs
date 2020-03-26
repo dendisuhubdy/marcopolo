@@ -21,6 +21,7 @@ use map_core;
 use map_core::block::{Block, Header};
 use map_core::types::Hash;
 use map_core::genesis;
+use map_core::balance::Balance;
 use map_consensus::poa;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -53,18 +54,22 @@ impl BlockChain {
         }
     }
 
-    pub fn setup_genesis(&mut self) -> Hash {
-        if self.db.get_block_by_number(0).is_none() {
-            self.db.write_block(&self.genesis).expect("can not write block");
-            self.db.write_head_hash(self.genesis.hash()).expect("can not wirte head");
-        }
-
+    pub fn setup_genesis(&mut self, state: &mut Balance) -> Hash {
+        let root = genesis::setup_allocation(state);
+        self.genesis.set_state_root(root);
+        self.db.write_block(&self.genesis).expect("can not write block");
+        self.db.write_head_hash(self.genesis.hash()).expect("can not wirte head");
+        info!("setup genesis hash={}", self.genesis.hash());
         self.genesis.hash()
     }
 
-    pub fn load(&mut self) {
+    pub fn load(&mut self, state: &mut Balance) {
         if self.db.get_block_by_number(0).is_none() {
-            self.setup_genesis();
+            self.setup_genesis(state);
+        } else {
+            let current = self.current_block();
+            state.load_root(current.state_root());
+            info!("load block height={} hash={}", current.height(), current.hash());
         }
     }
 

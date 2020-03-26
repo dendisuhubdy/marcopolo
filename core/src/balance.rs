@@ -175,6 +175,10 @@ impl Balance {
         self.root_hash
     }
 
+    pub fn load_root(&mut self, root: Hash) {
+        self.root_hash = root;
+    }
+
     /// Storage hash key of account
     pub fn address_key(addr: Address) -> Hash {
         let h = Hash::from_bytes(addr.as_slice());
