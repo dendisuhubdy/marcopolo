@@ -34,7 +34,7 @@ pub fn to_genesis() -> Block {
     b.header.height = 0;
     b.header.parent_hash = Hash(zore_hash);
     b.proofs.push(BlockProof(ed_genesis_pub_key,[0u8;32],0));
-    b.header.tx_root = block::get_hash_from_txs(b.txs.clone());
+    b.header.tx_root = block::get_hash_from_txs(&b.txs);
     b.header.sign_root = block::get_hash_from_signs(b.signs.clone());
     return b
 }

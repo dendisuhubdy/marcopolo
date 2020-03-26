@@ -139,7 +139,7 @@ impl Validator {
             return Err(Error::MismatchHash);
         }
 
-        if block.header.tx_root != map_core::block::get_hash_from_txs(block.txs.clone()) {
+        if block.header.tx_root != map_core::block::get_hash_from_txs(&block.txs) {
             return Err(Error::MismatchHash);
         }
 

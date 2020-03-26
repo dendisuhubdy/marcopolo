@@ -31,7 +31,7 @@ use chain::blockchain::{BlockChain};
 use chain::tx_pool::TxPoolManager;
 use rpc::http_server;
 use std::{thread,thread::JoinHandle,sync::mpsc};
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, SystemTime};
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
@@ -59,19 +59,20 @@ impl Default for NodeConfig {
 //#[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Service {
     pub block_chain: Arc<RwLock<BlockChain>>,
+    pub tx_pool : Arc<RwLock<TxPoolManager>>,
 }
 
 impl Service {
     pub fn new_service(cfg: NodeConfig) -> Self {
         Service{
             block_chain:    Arc::new(RwLock::new(BlockChain::new(cfg.data_dir))),
+            tx_pool: Arc::new(RwLock::new(TxPoolManager::start())),
         }
     }
     pub fn start(mut self,cfg: NodeConfig) -> (mpsc::Sender<i32>,JoinHandle<()>) {
         self.get_write_blockchain().load();
 
-        let tx_pool = Arc::new(RwLock::new(TxPoolManager::start()));
-        let rpc = http_server::start_http(cfg.rpc_addr,cfg.rpc_port,self.block_chain.clone(),tx_pool);
+        let rpc = http_server::start_http(cfg.rpc_addr,cfg.rpc_port,self.block_chain.clone(),self.tx_pool.clone());
 
         let (tx,rx): (mpsc::Sender<i32>,mpsc::Receiver<i32>) = mpsc::channel();
         let shared_block_chain = self.block_chain.clone();
@@ -111,8 +112,12 @@ impl Service {
         // 3. get pre_block info
         // 4. finalize block
         let cur_block = self.get_write_blockchain().current_block();
-        let txs = Vec::new();
-        let txs_root = block::get_hash_from_txs(txs.clone());
+        let tx_pool = self.tx_pool.clone();
+
+        let txs =
+            tx_pool.read().expect("acquiring block_chain read lock").get_txs().to_vec();
+
+        let txs_root = block::get_hash_from_txs(&txs);
         let header: Header = Header{
             height: cur_block.height() + 1,
             parent_hash: cur_block.get_hash().clone(),

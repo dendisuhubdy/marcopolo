@@ -103,8 +103,8 @@ impl BlockProof {
     }
 }
 
-pub fn get_hash_from_txs(txs: Vec<Transaction>) -> Hash {
-    let data = bincode::serialize(&txs).unwrap();
+pub fn get_hash_from_txs(txs: &Vec<Transaction>) -> Hash {
+    let data = bincode::serialize(txs).unwrap();
     Hash(hash::blake2b_256(data))
 }
 pub fn get_hash_from_signs(signs: Vec<VerificationItem>) -> Hash {
@@ -133,7 +133,7 @@ impl Default for Block {
 
 impl  Block {
     pub fn new(mut header: Header,txs: Vec<Transaction>,signs: Vec<VerificationItem>,proofs: Vec<BlockProof>) -> Self {
-        header.tx_root = get_hash_from_txs(txs.clone());
+        header.tx_root = get_hash_from_txs(&txs);
         header.sign_root = get_hash_from_signs(signs.clone());
         Block{header,signs,txs,proofs}
     }
