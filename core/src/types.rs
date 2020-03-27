@@ -15,7 +15,7 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::fmt;
-use serde::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize,Deserializer, Serializer};
 use hex;
 pub use hex::FromHexError as HexError;
 use ed25519::Message;
@@ -24,7 +24,6 @@ pub use ed25519::H256;
 use hash;
 
 pub const chain_id: u32 = 1;
-#[derive(Serialize, Deserialize)]
 #[derive(Default, Copy, Clone, Eq, Ord, PartialEq, PartialOrd, Hash)]
 pub struct Hash(pub [u8; 32]);
 
@@ -48,6 +47,16 @@ impl Hash {
         }
         h
     }
+
+    pub fn from_hex(text: &str) -> Result<Self, HexError> {
+        let mut from = text;
+        if text.starts_with("0x") || text.starts_with("0X") {
+            from = &text[2..];
+        }
+        let b = hex::decode(from)?;
+
+        Ok(Hash::from_bytes(&b))
+    }
 }
 
 impl fmt::Debug for Hash {
@@ -61,10 +70,30 @@ impl fmt::Debug for Hash {
 
 impl fmt::Display for Hash {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "0x")?;
         for i in self.0[..4].iter() {
             write!(f, "{:02x}", i)?;
         }
         Ok(())
+    }
+}
+
+impl Serialize for Hash {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        serializer.serialize_str(&format!("0x{}", hex::encode(self.0)))
+    }
+}
+
+impl<'a> Deserialize<'a> for Hash {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'a>
+    {
+        let s = String::deserialize(deserializer)?;
+        let hash = Hash::from_hex(s.as_str()).expect("Hash decode error");
+        Ok(hash)
     }
 }
 
