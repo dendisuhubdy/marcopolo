@@ -3,7 +3,7 @@ use serde::{Serialize, Deserialize};
 #[derive(Clone, Debug, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum API {
     Chain,
-    TxPool,
+    Account,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -16,7 +16,7 @@ impl Config {
         self.modules.contains(&API::Chain)
     }
 
-    pub fn config_pool(&self) -> bool {
-        self.modules.contains(&API::TxPool)
+    pub fn config_account(&self) -> bool {
+        self.modules.contains(&API::Account)
     }
 }

@@ -1,5 +1,5 @@
 pub(crate) use self::chain::{ChainRpc, ChainRpcImpl};
-pub(crate) use self::tx_pool::{TxPool, TxPoolClient};
+pub(crate) use self::account::{AccountManager, AccountManagerImpl};
 
-mod tx_pool;
+mod account;
 mod chain;

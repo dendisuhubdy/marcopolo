@@ -6,7 +6,7 @@ use std::sync::{Arc, RwLock};
 
 use crate::api::{
     ChainRpc, ChainRpcImpl,
-    TxPool, TxPoolClient};
+    AccountManager, AccountManagerImpl};
 
 pub struct RpcBuilder {
     io_handler: IoHandler,
@@ -24,8 +24,8 @@ impl RpcBuilder {
         self
     }
 
-    pub fn config_pool(mut self,tx_pool :Arc<RwLock<TxPoolManager>>,key : String) -> Self {
-        let pool = TxPoolClient::new(tx_pool,key).to_delegate();
+    pub fn config_account(mut self, tx_pool :Arc<RwLock<TxPoolManager>>, key : String) -> Self {
+        let pool = AccountManagerImpl::new(tx_pool, key).to_delegate();
         self.io_handler.extend_with(pool);
         self
     }

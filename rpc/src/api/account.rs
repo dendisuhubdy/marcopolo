@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use bytes::Bytes;
@@ -9,27 +10,26 @@ use ed25519::{privkey::PrivKey, pubkey::Pubkey};
 use map_core::genesis::{ed_genesis_priv_key, ed_genesis_pub_key};
 use map_core::transaction::Transaction;
 use map_core::types::Address;
-use std::collections::HashMap;
 
-/// TxPool rpc interface.
+/// AccountManager rpc interface.
 #[rpc(server)]
-pub trait TxPool {
+pub trait AccountManager {
     /// Send transaction.
     /// curl -d '{"id": 2, "jsonrpc": "2.0", "method":"map_sendTransaction","params": ["0xd2480451ef35ff2fdd7c69cad058719b9dc4d631","0x0000000000000000000000000000000000000011",100000]}' -H 'content-type:application/json' 'http://localhost:9545'
     #[rpc(name = "map_sendTransaction")]
     fn send_transaction(&self, from: String, to: String, value: u128) -> Result<String>;
 }
 
-/// TxPool rpc implementation.
-pub struct TxPoolClient {
+/// AccountManager rpc implementation.
+pub struct AccountManagerImpl {
     tx_pool: Arc<RwLock<TxPoolManager>>,
     accounts: HashMap<Address, PrivKey>,
 }
 
-impl TxPoolClient {
-    /// Creates new TxPoolClient.
+impl AccountManagerImpl {
+    /// Creates new AccountManagerImpl.
     pub fn new(tx_pool: Arc<RwLock<TxPoolManager>>, key: String) -> Self {
-        let mut accounts =  HashMap::new();
+        let mut accounts = HashMap::new();
 
         if key != "" {
             let priv_key = PrivKey::from_hex(key.as_str()).expect("private ok");
@@ -38,14 +38,14 @@ impl TxPoolClient {
             accounts.insert(address, priv_key);
         }
 
-        TxPoolClient {
+        AccountManagerImpl {
             tx_pool,
             accounts,
         }
     }
 }
 
-impl TxPool for TxPoolClient {
+impl AccountManager for AccountManagerImpl {
     fn send_transaction(&self, from: String, to: String, value: u128) -> Result<String> {
         if !is_hex(from.as_str()).is_ok() {
             return Ok(format!("from address is not hex {}", from));
@@ -101,7 +101,7 @@ fn is_hex(hex: &str) -> core::result::Result<(), String> {
     }
 }
 
-mod tx_pool {
+mod account {
     use super::*;
 
     #[test]

@@ -25,7 +25,7 @@ pub fn start_http(cfg: RpcConfig, block_chain: Arc<RwLock<BlockChain>>,tx_pool :
 
     let addr = url.parse().map_err(|_| format!("Invalid  listen host/port given: {}", url)).unwrap();
 
-    let handler = RpcBuilder::new().config_chain(block_chain).config_pool(tx_pool,cfg.key).build();
+    let handler = RpcBuilder::new().config_chain(block_chain).config_account(tx_pool, cfg.key).build();
 
     let http = ServerBuilder::new(handler)
         .threads(4)
