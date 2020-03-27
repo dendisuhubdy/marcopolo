@@ -44,11 +44,6 @@ impl Executor {
 
     // handle the state for the tx,caller handle the gas of tx
     pub fn exc_transfer_tx(tx: &Transaction, state: &mut Balance) -> Result<Hash, Error> {
-        // 1. version check
-        // 2. nonce check
-        // 3. balance check
-        // 4. sign check
-        // 5. update state
         let from_addr = tx.get_from_address();
         let to_addr = tx.get_to_address();
 
@@ -75,5 +70,42 @@ impl Executor {
     }
     fn verify_tx_sign(tx: &Transaction) -> Result<(),Error> {
         tx.verify_sign()
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    extern crate ed25519;
+    use ed25519::{privkey::PrivKey,pubkey::Pubkey,generator::Generator};
+    use core::balance::Balance;
+    use core::types::{Hash, Address};
+    use core::transaction::Transaction;
+    use std::path::PathBuf;
+    use super::Executor;
+    use bytes::Bytes;
+
+    pub fn get_pair() -> (PrivKey,Pubkey) {
+        Generator::default().new()
+    }
+    #[test]
+    pub fn test_tx_execute() {
+        let path = PathBuf::from("testdb_04".to_string());
+        let mut state = Balance::new(path);
+        let user1 = get_pair();
+        let addr1 = user1.1.into();
+        let const_value = 100000u128;
+        let tval = 100u128;
+        state.add_balance(addr1, const_value);
+        state.inc_nonce(addr1);
+        let hex_addr = "0000000000000000000000000000000000000001";
+        let addr2 = Address::from_hex(hex_addr).unwrap();
+        let tx = Transaction::new(addr1, addr2, 2,
+             10, 10, tval, Bytes::new());
+        match Executor::exc_transfer_tx(&tx, &mut state) {
+            Ok(h) => println!("root:{:?}",h),
+            Err(e) => {println!("err:{:?}",e);return;},
+        };
+        let val2 = state.balance(addr2);
+        assert_eq!(val2,tval);
     }
 }
