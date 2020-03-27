@@ -61,7 +61,9 @@ impl TxPool for TxPoolClient {
             return Ok(format!("sign address error  {} {}", sign_address, from));
         }
 
-        let mut tx = Transaction::new(sign_address, to, 1, 1000, 1000, value, b);
+        let nonce = self.tx_pool.read().expect("acquiring tx pool read lock").get_nonce(&sign_address);
+
+        let mut tx = Transaction::new(sign_address, to, nonce + 1, 1000, 1000, value, b);
 
         tx.sign(&pkey.to_bytes());
         self.tx_pool.write().expect("acquiring tx pool write lock").submit_txs(tx.clone());
