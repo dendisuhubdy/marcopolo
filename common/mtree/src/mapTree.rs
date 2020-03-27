@@ -228,67 +228,33 @@ pub mod tests {
         Ok(())
     }
     #[test]
-    fn test02_real_database() -> BinaryMerkleTreeResult<()> {
+    fn test02_data_version() -> BinaryMerkleTreeResult<()> {
         println!("");
-        println!("begin test02_real_database");
-        let seed = [0x00u8; KEY_LEN];
-        let path = generate_path(seed);
-        println!("path:{:?}",path);
-        let key = [0xAAu8; KEY_LEN];
-        let key2 = [0x33u8; KEY_LEN];
-        let retrieved_value;
-        let retrieved_value2;
-        let data = vec![0xFFu8];
-        let data2 = vec![0xCCu8];
-        {
-            let values = vec![data.clone()];
-            let values2 = vec![data2.clone()];
-            let mut tree = MapTree::open(&path, 160)?;
-            let mut root;
-            
-            match tree.insert(None, &mut [key], &values) {
-                Ok(r) => root = r,
-                Err(e) => {
-                    drop(tree);
-                    tear_down(&path);
-                    panic!("{:?}", e.description());
-                }
+        println!("begin test02_data_version");
+        let path = PathBuf::from("testdb_04".to_string());
+        let keys = [[0xAAu8; KEY_LEN],[0xBBu8; KEY_LEN],[0xCCu8; KEY_LEN]];
+        let values = vec![0x01u8,0x02u8,0x03u8];
+        let mut root;
+        let mut root0 = [0u8;32];
+        let mut tree = MapTree::<[u8; 32],Vec<u8>>::open(&path, 160)?;
+        for i in 0..3 {
+            if i == 0 {
+                let vv = vec![values[i].clone()];
+                root = tree.insert(None, &mut [keys[i]], &[vv])?;
+                root0 = root;
+            } else {
+                let vv = vec![values[i].clone()];
+                root = tree.insert(Some(&root0), &mut [keys[i]], &[vv])?;
+                root0 = root;
+                println!("insert:{},key:{:X},value:{:?}",i,keys[i][0],values[i].clone());
+                let val = tree.get(&root0, &mut [keys[i-1]])?;
+                println!("get key:{},key:{:X},value {:?}",i-1,keys[i-1][0],val);
             }
-            println!("insert key1 test,root:{:?}",root);
-            match tree.insert(Some(&root), &mut [key2], &values2) {
-                Ok(r) => root = r,
-                Err(e) => {
-                    drop(tree);
-                    tear_down(&path);
-                    panic!("{:?}", e.description());
-                }
-            }
-            println!("insert key2 test,root:{:?}",root);
-            
-            match tree.get(&root, &mut [key]) {
-                Ok(v) => retrieved_value = v,
-                Err(e) => {
-                    drop(tree);
-                    tear_down(&path);
-                    panic!("{:?}", e.description());
-                }
-            }
-            println!("get key1 test,root:{:?},value1:{:?}",root,retrieved_value);
-
-            match tree.get(&root, &mut [key2]) {
-                Ok(v) => retrieved_value2 = v,
-                Err(e) => {
-                    drop(tree);
-                    tear_down(&path);
-                    panic!("{:?}", e.description());
-                }
-            }
-            println!("get key2 test,root:{:?},value2:{:?}",root,retrieved_value2);
         }
-        // tear_down(&path);
+        
         // assert_eq!(retrieved_value[&key], Some(data));
         // assert_eq!(retrieved_value2[&key], Some(data2));
-        println!("end test02_real_database");
+        println!("end test02_data_version");
         Ok(())
     }
 }
