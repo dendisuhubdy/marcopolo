@@ -36,10 +36,8 @@ impl Executor {
         // let mut h = Hash([0u8;32]);
         for tx in txs {
             Executor::exc_transfer_tx(tx,state)?;
+            state.add_balance(*miner_addr, transfer_fee);
         }
-
-        let gas = transfer_fee * txs.len() as u128;
-        state.add_balance(*miner_addr, gas);
 
         Ok(state.commit())
     }
@@ -54,19 +52,19 @@ impl Executor {
         let from_addr = tx.get_from_address();
         let to_addr = tx.get_to_address();
 
+        Executor::verify_tx_sign(&tx)?;
         // Ensure balance and nance field available
         let from_account = state.get_account(from_addr);
         if tx.get_nonce() != from_account.get_nonce() + 1 {
             return Err(InternalErrorKind::InvalidTxNonce.into());
         }
-        if tx.get_value() + transfer_fee <= from_account.get_balance() {
+        if tx.get_value() + transfer_fee > from_account.get_balance() {
             return Err(InternalErrorKind::BalanceNotEnough.into());
         }
 
         state.sub_balance(from_addr, transfer_fee);
         state.inc_nonce(from_addr);
 
-        Executor::verify_tx_sign(&tx)?;
         state.transfer(from_addr, to_addr, tx.get_value());
         Ok(Hash::default())
     }

@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
+#[macro_use]
+extern crate log;
 pub mod types;
 pub mod block;
 pub mod genesis;

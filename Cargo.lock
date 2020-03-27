@@ -724,6 +724,7 @@ dependencies = [
  "bincode 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytes 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "map-ed25519 0.1.0-pre",
  "map-errors 0.1.0-pre",
  "map-hash 0.1.0-pre",
@@ -762,6 +763,7 @@ dependencies = [
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "map-core 0.1.0",
  "map-ed25519 0.1.0-pre",
+ "map-errors 0.1.0-pre",
 ]
 
 [[package]]
