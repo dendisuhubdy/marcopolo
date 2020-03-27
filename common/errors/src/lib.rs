@@ -81,7 +81,9 @@ pub struct InternalError {
 
 #[derive(Debug, Clone, Eq, PartialEq, Display)]
 pub enum InternalErrorKind {
-    Verify,
+    InvalidSignData,
+    BalanceNotEnough,
+    InvalidTxNonce,
     NoneSign,
     Execute,
     Other(String),

@@ -35,12 +35,7 @@ pub struct ConsensusError {
 
 #[derive(Debug, Clone, Eq, PartialEq, Display)]
 pub enum ConsensusErrorKind {
-    Header,
-    Block,
-    Verify,
     NoneSign,
-    Execute,
-    Other(String),
 }
 
 impl fmt::Display for ConsensusError {

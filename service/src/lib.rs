@@ -139,14 +139,9 @@ impl Service {
         let b = Block::new(header,txs,Vec::new(),Vec::new());
         let finalize = POA{};
         let mut statedb = self.state.write().unwrap();
-        let res = Executor::exc_txs_in_block(&b, &mut statedb, &POA::get_default_miner());
-        match res {
-            Ok(h) => {
-                tx_pool.write().expect("acquiring tx_pool write lock").notify_block(&b);
-                finalize.finalize_block(b,h)
-            },
-            Err(_) => Err(ConsensusErrorKind::Execute.into()),
-        }
+        let h = Executor::exc_txs_in_block(&b, &mut statedb, &POA::get_default_miner())?;
+        tx_pool.write().expect("acquiring tx_pool write lock").notify_block(&b);
+        finalize.finalize_block(b,h)
     }
     pub fn get_current_block(&mut self) -> Block {
         self.get_write_blockchain().current_block()

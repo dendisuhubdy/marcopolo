@@ -16,20 +16,18 @@
 
 #[macro_use]
 extern crate log;
+extern crate errors;
+
 use core::transaction::Transaction;
 use core::balance::Balance;
 use core::types::{Hash, Address};
 use core::block::{Block};
+use errors::{Error,InternalErrorKind};
 
 #[allow(non_upper_case_globals)]
 const transfer_fee: u128 = 10000;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Error {
-    InvalidSignData,
-    BalanceNotEnough,
-    InvalidTxNonce,
-}
+
 pub struct Executor;
 
 impl Executor {
@@ -37,13 +35,7 @@ impl Executor {
         let txs = b.get_txs();
         // let mut h = Hash([0u8;32]);
         for tx in txs {
-            let res = Executor::exc_transfer_tx(tx,state);
-            match res {
-                Ok(v) => {},
-                Err(e) => {
-                    error!("Fail transfer exection {:?}", e);
-                },
-            };
+            Executor::exc_transfer_tx(tx,state)?;
         }
 
         let gas = transfer_fee * txs.len() as u128;
@@ -65,10 +57,10 @@ impl Executor {
         // Ensure balance and nance field available
         let from_account = state.get_account(from_addr);
         if tx.get_nonce() != from_account.get_nonce() + 1 {
-            return Err(Error::InvalidTxNonce);
+            return Err(InternalErrorKind::InvalidTxNonce.into());
         }
         if tx.get_value() + transfer_fee <= from_account.get_balance() {
-            return Err(Error::BalanceNotEnough);
+            return Err(InternalErrorKind::BalanceNotEnough.into());
         }
 
         state.sub_balance(from_addr, transfer_fee);
@@ -84,10 +76,6 @@ impl Executor {
         Ok(())
     }
     fn verify_tx_sign(tx: &Transaction) -> Result<(),Error> {
-        if tx.verify_sign().is_ok() {
-            Ok(())
-        } else {
-            Err(Error::InvalidSignData)
-        }
+        tx.verify_sign()
     }
 }
