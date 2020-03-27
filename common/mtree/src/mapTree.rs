@@ -232,12 +232,15 @@ pub mod tests {
         println!("");
         println!("begin test02_data_version");
         let path = PathBuf::from("testdb_04".to_string());
-        let keys = [[0xAAu8; KEY_LEN],[0xBBu8; KEY_LEN],[0xCCu8; KEY_LEN]];
-        let values = vec![0x01u8,0x02u8,0x03u8];
+        let keys = [[0x01u8; KEY_LEN],[0x02u8; KEY_LEN],[0x03u8; KEY_LEN],
+                                    [0x04u8; KEY_LEN],[0x05u8; KEY_LEN],[0x06u8; KEY_LEN],
+                                    [0x07u8; KEY_LEN],[0x08u8; KEY_LEN],[0x09u8; KEY_LEN],[0x0Au8; KEY_LEN]];
+        let values = vec![0x01u8,0x02u8,0x03u8,0x04u8,0x05u8,0x06u8,
+        0x07u8,0x08u8,0x09u8,0x0Au8];
         let mut root;
         let mut root0 = [0u8;32];
         let mut tree = MapTree::<[u8; 32],Vec<u8>>::open(&path, 160)?;
-        for i in 0..3 {
+        for i in 0..10 {
             if i == 0 {
                 let vv = vec![values[i].clone()];
                 root = tree.insert(None, &mut [keys[i]], &[vv])?;
@@ -249,6 +252,7 @@ pub mod tests {
                 println!("insert:{},key:{:X},value:{:?}",i,keys[i][0],values[i].clone());
                 let val = tree.get(&root0, &mut [keys[i-1]])?;
                 println!("get key:{},key:{:X},value {:?}",i-1,keys[i-1][0],val);
+                assert_eq!(val[&keys[i-1]],Some(vec![values[i-1].clone()]));
             }
         }
         
