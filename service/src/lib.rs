@@ -43,6 +43,7 @@ pub struct NodeConfig {
     pub data_dir: PathBuf,
     pub rpc_addr: String,
     pub rpc_port: u16,
+    pub key:      String,
 }
 
 impl Default for NodeConfig {
@@ -52,6 +53,7 @@ impl Default for NodeConfig {
             data_dir: PathBuf::from("."),
             rpc_addr:"127.0.0.1".into(),
             rpc_port:9545,
+            key:    "".into(),
         }
     }
 }
@@ -81,7 +83,11 @@ impl Service {
             self.get_write_blockchain().load(&mut statedb);
         }
 
-        let rpc = http_server::start_http(cfg.rpc_addr,cfg.rpc_port,self.block_chain.clone(),self.tx_pool.clone());
+        let rpc = http_server::start_http(http_server::RpcConfig{
+            rpc_addr:cfg.rpc_addr,
+            rpc_port:cfg.rpc_port,
+            key:cfg.key,
+        },self.block_chain.clone(),self.tx_pool.clone());
 
         let (tx,rx): (mpsc::Sender<i32>,mpsc::Receiver<i32>) = mpsc::channel();
         let shared_block_chain = self.block_chain.clone();

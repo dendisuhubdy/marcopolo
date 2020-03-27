@@ -24,8 +24,8 @@ impl RpcBuilder {
         self
     }
 
-    pub fn config_pool(mut self,tx_pool :Arc<RwLock<TxPoolManager>>) -> Self {
-        let pool = TxPoolClient::new(tx_pool).to_delegate();
+    pub fn config_pool(mut self,tx_pool :Arc<RwLock<TxPoolManager>>,key : String) -> Self {
+        let pool = TxPoolClient::new(tx_pool,key).to_delegate();
         self.io_handler.extend_with(pool);
         self
     }

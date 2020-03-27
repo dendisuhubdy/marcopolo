@@ -7,19 +7,25 @@ use chain::tx_pool::TxPoolManager;
 
 use crate::rpc_build::RpcBuilder;
 
+pub struct RpcConfig {
+    pub rpc_addr: String,
+    pub rpc_port: u16,
+    pub key:      String,
+}
+
 pub struct RpcServer {
     pub http: jsonrpc_http_server::Server,
     pub url: String,
 }
 
-pub fn start_http(ip: String, port: u16, block_chain: Arc<RwLock<BlockChain>>,tx_pool : Arc<RwLock<TxPoolManager>>) -> RpcServer {
-    let url = format!("{}:{}", ip, port);
+pub fn start_http(cfg: RpcConfig, block_chain: Arc<RwLock<BlockChain>>,tx_pool : Arc<RwLock<TxPoolManager>>) -> RpcServer {
+    let url = format!("{}:{}", cfg.rpc_addr, cfg.rpc_port);
 
     info!("using url {}", url);
 
     let addr = url.parse().map_err(|_| format!("Invalid  listen host/port given: {}", url)).unwrap();
 
-    let handler = RpcBuilder::new().config_chain(block_chain).config_pool(tx_pool).build();
+    let handler = RpcBuilder::new().config_chain(block_chain).config_pool(tx_pool,cfg.key).build();
 
     let http = ServerBuilder::new(handler)
         .threads(4)

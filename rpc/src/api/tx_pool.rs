@@ -9,6 +9,7 @@ use ed25519::{privkey::PrivKey, pubkey::Pubkey};
 use map_core::genesis::{ed_genesis_priv_key, ed_genesis_pub_key};
 use map_core::transaction::Transaction;
 use map_core::types::Address;
+use std::collections::HashMap;
 
 /// TxPool rpc interface.
 #[rpc(server)]
@@ -21,14 +22,25 @@ pub trait TxPool {
 
 /// TxPool rpc implementation.
 pub struct TxPoolClient {
-    pub tx_pool: Arc<RwLock<TxPoolManager>>,
+    tx_pool: Arc<RwLock<TxPoolManager>>,
+    accounts: HashMap<Address, PrivKey>,
 }
 
 impl TxPoolClient {
     /// Creates new TxPoolClient.
-    pub fn new(tx_pool: Arc<RwLock<TxPoolManager>>) -> Self {
+    pub fn new(tx_pool: Arc<RwLock<TxPoolManager>>, key: String) -> Self {
+        let mut accounts =  HashMap::new();
+
+        if key != "" {
+            let priv_key = PrivKey::from_hex(key.as_str()).expect("private ok");
+            let pubkey = priv_key.to_pubkey().expect("pub key ok");
+            let address = Address::from(pubkey);
+            accounts.insert(address, priv_key);
+        }
+
         TxPoolClient {
             tx_pool,
+            accounts,
         }
     }
 }
@@ -52,20 +64,17 @@ impl TxPool for TxPoolClient {
             Err(e) => return Ok(format!("convert address err  {} {}", &to, e))
         };
 
+        let priv_key = match self.accounts.get(&from) {
+            Some(v) => v,
+            None => return Ok(format!("account no exist {}", from)),
+        };
+
+        let nonce = self.tx_pool.read().expect("acquiring tx pool read lock").get_nonce(&from);
+
         let b = Bytes::new();
-        let pkey = PrivKey::from_bytes(&ed_genesis_priv_key);
-        let pk = Pubkey::from_bytes(&ed_genesis_pub_key);
-        let sign_address = Address::from(pk);
+        let mut tx = Transaction::new(from, to, nonce + 1, 1000, 1000, value, b);
 
-        if sign_address != from {
-            return Ok(format!("sign address error  {} {}", sign_address, from));
-        }
-
-        let nonce = self.tx_pool.read().expect("acquiring tx pool read lock").get_nonce(&sign_address);
-
-        let mut tx = Transaction::new(sign_address, to, nonce + 1, 1000, 1000, value, b);
-
-        tx.sign(&pkey.to_bytes());
+        tx.sign(&priv_key.to_bytes()).expect("sign ok");
         self.tx_pool.write().expect("acquiring tx pool write lock").submit_txs(tx.clone());
         Ok(format!("{}", tx.hash()))
     }
@@ -98,8 +107,11 @@ mod tx_pool {
     #[test]
     fn test_is_hex() {
         {
+            let pkey = PrivKey::from_bytes(&ed_genesis_priv_key);
             let pk = Pubkey::from_bytes(&ed_genesis_pub_key);
             let address = Address::from(pk);
+            println!("{}", pkey.to_string());
+            println!("decode {}", PrivKey::from_hex("0xf9cb7ea173840aeba4fc8146743464cdae3e5527414872155fe331bd2a3454a2").unwrap().to_string());
             assert_eq!("d2480451ef35ff2fdd7c69cad058719b9dc4d631", address.to_string().as_str());
             assert!(is_hex("0xd2480451ef35ff2fdd7c69cad058719b9dc4d631").is_ok())
         }

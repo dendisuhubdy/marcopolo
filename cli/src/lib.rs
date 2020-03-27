@@ -24,6 +24,7 @@ use service::{Service, NodeConfig};
 use std::sync::Arc;
 use parking_lot::{Condvar, Mutex};
 use std::sync::mpsc;
+use ed25519::{privkey::PrivKey};
 
 pub fn run() {
     let matches = App::new("map")
@@ -54,6 +55,10 @@ pub fn run() {
             .long("single")
             .short("s")
             .help("Run with single node"))
+        .arg(Arg::with_name("key")
+            .long("key")
+            .takes_value(true)
+            .help("Specify private key"))
         .subcommand(SubCommand::with_name("clean")
             .about("Remove the whole chain data"))
         .get_matches();
@@ -81,7 +86,16 @@ pub fn run() {
         config.rpc_port = rpc_port.parse::<u16>().unwrap_or_default();
     }
 
-    config.rpc_port = matches.value_of("rpcport").unwrap().parse::<u16>().unwrap_or_default();
+    if matches.is_present("key") {
+        if let Some(key) = matches.value_of("key") {
+            if PrivKey::from_hex(key).is_ok() {
+                config.key = key.to_string();
+            } else {
+                println!("Please specify correct key");
+                return;
+            }
+        }
+    }
 
     if matches.is_present("single") {
         println!("Run map with single node");

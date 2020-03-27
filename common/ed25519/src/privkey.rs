@@ -17,14 +17,20 @@
 //! MarcoPolo ED25519.
 
 extern crate ed25519_dalek;
-extern crate sha2;
 extern crate errors;
+extern crate sha2;
 
-use errors::{Error,InternalErrorKind};
-use ed25519_dalek::{SecretKey,Signature,PublicKey,ExpandedSecretKey};
+use std::fmt;
+
+use ed25519_dalek::{ExpandedSecretKey, PublicKey, SecretKey, Signature};
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH};
-use super::{H256,Message,pubkey::Pubkey,signature::SignatureInfo};
+use hex;
+pub use hex::FromHexError;
 use sha2::Sha512;
+
+use errors::{Error, InternalErrorKind};
+
+use super::{H256, Message, pubkey::Pubkey, signature::SignatureInfo};
 
 #[derive(Debug, Eq, PartialEq, Clone,Copy)]
 pub struct PrivKey {
@@ -63,5 +69,26 @@ impl PrivKey {
         let mut p = [0u8;32];
         p[..].copy_from_slice(&pk.to_bytes()[..]);
         Ok(SignatureInfo::from_signature(&sign_data,p))
+    }
+
+    pub fn from_hex(text: &str) -> Result<Self, FromHexError> {
+        let mut from = text;
+        if text.starts_with("0x") || text.starts_with("0X") {
+            from = &text[2..];
+        }
+        let b = hex::decode(from)?;
+        let mut pkey: [u8; 32] = [0u8; 32];
+        pkey.copy_from_slice(&b);
+        Ok(PrivKey{inner: H256(pkey)})
+    }
+}
+
+impl fmt::Display for PrivKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "0x")?;
+        for i in self.to_bytes().iter() {
+            write!(f, "{:02x}", i)?;
+        }
+        Ok(())
     }
 }
