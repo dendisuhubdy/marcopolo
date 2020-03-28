@@ -9,3 +9,4 @@ pub mod http_server;
 pub mod api;
 pub mod config;
 pub mod rpc_build;
+pub mod types;
