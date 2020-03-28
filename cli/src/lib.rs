@@ -48,8 +48,10 @@ pub fn run() {
             .help("Customize RPC listening address"))
         .arg(
             Arg::with_name("rpcport")
-                .default_value("9545")
-                .help("Customize RPC listening port"),
+            .long("rpc-port")
+            .takes_value(true)
+            .default_value("9545")
+            .help("Customize RPC listening port"),
         )
         .arg(Arg::with_name("single")
             .long("single")
