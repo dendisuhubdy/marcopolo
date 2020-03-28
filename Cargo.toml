@@ -1,6 +1,6 @@
 [package]
 name = "map"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["alexrichton <alex_richton@protonmail.com>"]
 license = "GPL-3.0"
 edition = "2018"
