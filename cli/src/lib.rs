@@ -28,7 +28,7 @@ use ed25519::{privkey::PrivKey};
 
 pub fn run() {
     let matches = App::new("map")
-        .version("0.1.0")
+        .version("0.0.1")
         .about("MarcoPolo Protocol - A new P2P e-cash system")
         .arg(Arg::with_name("data_dir")
             .long("datadir")
