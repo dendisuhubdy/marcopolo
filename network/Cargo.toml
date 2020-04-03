@@ -1,0 +1,15 @@
+[package]
+name = "map-network"
+version = "0.1.0"
+authors = ["kericfrank <kericfrank@outlook.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+libp2p = { version = "0.16.2", default-features = false, features = ["libp2p-websocket"] }
+futures = "0.3.1"
+futures_codec = "0.3.3"
+futures-timer = "3.0.1"
+futures-util = { version = "0.3.1", default-features = false, features = ["io"] }
+tokio = "0.2"
