@@ -9,7 +9,4 @@ edition = "2018"
 [dependencies]
 libp2p = { version = "0.16.2", default-features = false, features = ["libp2p-websocket"] }
 futures = "0.3.1"
-futures_codec = "0.3.3"
-futures-timer = "3.0.1"
-futures-util = { version = "0.3.1", default-features = false, features = ["io"] }
-tokio = "0.2"
+async-std = "1.5"

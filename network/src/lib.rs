@@ -1,4 +1,6 @@
 pub mod handler;
+pub mod transport;
+pub mod behaviour;
 
 #[cfg(test)]
 mod tests {

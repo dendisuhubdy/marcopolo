@@ -17,6 +17,7 @@ extern crate core;
 extern crate consensus;
 extern crate chain;
 extern crate rpc;
+extern crate network;
 extern crate executor;
 #[macro_use]
 extern crate log;
@@ -31,6 +32,7 @@ use chain::blockchain::{BlockChain};
 use chain::tx_pool::TxPoolManager;
 use executor::Executor;
 use rpc::http_server;
+use network::handler;
 use std::{thread,thread::JoinHandle,sync::mpsc};
 use std::time::{Duration, SystemTime};
 use std::path::PathBuf;
@@ -82,7 +84,7 @@ impl Service {
             let mut statedb = self.state.write().unwrap();
             self.get_write_blockchain().load(&mut statedb);
         }
-
+        handler::start_network("40313");
         let rpc = http_server::start_http(http_server::RpcConfig{
             rpc_addr:cfg.rpc_addr,
             rpc_port:cfg.rpc_port,

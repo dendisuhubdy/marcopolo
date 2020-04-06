@@ -1,21 +1,18 @@
-use core::fmt::Debug;
-use core::ops::DerefMut;
-use std::time::{Duration, Instant};
-
-use futures_util::{stream::Stream, io::{AsyncRead, AsyncWrite}};
-use libp2p::{identity, PeerId};
-use libp2p::swarm::{NetworkBehaviourAction, NetworkBehaviourEventProcess, PollParameters};
-use libp2p::kad::Kademlia;
-use libp2p::mdns::{Mdns, MdnsEvent};
-use std::marker::PhantomData;
+use async_std::{io, task};
+use futures::{future, prelude::*};
 use libp2p::{
     Multiaddr,
+    PeerId,
     Swarm,
-    NetworkBehaviour,
-    floodsub::{self, Floodsub, FloodsubEvent},
+    identity,
+    floodsub::{self, Floodsub},
+    mdns::{Mdns},
+    ping::{Ping, PingConfig},
 };
+use std::{error::Error, task::{Context, Poll}};
+use crate::behaviour::MyBehaviour;
 
-pub fn start_network(port: &str) {
+pub fn start_network(port: &str) -> Result<(), Box<dyn Error>> {
 
     // Create a random PeerId
     let local_key = identity::Keypair::generate_ed25519();
@@ -28,47 +25,59 @@ pub fn start_network(port: &str) {
     // Create a Floodsub topic
     let floodsub_topic = floodsub::Topic::new("chat");
 
+    // Create a Swarm to manage peers and events
     let mut swarm = {
-        let mut behaviour = DummyBehaviour{marker: PhantomData};
+        let mdns = Mdns::new()?;
+        let mut behaviour = MyBehaviour {
+            floodsub: Floodsub::new(local_peer_id.clone()),
+            mdns,
+            ping: Ping::new(PingConfig::new()),
+            ignored_member: false,
+        };
 
-        libp2p::Swarm::new(transport, behaviour, local_peer_id)
+        behaviour.floodsub.subscribe(floodsub_topic.clone());
+        Swarm::new(transport, behaviour, local_peer_id)
     };
 
+    // Reach out to another node if specified
+    if let Some(to_dial) = std::env::args().nth(1) {
+        let addr: Multiaddr = to_dial.parse()?;
+        Swarm::dial_addr(&mut swarm, addr)?;
+        println!("Dialed {:?}", to_dial)
+    }
+
+    // Read full lines from stdin
+    let mut stdin = io::BufReader::new(io::stdin()).lines();
+
     // Listen on all interfaces and whatever port the OS assigns
-    let addr = libp2p::Swarm::listen_on(&mut swarm, format!("/ip4/0.0.0.0/tcp/{}", port).parse().unwrap()).unwrap();
-    println!("Listening on {:?}", addr);
+    Swarm::listen_on(&mut swarm, "/ip4/0.0.0.0/tcp/0".parse()?)?;
 
-    let mut interval = Interval::new_interval(Duration::new(5, 0));
+    // Kick it off
     let mut listening = false;
-    tokio::run(futures::future::poll_fn(move || -> Result<_, ()> {
+    task::block_on(future::poll_fn(move |cx: &mut Context| {
+        println!("loop");
         loop {
-            match interval.poll().expect("Error while polling interval") {
-                Async::Ready(Some(_)) => {
-                    //sync.on_tick(swarm.deref_mut());
-                }
-                Async::Ready(None) => panic!("Interval closed"),
-                Async::NotReady => break,
-            };
+            match stdin.try_poll_next_unpin(cx)? {
+                Poll::Ready(Some(line)) => swarm.floodsub.publish(floodsub_topic.clone(), line.as_bytes()),
+                Poll::Ready(None) => panic!("Stdin closed"),
+                Poll::Pending => break
+            }
         }
-
         loop {
-            match swarm.poll().expect("Error while polling swarm") {
-                Async::Ready(Some((peer_id, message))) => {
-                    println!("Received: {:?} from {:?}", message, peer_id);
-                    //sync.on_message(swarm.deref_mut(), &peer_id, message);
-                }
-                Async::Ready(None) | Async::NotReady => {
+            match swarm.poll_next_unpin(cx) {
+                Poll::Ready(Some(event)) => println!("ready {:?}", event),
+                Poll::Ready(None) => return Poll::Ready(Ok(())),
+                Poll::Pending => {
                     if !listening {
-                        if let Some(a) = libp2p::Swarm::listeners(&swarm).next() {
-                            println!("Listening on {:?}", a);
+                        for addr in Swarm::listeners(&swarm) {
+                            println!("Listening on {:?}", addr);
                             listening = true;
                         }
                     }
-                    break;
+                    break
                 }
             }
         }
-
-        Ok(Async::NotReady)
-    }));
+        Poll::Pending
+    }))
 }
