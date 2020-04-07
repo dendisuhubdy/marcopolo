@@ -20,13 +20,18 @@ extern crate core;
 use crossbeam::crossbeam_channel::{bounded, select, Receiver, RecvError, Sender};
 use std::collections::HashMap;
 use core::{block::Block};
+use std::thread;
+
+const ONE_CHANNEL_SIZE: usize = 1;
+pub const REGISTER_CHANNEL_SIZE: usize = 2;
+pub const EVENT_CHANNEL_SIZE: usize = 64;
 
 pub struct RegisterItem<M> (pub String, pub Sender<Receiver<M>>);
 pub type EventRegister<M> = Sender<RegisterItem<M>>;
 
 impl<M> RegisterItem<M> {
     pub fn call(sender: &Sender<RegisterItem<M>>, arguments: String) -> Option<Receiver<M>> {
-        let (responder, response) = crossbeam_channel::bounded(ONESHOT_CHANNEL_SIZE);
+        let (responder, response) = crossbeam_channel::bounded(ONE_CHANNEL_SIZE);
         let _ = sender.send(RegisterItem(responder,arguments));
         response.recv().ok()
     }
@@ -54,6 +59,29 @@ impl EventService {
     pub fn new() -> Self {
         Self {
             new_block_subscribers :HashMap::default(),
+        }
+    }
+    #[allow(clippy::zero_ptr, clippy::drop_copy)]
+    pub fn start<S: ToString>(mut self, thread_name: Option<S>) -> EventHandler {
+        let (new_block_register, new_block_register_receiver) = bounded(REGISTER_CHANNEL_SIZE);
+        let (new_block_sender, new_block_receiver) = bounded::<Block>(EVENT_CHANNEL_SIZE);
+
+        let mut thread_builder = thread::Builder::new();
+        if let Some(name) = thread_name {
+            thread_builder = thread_builder.name(name.to_string());
+        }
+        let join_handle = thread_builder
+            .spawn(move || loop {
+                select! {
+                    recv(new_block_register_receiver) -> msg => self.handle_register_new_block(msg),
+                    recv(new_block_receiver) -> msg => self.handle_notify_new_block(msg),
+                }
+            })
+            .expect("Start notify service failed");
+
+        EventHandler {
+            new_block_register,
+            new_block_notifier: new_block_sender,
         }
     }
     fn handle_register_new_block(
