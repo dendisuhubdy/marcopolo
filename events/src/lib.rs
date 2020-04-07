@@ -24,12 +24,28 @@ use core::{block::Block};
 pub struct RegisterItem<M> (pub String, pub Sender<Receiver<M>>);
 pub type EventRegister<M> = Sender<RegisterItem<M>>;
 
+impl<M> RegisterItem<M> {
+    pub fn call(sender: &Sender<RegisterItem<M>>, arguments: String) -> Option<Receiver<M>> {
+        let (responder, response) = crossbeam_channel::bounded(ONESHOT_CHANNEL_SIZE);
+        let _ = sender.send(RegisterItem(responder,arguments));
+        response.recv().ok()
+    }
+}
+
 #[derive(Clone)]
 pub struct EventHandler {
     new_block_register: EventRegister<Block>,
     new_block_notifier: Sender<Block>,
 }
-
+impl EventHandler {
+    pub fn subscribe_new_block<S: ToString>(&self, name: S) -> Receiver<Block> {
+        RegisterItem::call(&self.new_block_register, name.to_string())
+            .expect("Subscribe new block should be OK")
+    }
+    pub fn notify_new_block(&self, b: Block) {
+        let _ = self.new_block_notifier.send(b);
+    }
+}
 pub struct EventService {
     new_block_subscribers: HashMap<String, Sender<Block>>,
 }
