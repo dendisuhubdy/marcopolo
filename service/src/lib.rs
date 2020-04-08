@@ -99,14 +99,12 @@ impl Service {
                 let res2 = self.generate_block();
                 match res2 {
                     Ok(b) => {
-                        let res = shared_block_chain
+                        if let Err(e) = shared_block_chain
                             .write()
                             .expect("acquiring shared_block_chain write lock")
-                            .insert_block(b);
-                        match res {
-                            Ok(()) => {},
-                            Err(e) => error!("insert_block Error: {:?}", e),
-                        };
+                            .insert_block(b) {
+                                error!("insert_block Error: {:?}", e);
+                            }
                     },
                     Err(e) => error!("generate_block,Error: {:?}", e),
                 };

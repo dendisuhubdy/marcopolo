@@ -9,4 +9,4 @@ edition = "2018"
 [dependencies]
 log = "0.4.8"
 core = { package = "map-core", path = "../core" }
-crossbeam-channel = "0.7"
+crossbeam-channel = "0.4"
