@@ -124,6 +124,18 @@ impl EventService {
 pub mod tests {
     #[test]
     pub fn test_events() {
-       
+       let new_block_handle =  EventService::new().start(Some("test"));
+       let receiver1 = new_block_handle.subscribe_new_block("1111".to_string());
+       let receiver2 = new_block_handle.subscribe_new_block("2222".to_string());
+       let b = Block::default();
+       new_block_handle.notify_new_block(b);
+       let join_handle = thread::spawn(move || loop {
+                select! {
+                    recv(receiver1) -> msg => println!("receiver1{:?}", msg),
+                    recv(receiver2) -> msg => println!("receiver2{:?}", msg),
+                }
+            })
+            .expect("Start notify service failed");
+        join_handle.join();
     }
 }
