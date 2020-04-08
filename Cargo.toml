@@ -21,6 +21,7 @@ members = [
 	"common/store",
 	"common/mtree",
 	"executor",
+	"events",
 	"core",
     "chain",
 	"consensus",

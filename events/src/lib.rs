@@ -14,10 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
-extern crate crossbeam;
+// extern crate crossbeam;
 extern crate core;
+#[macro_use]
+extern crate log;
 // use crossbeam::{crossbeam_channel};
-use crossbeam::crossbeam_channel::{bounded, select, Receiver, RecvError, Sender};
+use crossbeam_channel::{bounded, select, Receiver, RecvError, Sender};
 use std::collections::HashMap;
 use core::{block::Block};
 use std::thread;
@@ -32,7 +34,7 @@ pub type EventRegister<M> = Sender<RegisterItem<M>>;
 impl<M> RegisterItem<M> {
     pub fn call(sender: &Sender<RegisterItem<M>>, arguments: String) -> Option<Receiver<M>> {
         let (responder, response) = crossbeam_channel::bounded(ONE_CHANNEL_SIZE);
-        let _ = sender.send(RegisterItem(responder,arguments));
+        let _ = sender.send(RegisterItem(arguments,responder));
         response.recv().ok()
     }
 }
@@ -94,7 +96,7 @@ impl EventService {
                 responder,
             )) => {
                 debug!("Register new_block {:?}", name);
-                let (sender, receiver) = bounded::<Block>(NOTIFY_CHANNEL_SIZE);
+                let (sender, receiver) = bounded::<Block>(EVENT_CHANNEL_SIZE);
                 self.new_block_subscribers.insert(name, sender);
                 let _ = responder.send(receiver);
             }
@@ -113,5 +115,15 @@ impl EventService {
             }
             _ => debug!("new block channel is closed"),
         }
+    }
+}
+
+
+
+#[cfg(test)]
+pub mod tests {
+    #[test]
+    pub fn test_events() {
+       
     }
 }
