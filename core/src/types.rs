@@ -78,6 +78,32 @@ impl fmt::Display for Hash {
     }
 }
 
+impl AsRef<[u8]> for Hash {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        return &self.0
+    }
+}
+
+impl AsMut<[u8]> for Hash {
+    #[inline]
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
+
+impl From<&[u8]> for Hash {
+    fn from(src: &[u8]) -> Self {
+        let mut h = Self::default();
+        if src.len() <= 32 {
+            h.0[(32-src.len())..].copy_from_slice(src);
+        } else {
+            h.0.copy_from_slice(&src[(src.len()-32)..])
+        }
+        h
+    }
+}
+
 impl Serialize for Hash {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where

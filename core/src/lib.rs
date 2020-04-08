@@ -21,4 +21,5 @@ pub mod block;
 pub mod genesis;
 pub mod transaction;
 pub mod balance;
+pub mod trie;
 pub mod traits;
