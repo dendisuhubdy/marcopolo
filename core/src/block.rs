@@ -196,4 +196,28 @@ mod tests {
         let encoded: Vec<u8> = bincode::serialize(&head).unwrap();
         assert_eq!(encoded, vec![0; 48]);
     }
+
+    #[test]
+    fn test_encode_option() {
+        // The object that we will serialize.
+        {
+            let target: Option<String>  = Some("hello".to_string());
+
+            let encoded: Vec<u8> = bincode::serialize(&target).unwrap();
+            let decoded: Option<String> = bincode::deserialize(&encoded[..]).unwrap();
+            assert_eq!(target, decoded);
+        }
+        {
+            let target: Option<String>  = None;
+
+            let encoded: Vec<u8> = bincode::serialize(&target).unwrap();
+            assert_eq!(encoded, [0]);
+        }
+        {
+            let target: (Option<String>, Option<String>)  = (None, None);
+
+            let encoded: Vec<u8> = bincode::serialize(&target).unwrap();
+            assert_eq!(encoded, [0, 0]);
+        }
+    }
 }
