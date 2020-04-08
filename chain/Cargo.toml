@@ -12,4 +12,7 @@ bincode = "1.2.0"
 map-core = { path = "../core" }
 map-store = { path = "../common/store" }
 map-consensus = { path = "../consensus" }
+errors = { package = "map-errors", path = "../common/errors" }
 futures = "0.1"
+failure = "0.1.7"
+enum-display-derive = "0.1.0"

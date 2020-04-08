@@ -118,16 +118,11 @@ impl Service {
             }
         });
         (tx,builder)
-        // builder.join();
     }
     pub fn new_empty_block() -> Block {
         Block::default()
     }
     pub fn generate_block(&mut self) -> Result<Block,Error> {
-        // 1. get txs from txpool
-        // 2. exc txs
-        // 3. get pre_block info
-        // 4. finalize block
         let cur_block = self.get_write_blockchain().current_block();
         let tx_pool = self.tx_pool.clone();
 

@@ -23,7 +23,7 @@ use std::fmt::{self, Display,Debug};
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Display)]
 pub enum ErrorKind {
     Header,
-    Block,
+    BlockChain,
     Internal,
     Consensus,
 }

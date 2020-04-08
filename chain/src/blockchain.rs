@@ -23,17 +23,8 @@ use map_core::types::Hash;
 use map_core::genesis;
 use map_core::balance::Balance;
 use map_consensus::poa;
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Error {
-    UnknownAncestor,
-    KnownBlock,
-    MismatchHash,
-    InvalidBlockProof,
-    InvalidBlockTime,
-    InvalidBlockHeight,
-    InvalidAuthority,
-}
+use super::BlockChainErrorKind;
+use errors::Error;
 
 pub struct BlockChain {
     db: ChainDB,
@@ -105,24 +96,24 @@ impl BlockChain {
     pub fn insert_block(&mut self, block: Block) -> Result<(), Error> {
         // Already in chain
         if self.exits_block(block.hash(), block.height()) {
-            return Err(Error::KnownBlock)
+            return Err(BlockChainErrorKind::KnownBlock.into())
         }
 
         if !self.check_previous(&block.header) {
-            return Err(Error::UnknownAncestor)
+            return Err(BlockChainErrorKind::UnknownAncestor.into())
         }
 
         let current = self.current_block();
 
         if block.header.parent_hash != current.hash() {
-            return Err(Error::UnknownAncestor)
+            return Err(BlockChainErrorKind::UnknownAncestor.into())
         }
 
         self.validator.validate_header(self, &block.header)?;
         self.validator.validate_block(self, &block)?;
         if let Err(e) = self.consensus.verify(&block) {
             error!("consensus err height={}, {:?}", block.height(), e);
-            return Err(Error::InvalidAuthority);
+            return Err(BlockChainErrorKind::InvalidAuthority.into());
         }
 
         self.db.write_block(&block).expect("can not write block");
@@ -138,11 +129,11 @@ impl Validator {
     #[allow(unused_variables)]
     pub fn validate_block(&self, chain: &BlockChain, block: &Block) -> Result<(), Error> {
         if block.header.sign_root != map_core::block::get_hash_from_signs(block.signs.clone()) {
-            return Err(Error::MismatchHash);
+            return Err(BlockChainErrorKind::MismatchHash.into());
         }
 
         if block.header.tx_root != map_core::block::get_hash_from_txs(&block.txs) {
-            return Err(Error::MismatchHash);
+            return Err(BlockChainErrorKind::MismatchHash.into());
         }
 
         Ok(())
@@ -152,17 +143,17 @@ impl Validator {
         // Ensure block parent exists on chain
         let pre = match chain.get_block(header.parent_hash) {
             Some(b) => b,
-            None => return Err(Error::UnknownAncestor),
+            None => return Err(BlockChainErrorKind::UnknownAncestor.into()),
         };
 
         // Ensure block height increase by one
         if header.height != pre.header.height + 1 {
-            return Err(Error::InvalidBlockHeight);
+            return Err(BlockChainErrorKind::InvalidBlockHeight.into());
         }
 
         // Ensure block time interval
         if header.time <= pre.header.time {
-            return Err(Error::InvalidBlockTime);
+            return Err(BlockChainErrorKind::InvalidBlockTime.into());
         }
         Ok(())
     }
