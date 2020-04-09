@@ -173,7 +173,7 @@ mod tests {
     fn test_service() {
         println!("begin service,for 60 seconds");
         let mut config = NodeConfig::default();
-        let service = Service::new_service(config);
+        let service = Service::new_service(config.clone());
         let (tx,th_handle) = service.start(config.clone());
         thread::sleep(Duration::from_millis(60*1000));
         thread::spawn(move || {
