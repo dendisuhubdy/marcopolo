@@ -1,5 +1,5 @@
 use async_std::{io, task};
-use futures::{future, prelude::*};
+use futures::{future, prelude::*,channel::mpsc};
 use libp2p::{
     Multiaddr,
     PeerId,
@@ -10,12 +10,12 @@ use libp2p::{
     ping::{Ping, PingConfig},
 };
 use std::{error::Error, task::{Context, Poll}};
-use crate::behaviour::MyBehaviour;
+use crate::{behaviour::MyBehaviour,NetworkConfig, config};
 
-pub fn start_network(port: &str) -> Result<(), Box<dyn Error>> {
+pub fn start_network(cfg: NetworkConfig) -> Result<(), Box<dyn Error>> {
 
     // Create a random PeerId
-    let local_key = identity::Keypair::generate_ed25519();
+    let local_key = config::load_private_key(&cfg);
     let local_peer_id = PeerId::from(local_key.public());
     println!("Local peer id: {:?}", local_peer_id);
 
@@ -55,7 +55,6 @@ pub fn start_network(port: &str) -> Result<(), Box<dyn Error>> {
     // Kick it off
     let mut listening = false;
     task::block_on(future::poll_fn(move |cx: &mut Context| {
-        println!("loop");
         loop {
             match stdin.try_poll_next_unpin(cx)? {
                 Poll::Ready(Some(line)) => swarm.floodsub.publish(floodsub_topic.clone(), line.as_bytes()),

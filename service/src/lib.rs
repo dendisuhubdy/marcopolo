@@ -32,7 +32,7 @@ use chain::blockchain::{BlockChain};
 use chain::tx_pool::TxPoolManager;
 use executor::Executor;
 use rpc::http_server;
-use network::handler;
+use network::{handler,NetworkConfig};
 use std::{thread,thread::JoinHandle,sync::mpsc};
 use std::time::{Duration, SystemTime};
 use std::path::PathBuf;
@@ -92,7 +92,11 @@ impl Service {
             let mut statedb = self.state.write().unwrap();
             self.get_write_blockchain().load(&mut statedb);
         }
-        handler::start_network("40313");
+
+        let mut config = NetworkConfig::new();
+        config.update_dir(cfg.data_dir).unwrap();
+        handler::start_network(config);
+
         let rpc = http_server::start_http(http_server::RpcConfig{
             rpc_addr:cfg.rpc_addr,
             rpc_port:cfg.rpc_port,

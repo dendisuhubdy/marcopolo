@@ -85,7 +85,9 @@ pub fn run() {
         config.rpc_addr = rpc_addr.to_string();
     }
     if let Some(rpc_port) = matches.value_of("rpcport") {
-        config.rpc_port = rpc_port.parse::<u16>().unwrap_or_default();
+        let port = rpc_port.parse::<u16>()
+            .map_err(|_| format!("Invalid rpc_port port: {}", rpc_port)).unwrap();
+        config.rpc_port = port;
     }
 
     if matches.is_present("key") {

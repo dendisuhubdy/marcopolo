@@ -10,3 +10,5 @@ edition = "2018"
 libp2p = { version = "0.16.2", default-features = false, features = ["libp2p-websocket"] }
 futures = "0.3.1"
 async-std = "1.5"
+log = "0.4.8"
+dirs = "2.0.1"
