@@ -23,10 +23,13 @@ use core::types::{Hash,Address};
 use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 use std::fmt;
+use std::cmp::Ordering;
 use errors::Error;
 
 const poa_Version: u32 = 1;
-pub struct POA {}
+pub struct POA {
+    validator: [u8;32],
+}
 
 impl IConsensus for POA {
     fn version() -> u32 {
@@ -35,6 +38,32 @@ impl IConsensus for POA {
 }
 
 impl POA {
+    pub fn new(v: Option<[u8;32]>) -> Self {
+        if let Some(val) = v {
+            Self{
+                validator:  val,
+            }
+        } else {
+            Self{
+                validator:  ed_genesis_priv_key,
+            }
+        }
+    } 
+    fn get_local_pk(&self) -> Option<Vec<u8>> {
+        if let Ok(pk) = PrivKey::from_bytes(&self.validator[..]).to_pubkey() {
+            Some(pk.to_bytes())
+        } else {
+            None
+        }
+    }
+    fn is_poa_sign(&self,pk: Vec<u8>) -> bool {
+        if let Some(lpk) = self.get_local_pk() {
+            if lpk.len() == pk.len() && Ordering::Equal == lpk.cmp(&pk) {
+                return true
+            }
+        }
+        false
+    }
     pub fn sign_block(t: u8,pkey: Option<PrivKey>,mut b: Block) -> Result<Block,Error> {
         let h = b.get_hash();
         match pkey {
@@ -77,7 +106,7 @@ impl POA {
     pub fn finalize_block(&self,mut b: Block,h: Hash) -> Result<Block,Error> {
         // sign with default priv key
         b.set_state_root(h);
-        POA::sign_block(0u8,None,b)
+        POA::sign_block(0u8,Some(PrivKey::from_bytes(&self.validator[..])),b)
     }
     pub fn verify(&self,b: &Block) -> Result<(),Error> {
         let proof = b.proof_one();
@@ -105,6 +134,10 @@ impl POA {
         let pk0 = &mut [0u8;64];
         let t = proof.get_pk(pk0);
         if t == 0u8 {       // ed25519
+            let p_pk = pk0.to_vec();
+            if !self.is_poa_sign(p_pk) {
+                return Err(ConsensusErrorKind::AnotherPk.into());
+            }
             let mut a1 = [0u8;32];
             a1[..].copy_from_slice(&pk0[0..32]);
             let pk = Pubkey::from_bytes(&a1);

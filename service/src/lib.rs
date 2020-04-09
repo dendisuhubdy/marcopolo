@@ -138,7 +138,7 @@ impl Service {
         };
         info!("seal block, height={}, parent={}, tx={}", header.height, header.parent_hash, txs.len());
         let b = Block::new(header,txs,Vec::new(),Vec::new());
-        let finalize = POA{};
+        let finalize = POA::new(None);
         let mut statedb = self.state.write().unwrap();
         let h = Executor::exc_txs_in_block(&b, &mut statedb, &POA::get_default_miner())?;
         tx_pool.write().expect("acquiring tx_pool write lock").notify_block(&b);

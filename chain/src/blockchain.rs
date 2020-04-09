@@ -41,7 +41,7 @@ impl BlockChain {
             db: ChainDB::new(db_cfg).unwrap(),
             genesis: genesis::to_genesis(),
             validator: Validator{},
-            consensus: poa::POA{},
+            consensus: poa::POA::new(None),
         }
     }
 

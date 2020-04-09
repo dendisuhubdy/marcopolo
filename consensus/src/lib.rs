@@ -36,6 +36,7 @@ pub struct ConsensusError {
 #[derive(Debug, Clone, Eq, PartialEq, Display)]
 pub enum ConsensusErrorKind {
     NoneSign,
+    AnotherPk,
 }
 
 impl fmt::Display for ConsensusError {
