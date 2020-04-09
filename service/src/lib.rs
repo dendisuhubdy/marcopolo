@@ -62,8 +62,6 @@ impl Default for NodeConfig {
     }
 }
 
-// pub mod Service;
-
 //#[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Service {
     pub block_chain: Arc<RwLock<BlockChain>>,

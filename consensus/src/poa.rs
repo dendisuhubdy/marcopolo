@@ -129,11 +129,15 @@ impl POA {
             },
             None => {
                 // get proof from genesis
-                let proof = BlockProof::new(0u8,&ed_genesis_pub_key);
-                let sign_info = b.sign_one();
-                match sign_info {
-                    Some(&v2) => self.poa_verify(&proof,&v2),
-                    None => Err(ConsensusErrorKind::NoneSign.into()),
+                if let Some(pk) = self.get_local_pk() {
+                    let proof = BlockProof::new(0u8,pk.as_slice());
+                    let sign_info = b.sign_one();
+                    match sign_info {
+                        Some(&v2) => self.poa_verify(&proof,&v2),
+                        None => Err(ConsensusErrorKind::NoneSign.into()),
+                    }
+                } else {
+                    Err(ConsensusErrorKind::InvalidProof.into())
                 }
             },
         }
@@ -143,7 +147,7 @@ impl POA {
         let pk0 = &mut [0u8;64];
         let t = proof.get_pk(pk0);
         if t == 0u8 {       // ed25519
-            let p_pk = pk0.to_vec();
+            let p_pk = pk0[0..32].to_vec();
             if !self.is_poa_sign(p_pk) {
                 return Err(ConsensusErrorKind::AnotherPk.into());
             }
@@ -185,5 +189,15 @@ mod tests {
             Err(e) => println!("Error: {:?}", e),
         }
         println!("end verify");
+    }
+    #[test]
+    pub fn test_cmp() {
+        let f = POA::new_from_string("2afa6bd56b12f68f95129addfb6a98e4d49aa423b73cec6ca160d2259c4b3d04".to_string());
+        let mut b = Block::default();
+        let bb = f.finalize_block(b, Hash([0u8;32])).unwrap();
+        match f.verify(&bb) {
+            Ok(()) => println!("verify seccess......"),
+            Err(e) => println!("verify failed,err={:?}",e),
+        }
     }
 }

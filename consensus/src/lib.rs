@@ -37,6 +37,7 @@ pub struct ConsensusError {
 pub enum ConsensusErrorKind {
     NoneSign,
     AnotherPk,
+    InvalidProof,
 }
 
 impl fmt::Display for ConsensusError {
