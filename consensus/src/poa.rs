@@ -49,6 +49,15 @@ impl POA {
             }
         }
     } 
+    pub fn new_from_string(priv_key : String) -> Self {
+        match PrivKey::from_hex(&priv_key) {
+            Ok(pkey) => POA::new(Some(pkey.to_bytes())),
+            Err(e) => {
+                info!("it's wrong pirv_key in new_from_string function, err={:?}, key={}", e, priv_key);
+                POA::new(None)
+            },
+        }
+    } 
     fn get_local_pk(&self) -> Option<Vec<u8>> {
         if let Ok(pk) = PrivKey::from_bytes(&self.validator[..]).to_pubkey() {
             Some(pk.to_bytes())

@@ -98,7 +98,16 @@ pub fn run() {
             }
         }
     }
-
+    if matches.is_present("poa_privkey") {
+        if let Some(key) = matches.value_of("poa_privkey") {
+            if PrivKey::from_hex(key).is_ok() {
+                config.poa_privkey = key.to_string();
+            } else {
+                println!("Please specify correct  poa_privkey");
+                return;
+            }
+        }
+    }
     if matches.is_present("single") {
         println!("Run map with single node");
     }

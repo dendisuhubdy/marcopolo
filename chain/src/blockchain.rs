@@ -34,14 +34,14 @@ pub struct BlockChain {
 }
 
 impl BlockChain {
-    pub fn new(datadir: PathBuf) -> Self {
+    pub fn new(datadir: PathBuf,key: String) -> Self {
         info!("using datadir {}", datadir.display());
         let db_cfg = map_store::Config::new(datadir.clone());
         BlockChain {
             db: ChainDB::new(db_cfg).unwrap(),
             genesis: genesis::to_genesis(),
             validator: Validator{},
-            consensus: poa::POA::new(None),
+            consensus: poa::POA::new_from_string(key),
         }
     }
 
@@ -166,7 +166,7 @@ mod tests {
 
     #[test]
     fn test_init() {
-        let mut chain = BlockChain::new(PathBuf::from("./mapdata"));
+        let mut chain = BlockChain::new(PathBuf::from("./mapdata"),"".to_string());
         let mut state = Balance::new(PathBuf::from("./balance"));
         chain.load(&mut state);
         assert_eq!(chain.genesis.height(), 0);
@@ -176,7 +176,7 @@ mod tests {
 
     #[test]
     fn test_insert_empty() {
-        let mut chain = BlockChain::new(PathBuf::from("./mapdata"));
+        let mut chain = BlockChain::new(PathBuf::from("./mapdata"),"".to_string());
         let mut state = Balance::new(PathBuf::from("./balance"));
         chain.load(&mut state);
         {

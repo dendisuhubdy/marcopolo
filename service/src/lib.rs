@@ -46,6 +46,7 @@ pub struct NodeConfig {
     pub rpc_addr: String,
     pub rpc_port: u16,
     pub key:      String,
+    pub poa_privkey:  String,
 }
 
 impl Default for NodeConfig {
@@ -55,7 +56,8 @@ impl Default for NodeConfig {
             data_dir: PathBuf::from("."),
             rpc_addr:"127.0.0.1".into(),
             rpc_port:9545,
-            key:    "".into(),
+            key:        "".into(),
+            poa_privkey:"".into(),
         }
     }
 }
@@ -67,6 +69,7 @@ pub struct Service {
     pub block_chain: Arc<RwLock<BlockChain>>,
     pub state: Arc<RwLock<Balance>>,
     pub tx_pool : Arc<RwLock<TxPoolManager>>,
+    pub cfg: NodeConfig,
 }
 
 impl Service {
@@ -74,10 +77,15 @@ impl Service {
         let state = Arc::new(RwLock::new(Balance::new(cfg.data_dir.clone())));
 
         Service {
-            block_chain: Arc::new(RwLock::new(BlockChain::new(cfg.data_dir.clone()))),
+            block_chain: Arc::new(RwLock::new(BlockChain::new(cfg.data_dir.clone(),cfg.poa_privkey.clone()))),
             state: state.clone(),
             tx_pool: Arc::new(RwLock::new(TxPoolManager::start(state.clone()))),
+            cfg:   cfg.clone(),
         }
+    }
+    fn get_POA(&self) -> POA {
+        let key = self.cfg.poa_privkey.clone();
+        POA::new_from_string(key)
     }
     pub fn start(mut self,cfg: NodeConfig) -> (mpsc::Sender<i32>,JoinHandle<()>) {
         {
@@ -138,7 +146,7 @@ impl Service {
         };
         info!("seal block, height={}, parent={}, tx={}", header.height, header.parent_hash, txs.len());
         let b = Block::new(header,txs,Vec::new(),Vec::new());
-        let finalize = POA::new(None);
+        let finalize = self.get_POA();
         let mut statedb = self.state.write().unwrap();
         let h = Executor::exc_txs_in_block(&b, &mut statedb, &POA::get_default_miner())?;
         tx_pool.write().expect("acquiring tx_pool write lock").notify_block(&b);
