@@ -122,6 +122,10 @@ impl EventService {
 
 #[cfg(test)]
 pub mod tests {
+    use core::{block::Block};
+    use std::thread;
+    use crossbeam_channel::{select};
+    use super::{EventService};
     #[test]
     pub fn test_events() {
        let new_block_handle =  EventService::new().start(Some("test"));
@@ -134,8 +138,7 @@ pub mod tests {
                     recv(receiver1) -> msg => println!("receiver1{:?}", msg),
                     recv(receiver2) -> msg => println!("receiver2{:?}", msg),
                 }
-            })
-            .expect("Start notify service failed");
-        join_handle.join();
+            }).join();
+        // join_handle.join();
     }
 }
