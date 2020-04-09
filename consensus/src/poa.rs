@@ -133,7 +133,7 @@ mod tests {
         println!("begin verify");
         let h = Hash([0u8;32]);
         let pkey = PrivKey::from_bytes(&ed_genesis_priv_key);
-        let signs = pkey.sign(&h.0);
+        let signs = pkey.sign(&h.0).unwrap();
 
         let pk = Pubkey::from_bytes(&ed_genesis_pub_key);
         let msg = h.to_msg();

@@ -167,7 +167,8 @@ mod tests {
     #[test]
     fn test_init() {
         let mut chain = BlockChain::new(PathBuf::from("./mapdata"));
-        chain.load();
+        let mut state = Balance::new(PathBuf::from("./balance"));
+        chain.load(&mut state);
         assert_eq!(chain.genesis.height(), 0);
         assert_eq!(chain.genesis.header.parent_hash, Hash::default());
         assert!(chain.get_block_by_number(0).is_some());
@@ -176,7 +177,8 @@ mod tests {
     #[test]
     fn test_insert_empty() {
         let mut chain = BlockChain::new(PathBuf::from("./mapdata"));
-        chain.load();
+        let mut state = Balance::new(PathBuf::from("./balance"));
+        chain.load(&mut state);
         {
             let block = Block {
                 header: Header{
