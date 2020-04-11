@@ -11,8 +11,12 @@ use libp2p::{
 };
 use std::{error::Error, task::{Context, Poll}};
 use crate::{behaviour::MyBehaviour,NetworkConfig, config};
+use map_core::block::{Block};
+use std::sync::{Arc, RwLock};
+use chain::blockchain::BlockChain;
+use bincode;
 
-pub fn start_network(cfg: NetworkConfig) -> Result<(), Box<dyn Error>> {
+pub fn start_network(cfg: NetworkConfig, block_chain: Arc<RwLock<BlockChain>>) -> Result<(), Box<dyn Error>> {
 
     // Create a random PeerId
     let local_key = config::load_private_key(&cfg);
@@ -46,22 +50,35 @@ pub fn start_network(cfg: NetworkConfig) -> Result<(), Box<dyn Error>> {
         println!("Dialed {:?}", to_dial)
     }
 
-    // Read full lines from stdin
-    let mut stdin = io::BufReader::new(io::stdin()).lines();
-
     // Listen on all interfaces and whatever port the OS assigns
     Swarm::listen_on(&mut swarm, "/ip4/0.0.0.0/tcp/0".parse()?)?;
+
+    let (tx, rx) = mpsc::unbounded::<Block>();
+
+    let mut network_recv = rx;
 
     // Kick it off
     let mut listening = false;
     task::block_on(future::poll_fn(move |cx: &mut Context| {
         loop {
-            match stdin.try_poll_next_unpin(cx)? {
-                Poll::Ready(Some(line)) => swarm.floodsub.publish(floodsub_topic.clone(), line.as_bytes()),
-                Poll::Ready(None) => panic!("Stdin closed"),
-                Poll::Pending => break
+            match network_recv.poll_next_unpin(cx) {
+                Poll::Ready(Some(x)) => {
+                    //Simulate pending transactions data
+                    let block = block_chain.write().expect("network get block chain").current_block();
+                    info!("Forwarding block");
+                    swarm.floodsub.publish(
+                        floodsub_topic.clone(),
+                        bincode::serialize(&block).expect("Failed to serialize message."),
+                    );
+                }
+                Poll::Ready(None) => panic!("Interval stream closed"),
+                Poll::Pending => {
+                    info!("send block Pending");
+                    break
+                }
             }
         }
+
         loop {
             match swarm.poll_next_unpin(cx) {
                 Poll::Ready(Some(event)) => println!("ready {:?}", event),

@@ -93,7 +93,7 @@ impl Service {
 
         let mut config = NetworkConfig::new();
         config.update_dir(cfg.data_dir).unwrap();
-        handler::start_network(config);
+        handler::start_network(config,self.block_chain.clone());
 
         let rpc = http_server::start_http(http_server::RpcConfig{
             rpc_addr:cfg.rpc_addr,

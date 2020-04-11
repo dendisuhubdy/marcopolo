@@ -12,3 +12,6 @@ futures = "0.3.1"
 async-std = "1.5"
 log = "0.4.8"
 dirs = "2.0.1"
+chain = { package = "chain", path = "../chain" }
+map-core = { path = "../core" }
+bincode = "1.2.0"
