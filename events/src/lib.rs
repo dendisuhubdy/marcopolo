@@ -30,6 +30,8 @@ pub const EVENT_CHANNEL_SIZE: usize = 64;
 
 pub struct RegisterItem<M> (pub String, pub Sender<Receiver<M>>);
 pub type EventRegister<M> = Sender<RegisterItem<M>>;
+pub type SignalSender = Sender<()>;
+
 
 impl<M> RegisterItem<M> {
     pub fn call(sender: &Sender<RegisterItem<M>>, arguments: String) -> Option<Receiver<M>> {
@@ -41,6 +43,7 @@ impl<M> RegisterItem<M> {
 
 #[derive(Clone)]
 pub struct EventHandler {
+    stop:   SignalSender, 
     new_block_register: EventRegister<Block>,
     new_block_notifier: Sender<Block>,
 }
@@ -65,6 +68,7 @@ impl EventService {
     }
     #[allow(clippy::zero_ptr, clippy::drop_copy)]
     pub fn start<S: ToString>(mut self, thread_name: Option<S>) -> EventHandler {
+        let (signal_sender, signal_receiver) = bounded::<()>(ONE_CHANNEL_SIZE);
         let (new_block_register, new_block_register_receiver) = bounded(REGISTER_CHANNEL_SIZE);
         let (new_block_sender, new_block_receiver) = bounded::<Block>(EVENT_CHANNEL_SIZE);
 
@@ -75,6 +79,9 @@ impl EventService {
         let join_handle = thread_builder
             .spawn(move || loop {
                 select! {
+                    recv(signal_receiver) -> _ => {
+                        break;
+                    }
                     recv(new_block_register_receiver) -> msg => self.handle_register_new_block(msg),
                     recv(new_block_receiver) -> msg => self.handle_notify_new_block(msg),
                 }
@@ -82,6 +89,7 @@ impl EventService {
             .expect("Start notify service failed");
 
         EventHandler {
+            stop:   signal_sender,
             new_block_register,
             new_block_notifier: new_block_sender,
         }
