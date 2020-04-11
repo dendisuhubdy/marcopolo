@@ -10,3 +10,4 @@ edition = "2018"
 log = "0.4.8"
 core = { package = "map-core", path = "../core" }
 crossbeam-channel = "0.4"
+parking_lot = "0.10.0"

@@ -23,6 +23,8 @@ use crossbeam_channel::{bounded, select, Receiver, RecvError, Sender};
 use std::collections::HashMap;
 use core::{block::Block};
 use std::thread;
+use std::sync::Arc;
+use parking_lot::Mutex;
 
 const ONE_CHANNEL_SIZE: usize = 1;
 pub const REGISTER_CHANNEL_SIZE: usize = 2;
@@ -43,17 +45,29 @@ impl<M> RegisterItem<M> {
 
 #[derive(Clone)]
 pub struct EventHandler {
-    stop:   SignalSender, 
+    stop: Option<Arc<Mutex<Option<SignalSender>>>>,
     new_block_register: EventRegister<Block>,
     new_block_notifier: Sender<Block>,
 }
 impl EventHandler {
+    pub fn new_stop(stop: SignalSender) -> Option<Arc<Mutex<Option<SignalSender>>>> {
+        Some(Arc::new(Mutex::new(Some(stop))))
+    }
     pub fn subscribe_new_block<S: ToString>(&self, name: S) -> Receiver<Block> {
         RegisterItem::call(&self.new_block_register, name.to_string())
             .expect("Subscribe new block should be OK")
     }
     pub fn notify_new_block(&self, b: Block) {
         let _ = self.new_block_notifier.send(b);
+    }
+    pub fn stop(&mut self) {
+        let inner = self.stop
+        .take()
+        .expect("Stop signal can only be sent once");
+        if let Ok(lock) = Arc::try_unwrap(inner) {
+            let handler = lock.lock().take().expect("Handler can only be taken once");
+            handler.send(());
+        };
     }
 }
 pub struct EventService {
@@ -89,7 +103,7 @@ impl EventService {
             .expect("Start notify service failed");
 
         EventHandler {
-            stop:   signal_sender,
+            stop:   EventHandler::new_stop(signal_sender),
             new_block_register,
             new_block_notifier: new_block_sender,
         }
@@ -131,22 +145,35 @@ impl EventService {
 #[cfg(test)]
 pub mod tests {
     use core::{block::Block};
-    use std::thread;
+    use std::{thread,sync::mpsc};
+    use std::time::{Duration, SystemTime};
     use crossbeam_channel::{select};
     use super::{EventService};
     #[test]
     pub fn test_events() {
-       let new_block_handle =  EventService::new().start(Some("test"));
+       let mut new_block_handle =  EventService::new().start(Some("test"));
        let receiver1 = new_block_handle.subscribe_new_block("1111".to_string());
        let receiver2 = new_block_handle.subscribe_new_block("2222".to_string());
        let b = Block::default();
+       let mut stop = 0;
+       let (tx,rx): (mpsc::Sender<i32>,mpsc::Receiver<i32>) = mpsc::channel();
        new_block_handle.notify_new_block(b);
+       thread::spawn(move || loop {
+            stop = stop + 1;
+            thread::sleep(Duration::from_millis(1000));
+            if stop > 10 {
+                new_block_handle.stop();
+                tx.send(0);
+            }
+       });
        let join_handle = thread::spawn(move || loop {
-                select! {
-                    recv(receiver1) -> msg => println!("receiver1{:?}", msg),
-                    recv(receiver2) -> msg => println!("receiver2{:?}", msg),
-                }
-            }).join();
-        // join_handle.join();
+            select! {
+                recv(receiver1) -> msg => println!("receiver1{:?}", msg),
+                recv(receiver2) -> msg => println!("receiver2{:?}", msg),
+            }
+            if rx.try_recv().is_ok() {
+                break;
+            }
+        }).join();
     }
 }
