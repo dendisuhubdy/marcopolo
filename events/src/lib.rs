@@ -164,6 +164,7 @@ pub mod tests {
             if stop > 10 {
                 new_block_handle.stop();
                 tx.send(0);
+                break;
             }
        });
        let join_handle = thread::spawn(move || loop {
