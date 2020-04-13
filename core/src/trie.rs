@@ -28,7 +28,10 @@ use hash as core_hash;
 use crate::types::Hash;
 
 const HASHED_NULL_NODE_BYTES :[u8;32] = [0x3a, 0xc4, 0xbf, 0x3c, 0xc9, 0x2d, 0x05, 0x46, 0x3d, 0x1e, 0x9c, 0x40, 0x24, 0xca, 0xab, 0x4c, 0x78, 0x0f, 0x9d, 0x99, 0xd2, 0x4d, 0xd2, 0xf4, 0x55, 0x70, 0x86, 0x94, 0xb5, 0x0a, 0x00, 0xc9];
+/// hash of null node with rlp encoded([0x80])
 pub const HASHED_NULL_NODE : Hash = Hash(HASHED_NULL_NODE_BYTES);
+/// Empty node with rlp of null item
+pub const EMPTY_TRIE: &[u8] = &[0x80];
 
 impl Encodable for Hash {
     fn rlp_append(&self, s: &mut RlpStream) {
@@ -120,9 +123,9 @@ impl NodeCodec for BinNodeCodec<Blake2Hasher> {
     type HashOut = <Blake2Hasher as hash_db::Hasher>::Out;
 
     fn hashed_null_node() -> <Blake2Hasher as hash_db::Hasher>::Out {
-        // let out = core_hash::blake2b_256(<Self as NodeCodec>::empty_node());
-        // out[..].into()
-        HASHED_NULL_NODE
+        // HASHED_NULL_NODE
+        let out = core_hash::blake2b_256(<Self as NodeCodec>::empty_node());
+        out[..].into()
     }
 
     fn decode_plan(data: &[u8]) -> ::std::result::Result<NodePlan, Self::Error> {
@@ -194,7 +197,7 @@ impl NodeCodec for BinNodeCodec<Blake2Hasher> {
     }
 
     fn empty_node() -> &'static[u8] {
-        &[0x80]
+        EMPTY_TRIE
     }
 
     fn leaf_node(partial: Partial, value: &[u8]) -> Vec<u8> {
@@ -264,29 +267,40 @@ pub type TrieDB<'db> = trie_db::TrieDB<'db, ExtensionLayout>;
 #[cfg(test)]
 mod tests {
     use trie_db::{DBValue, Trie, TrieMut};
-    use memory_db::*;
+    use memory_db::{MemoryDB, HashKey};
     use crate::types::Hash;
     use hash as core_hash;
-    use super::{TrieDBMut, TrieDB, Blake2Hasher, HASHED_NULL_NODE};
+    use super::{TrieDBMut, TrieDB, Blake2Hasher, HASHED_NULL_NODE, EMPTY_TRIE};
 
     #[test]
     fn test_trie_mut() {
         // empty item of rlp
-        let null_root = Hash(core_hash::blake2b_256(&[0x80]));
+        let null_root = Hash(core_hash::blake2b_256(EMPTY_TRIE));
         assert_eq!(null_root, HASHED_NULL_NODE);
+        let long_node = vec![1u8;33];
 
-        let mut memdb = MemoryDB::<Blake2Hasher, HashKey<_>, DBValue>::new(&[0x80]);
+        let mut memdb = MemoryDB::<Blake2Hasher, HashKey<_>, DBValue>::new(EMPTY_TRIE);
         let mut root: Hash = Default::default();
         {
             let mut t = TrieDBMut::new(&mut memdb, &mut root);
             assert!(t.is_empty());
             assert_eq!(*t.root(), HASHED_NULL_NODE);
             t.insert(b"foo", b"b").unwrap();
+            t.insert(b"fog", b"a").unwrap();
         }
 
         {
             let t = TrieDB::new(&memdb, &root).unwrap();
             assert!(!t.is_empty());
+            assert!(t.contains(b"foo").unwrap());
+            assert_eq!(t.get(b"foo").unwrap().unwrap(), b"b".to_vec());
+            assert_eq!(t.get(b"fog").unwrap().unwrap(), b"a".to_vec());
+        }
+
+        {
+            let mut t = TrieDBMut::new(&mut memdb, &mut root);
+            t.insert(b"fot", &long_node).unwrap();
+            assert_eq!(t.get(b"fot").unwrap().unwrap(), long_node);
         }
     }
 }
