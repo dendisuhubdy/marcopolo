@@ -25,6 +25,7 @@ use std::sync::Arc;
 use parking_lot::{Condvar, Mutex};
 use std::sync::mpsc;
 use ed25519::{privkey::PrivKey};
+use network::{Multiaddr};
 
 pub fn run() {
     let matches = App::new("map")
@@ -61,6 +62,12 @@ pub fn run() {
             .long("key")
             .takes_value(true)
             .help("Specify private key"))
+        .arg(Arg::with_name("dial_addrs")
+            .short("dial_addrs")
+            .value_name("MULTIADDR")
+            .takes_value(true)
+            .help("One or more  multiaddrs to manually connect to a p2p peer")
+        )
         .subcommand(SubCommand::with_name("clean")
             .about("Remove the whole chain data"))
         .get_matches();
@@ -110,6 +117,19 @@ pub fn run() {
             }
         }
     }
+    if matches.is_present("dial_addr") {
+        if let Some(addresses_str) = matches.value_of("dial_addr") {
+            config.dial_addrs = addresses_str
+                .split(',')
+                .map(|multiaddr| {
+                    multiaddr
+                        .parse()
+                        .map_err(|_| format!("Invalid Multiaddr: {}", multiaddr))
+                })
+                .collect::<Result<Vec<Multiaddr>, _>>().unwrap();
+        }
+    }
+
     if matches.is_present("single") {
         println!("Run map with single node");
     }

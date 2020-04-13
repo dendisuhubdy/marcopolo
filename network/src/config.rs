@@ -1,7 +1,13 @@
-use std::path::PathBuf;
-use libp2p::{identity::Keypair};
+use core::{fmt, iter};
+use std::{
+    net::Ipv4Addr,
+    path::{Path, PathBuf},
+};
 use std::fs::File;
 use std::io::prelude::*;
+
+use libp2p::{identity::Keypair};
+use libp2p::{multiaddr, multiaddr::Multiaddr, PeerId};
 
 const NODE_KEY_FILENAME: &str = "nodekey";
 
@@ -11,8 +17,14 @@ pub struct Config {
     /// Data directory where node's keyfile is stored
     pub network_dir: PathBuf,
 
-    /// The TCP port that libp2p listens on.
+    /// IP address to listen on.
+    pub listen_address: Multiaddr,
+
+    /// The TCP port that p2p listens on.
     pub port: u16,
+
+    /// The cli dial addr.
+    pub dial_addrs: Vec<Multiaddr>,
 }
 
 /// Generates a default Config.
@@ -21,10 +33,10 @@ impl Config {
         Config::default()
     }
 
-    pub fn update_dir(&mut self, data_dir: PathBuf) -> Result<(), String> {
+    pub fn update_network_cfg(&mut self, data_dir: PathBuf, dial_addrs: Vec<Multiaddr>) -> Result<(), String> {
         // If a `datadir` has been specified, set the network dir to be inside it.
         self.network_dir = data_dir.join("network");
-
+        self.dial_addrs = dial_addrs;
         Ok(())
     }
 }
@@ -34,9 +46,14 @@ impl Default for Config {
     fn default() -> Self {
         let mut network_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
         network_dir.push(".map");
+        let listen_address = iter::once(multiaddr::Protocol::Ip4(Ipv4Addr::new(0, 0, 0, 0)))
+            .chain(iter::once(multiaddr::Protocol::Tcp(40313)))
+            .collect();
         Config {
             network_dir,
             port: 40313,
+            dial_addrs: vec![],
+            listen_address,
         }
     }
 }

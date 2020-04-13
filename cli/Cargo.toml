@@ -13,3 +13,4 @@ logger = { package = "map-logger", path = "../common/logger" }
 service = { package = "map-service", path = "../service" }
 parking_lot = "0.10.0"
 ed25519 = { package = "map-ed25519", path = "../common/ed25519" }
+network = { package = "map-network", path = "../network" }

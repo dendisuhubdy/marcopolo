@@ -32,7 +32,7 @@ use chain::blockchain::{BlockChain};
 use chain::tx_pool::TxPoolManager;
 use executor::Executor;
 use rpc::http_server;
-use network::{handler,NetworkConfig};
+use network::{handler,NetworkConfig,Multiaddr};
 use std::{thread,thread::JoinHandle,sync::mpsc};
 use std::time::{Duration, SystemTime};
 use std::path::PathBuf;
@@ -47,6 +47,8 @@ pub struct NodeConfig {
     pub rpc_port: u16,
     pub key:      String,
     pub poa_privkey:  String,
+    /// List of p2p nodes to initially connect to.
+    pub dial_addrs: Vec<Multiaddr>,
 }
 
 impl Default for NodeConfig {
@@ -58,6 +60,7 @@ impl Default for NodeConfig {
             rpc_port:9545,
             key:        "".into(),
             poa_privkey:"".into(),
+            dial_addrs:vec![],
         }
     }
 }
@@ -92,8 +95,8 @@ impl Service {
         }
 
         let mut config = NetworkConfig::new();
-        config.update_dir(cfg.data_dir).unwrap();
-        handler::start_network(config,self.block_chain.clone());
+        config.update_network_cfg(cfg.data_dir, cfg.dial_addrs).unwrap();
+        handler::Service::start_network(config,self.block_chain.clone());
 
         let rpc = http_server::start_http(http_server::RpcConfig{
             rpc_addr:cfg.rpc_addr,
