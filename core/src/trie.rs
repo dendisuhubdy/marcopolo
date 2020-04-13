@@ -27,8 +27,8 @@ use trie_db::{TrieLayout, NodeCodec, ChildReference, Partial,
 use hash as core_hash;
 use crate::types::Hash;
 
-// const HASHED_NULL_NODE_BYTES :[u8;32] = [0;32];
-// const HASHED_NULL_NODE : Hash = Hash(HASHED_NULL_NODE_BYTES);
+const HASHED_NULL_NODE_BYTES :[u8;32] = [0x3a, 0xc4, 0xbf, 0x3c, 0xc9, 0x2d, 0x05, 0x46, 0x3d, 0x1e, 0x9c, 0x40, 0x24, 0xca, 0xab, 0x4c, 0x78, 0x0f, 0x9d, 0x99, 0xd2, 0x4d, 0xd2, 0xf4, 0x55, 0x70, 0x86, 0x94, 0xb5, 0x0a, 0x00, 0xc9];
+pub const HASHED_NULL_NODE : Hash = Hash(HASHED_NULL_NODE_BYTES);
 
 impl Encodable for Hash {
     fn rlp_append(&self, s: &mut RlpStream) {
@@ -52,9 +52,12 @@ impl hash_db::Hasher for Blake2Hasher {
 
 /// implementation of a `NodeCodec`.
 #[derive(Default, Clone)]
-pub struct BinNodeCodec<H>(PhantomData<H>);
+pub struct BinNodeCodec<H> {
+    mark: PhantomData<H>
+}
 
 /// layout using modified partricia trie with extention node
+#[derive(Clone, Default)]
 pub struct ExtensionLayout;
 
 impl TrieLayout for ExtensionLayout {
@@ -117,8 +120,9 @@ impl NodeCodec for BinNodeCodec<Blake2Hasher> {
     type HashOut = <Blake2Hasher as hash_db::Hasher>::Out;
 
     fn hashed_null_node() -> <Blake2Hasher as hash_db::Hasher>::Out {
-        let out = core_hash::blake2b_256(<Self as NodeCodec>::empty_node());
-        out[..].into()
+        // let out = core_hash::blake2b_256(<Self as NodeCodec>::empty_node());
+        // out[..].into()
+        HASHED_NULL_NODE
     }
 
     fn decode_plan(data: &[u8]) -> ::std::result::Result<NodePlan, Self::Error> {
@@ -204,7 +208,6 @@ impl NodeCodec for BinNodeCodec<Blake2Hasher> {
         partial: impl Iterator<Item = u8>,
         number_nibble: usize,
         child_ref: ChildReference<<Blake2Hasher as hash_db::Hasher>::Out>,
-        // child: ChildReference<Self::HashOut>,
     ) -> Vec<u8> {
         let mut stream = RlpStream::new_list(2);
         stream.append_iter(encode_partial_from_iterator_iter(partial, number_nibble % 2 > 0, false));
@@ -219,7 +222,6 @@ impl NodeCodec for BinNodeCodec<Blake2Hasher> {
     }
 
     fn branch_node(
-        // children: impl Iterator<Item = impl Borrow<Option<ChildReference<Self::HashOut>>>>,
         children: impl Iterator<Item = impl Borrow<Option<ChildReference<<Blake2Hasher as hash_db::Hasher>::Out>>>>,
         maybe_value: Option<&[u8]>,
     ) -> Vec<u8> {
@@ -257,6 +259,34 @@ impl NodeCodec for BinNodeCodec<Blake2Hasher> {
 
 pub type TrieDBMut<'db> = trie_db::TrieDBMut<'db, ExtensionLayout>;
 
+pub type TrieDB<'db> = trie_db::TrieDB<'db, ExtensionLayout>;
+
 #[cfg(test)]
 mod tests {
+    use trie_db::{DBValue, Trie, TrieMut};
+    use memory_db::*;
+    use crate::types::Hash;
+    use hash as core_hash;
+    use super::{TrieDBMut, TrieDB, Blake2Hasher, HASHED_NULL_NODE};
+
+    #[test]
+    fn test_trie_mut() {
+        // empty item of rlp
+        let null_root = Hash(core_hash::blake2b_256(&[0x80]));
+        assert_eq!(null_root, HASHED_NULL_NODE);
+
+        let mut memdb = MemoryDB::<Blake2Hasher, HashKey<_>, DBValue>::new(&[0x80]);
+        let mut root: Hash = Default::default();
+        {
+            let mut t = TrieDBMut::new(&mut memdb, &mut root);
+            assert!(t.is_empty());
+            assert_eq!(*t.root(), HASHED_NULL_NODE);
+            t.insert(b"foo", b"b").unwrap();
+        }
+
+        {
+            let t = TrieDB::new(&memdb, &root).unwrap();
+            assert!(!t.is_empty());
+        }
+    }
 }
