@@ -6,7 +6,7 @@ use jsonrpc_core::Result;
 use jsonrpc_derive::rpc;
 
 use chain::tx_pool::TxPoolManager;
-use ed25519::{privkey::PrivKey, pubkey::Pubkey};
+use ed25519::{privkey::PrivKey};
 use map_core::genesis::{ed_genesis_priv_key, ed_genesis_pub_key};
 use map_core::transaction::Transaction;
 use map_core::types::Address;

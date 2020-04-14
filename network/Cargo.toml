@@ -16,3 +16,4 @@ chain = { package = "chain", path = "../chain" }
 map-core = { path = "../core" }
 bincode = "1.2.0"
 parking_lot = "0.10.0"
+error-chain = "0.12.0"

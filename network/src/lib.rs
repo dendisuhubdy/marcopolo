@@ -5,6 +5,8 @@ pub mod handler;
 pub mod transport;
 pub mod behaviour;
 pub mod config;
+pub mod executor;
+pub mod error;
 
 pub use config::{Config as NetworkConfig};
 pub use libp2p::multiaddr::Multiaddr;

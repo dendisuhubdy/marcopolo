@@ -1,78 +1,62 @@
 use std::{error::Error, task::{Context, Poll}};
-use std::sync::{Arc, RwLock};
+use std::pin::Pin;
 
-use async_std::{io, task};
-use bincode;
-use futures::{channel::mpsc, future, prelude::*};
+use futures::{prelude::*, StreamExt};
 use libp2p::{
-    floodsub::{self, Floodsub},
-    identity,
-    mdns::Mdns,
+    floodsub::{self,Topic},
     multiaddr::{self, Multiaddr},
     PeerId,
-    ping::{Ping, PingConfig},
+    swarm::SwarmEvent,
 };
 
-use chain::blockchain::BlockChain;
 use map_core::{block::Block, transaction::Transaction};
-use std::pin::Pin;
-use crate::{behaviour::MyBehaviour, config, NetworkConfig};
-use parking_lot::Mutex;
+use crate::error;
+use crate::{behaviour::{BehaviourEvent, Behaviour}, config, NetworkConfig};
 
 enum NetworkMessage {
     PropagateTx(Transaction),
     AnnounceBlock(Block),
 }
 
-impl Unpin for Service {
-}
+impl Unpin for Service {}
 
-type Swarm = libp2p::swarm::Swarm<MyBehaviour>;
+type Swarm = libp2p::swarm::Swarm<Behaviour>;
+
 /// The configuration and state of the libp2p components
 pub struct Service {
     /// The libp2p Swarm handler.
-    pub swarm: Arc<Mutex<Swarm>>,
+    pub swarm: Swarm,
     /// This node's PeerId.
     local_peer_id: PeerId,
-
-    network_send: mpsc::UnboundedSender<NetworkMessage>,
 }
 
 impl Service {
-
-    pub fn start_network(cfg: NetworkConfig, block_chain: Arc<RwLock<BlockChain>>) -> Result<Self,Box<dyn Error>> {
+    pub fn new(cfg: NetworkConfig) -> error::Result<Self> {
         // Load the private key from CLI disk or generate a new random PeerId
         let local_key = config::load_private_key(&cfg);
         let local_peer_id = PeerId::from(local_key.public());
         println!("Local peer id: {:?}", local_peer_id);
 
         // Set up a an encrypted DNS-enabled TCP Transport over the Mplex and Yamux protocols
-        let transport = libp2p::build_development_transport(local_key)?;
+        let transport = libp2p::build_development_transport(local_key.clone()).expect("build transport error");
 
         // Create a Floodsub topic
         let floodsub_topic = floodsub::Topic::new("map");
 
         // Create a Swarm to manage peers and events
         let mut swarm = {
-            let mdns = Mdns::new()?;
-            let mut behaviour = MyBehaviour {
-                floodsub: Floodsub::new(local_peer_id.clone()),
-                mdns,
-                ping: Ping::new(PingConfig::new()),
-                ignored_member: false,
-            };
-
+            let mut behaviour = Behaviour::new(&local_key)?;
             behaviour.floodsub.subscribe(floodsub_topic.clone());
             Swarm::new(transport, behaviour, local_peer_id.clone())
         };
 
         // attempt to connect to cli p2p nodes
         for addr in cfg.dial_addrs {
-            println!("dial {}",addr);
+            println!("dial {}", addr);
             match Swarm::dial_addr(&mut swarm, addr.clone()) {
-                Ok(()) => debug!("Dialing p2p peer address => {:?} ",  addr),
+                Ok(()) => debug!("Dialing p2p peer address => {:?} ", addr),
                 Err(err) => debug!(
-                    "Could not connect to peer address {}", format!("{:?} Error {:?}", addr,err)),
+                    "Could not connect to peer address {}", format!("{:?} Error {:?}", addr, err)),
             };
         }
 
@@ -81,74 +65,79 @@ impl Service {
             Ok(_) => {
                 let mut log_address = cfg.listen_address;
                 log_address.push(multiaddr::Protocol::P2p(local_peer_id.clone().into()));
-                info!("Listening established address {:?} ",format!("{}", log_address));
+                info!("Listening established address {:?} ", format!("{}", log_address));
             }
             Err(err) => warn!(
                 "Cannot listen on: {} because: {:?}", cfg.listen_address, err
             ),
         };
 
-        let (tx, rx) = mpsc::unbounded::<NetworkMessage>();
-        let mut network_recv = rx;
-
-        let swarm_service = Arc::new(Mutex::new(swarm));
-
-        let swarm_close = swarm_service.clone();
-
-        // Kick it off
-        let mut listening = false;
-        task::spawn(future::poll_fn(move |cx: &mut Context| {
-            loop {
-                match network_recv.poll_next_unpin(cx) {
-                    Poll::Ready(Some(x)) => {
-                        //Simulate pending transactions data
-                        let block = block_chain.write().expect("network get block chain").current_block();
-                        info!("Forwarding block");
-                        swarm_close.lock().floodsub.publish(
-                            floodsub_topic.clone(),
-                            bincode::serialize(&block).expect("Failed to serialize message."),
-                        );
-                    }
-                    Poll::Ready(None) => panic!("Interval stream closed"),
-                    Poll::Pending => {
-                        info!("send block Pending");
-                        break
-                    }
-                }
-            }
-
-            loop {
-                match swarm_close.lock().poll_next_unpin(cx) {
-                    Poll::Ready(Some(event)) => println!("ready {:?}", event),
-                    Poll::Ready(None) => return Poll::Ready(()),
-                    Poll::Pending => {
-                        if !listening {
-                            for addr in Swarm::listeners(&swarm_close.lock()) {
-                                println!("Listening on {:?}", addr);
-                                listening = true;
-                            }
-                        }
-                        break
-                    }
-                }
-            }
-            Poll::Pending
-        }));
-
-
         Ok(Service {
             local_peer_id: local_peer_id,
-            swarm:swarm_service,
-            network_send : tx,
+            swarm,
         })
     }
 }
-
-impl Future for Service {
-    type Output = Result<(), io::Error>;
-
+//futures::future::Future
+impl futures::future::Future for Service {
+    //Future<Item=Foo, Error=Bar>
+    //Future<Output=Result<Foo, Bar>>
+    type Output = Result<Libp2pEvent, crate::error::Error>;
     fn poll(mut self: Pin<&mut Self>, cx: &mut std::task::Context) -> Poll<Self::Output> {
         let this = &mut *self;
+        loop {
+            // Process the next action coming from the network.
+            let next_event = this.swarm.next_event();
+            futures::pin_mut!(next_event);
+            let poll_value = next_event.poll_unpin(cx);
+
+            match poll_value {
+                //Behaviour events
+                Poll::Ready(SwarmEvent::Behaviour((event))) => match event {
+                    BehaviourEvent::PubsubMessage {
+                        source,
+                        topics,
+                        message,
+                    } => {
+                        //debug!(self.log, "Gossipsub message received"; "Message" => format!("{:?}", topics[0]));
+                        return Poll::Ready(Ok(Libp2pEvent::PubsubMessage {
+                            source,
+                            topics,
+                            message,
+                        }));
+                    }
+                    BehaviourEvent::AnnounceBlock(peer_id, event) => {
+                        //debug!(self.log,"Received RPC message from: {:?}", peer_id);
+                        return Poll::Ready(Ok(Libp2pEvent::AnnounceBlock(peer_id, event)));
+                    }
+                    BehaviourEvent::PeerDialed(peer_id) => {
+                        return Poll::Ready(Ok(Libp2pEvent::PeerDialed(peer_id)));
+                    }
+                    BehaviourEvent::PeerDisconnected(peer_id) => {
+                        return Poll::Ready(Ok(Libp2pEvent::PeerDisconnected(peer_id)));
+                    }
+                },
+                Poll::Pending => break,
+                _ => break,
+            }
+        }
         Poll::Pending
     }
+}
+
+/// Events that can be obtained from polling the Libp2p Service.
+#[derive(Debug)]
+pub enum Libp2pEvent {
+    /// An RPC response request has been received on the swarm.
+    AnnounceBlock(PeerId, Block),
+    /// Initiated the connection to a new peer.
+    PeerDialed(PeerId),
+    /// A peer has disconnected.
+    PeerDisconnected(PeerId),
+    /// Received pubsub message.
+    PubsubMessage {
+        source: PeerId,
+        topics: Vec<Topic>,
+        message: Vec<u8>,
+    },
 }

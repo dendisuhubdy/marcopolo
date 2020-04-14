@@ -32,7 +32,7 @@ use chain::blockchain::{BlockChain};
 use chain::tx_pool::TxPoolManager;
 use executor::Executor;
 use rpc::http_server;
-use network::{handler,NetworkConfig,Multiaddr};
+use network::{executor as network_executor, NetworkConfig, Multiaddr};
 use std::{thread,thread::JoinHandle,sync::mpsc};
 use std::time::{Duration, SystemTime};
 use std::path::PathBuf;
@@ -96,7 +96,7 @@ impl Service {
 
         let mut config = NetworkConfig::new();
         config.update_network_cfg(cfg.data_dir, cfg.dial_addrs).unwrap();
-        handler::Service::start_network(config,self.block_chain.clone());
+        network_executor::NetworkExecutor::new(config,self.block_chain.clone());
 
         let rpc = http_server::start_http(http_server::RpcConfig{
             rpc_addr:cfg.rpc_addr,
