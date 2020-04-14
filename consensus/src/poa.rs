@@ -50,6 +50,9 @@ impl POA {
         }
     } 
     pub fn new_from_string(priv_key : String) -> Self {
+        if priv_key.len() < 32 {
+            return  POA::new(None);
+        }
         match PrivKey::from_hex(&priv_key) {
             Ok(pkey) => POA::new(Some(pkey.to_bytes())),
             Err(e) => {

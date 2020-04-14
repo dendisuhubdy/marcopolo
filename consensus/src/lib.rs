@@ -38,6 +38,7 @@ pub enum ConsensusErrorKind {
     NoneSign,
     AnotherPk,
     InvalidProof,
+    InvalidKey,
 }
 
 impl fmt::Display for ConsensusError {
