@@ -113,7 +113,7 @@ pub fn run() {
                 config.poa_privkey = key.to_string();
             } else {
                 println!("Please specify correct  poa_privkey");
-                return;
+                // return;
             }
         }
     }
