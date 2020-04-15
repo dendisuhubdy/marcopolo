@@ -1,10 +1,10 @@
-use std::{error::Error, task::{Context, Poll}};
+use std::{task::{Poll}};
 use std::pin::Pin;
 
-use futures::{prelude::*, StreamExt};
+use futures::{prelude::*};
 use libp2p::{
     floodsub::{self,Topic},
-    multiaddr::{self, Multiaddr},
+    multiaddr::{self},
     PeerId,
     swarm::SwarmEvent,
 };

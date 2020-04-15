@@ -6,15 +6,12 @@ use async_std::{io, task};
 use futures::{channel::mpsc, channel::oneshot, future, prelude::*};
 use libp2p::{
     floodsub::{Floodsub, Topic},
-    PeerId,
 };
 use parking_lot::Mutex;
 
 use chain::blockchain::BlockChain;
 
 use crate::{
-    behaviour::{Behaviour, BehaviourEvent},
-    config,
     handler::{Libp2pEvent, Service}, NetworkConfig};
 use crate::error;
 use core::ops::{DerefMut};
@@ -51,7 +48,7 @@ impl NetworkExecutor {
             .send(NetworkMessage::Publish {
                 topics: vec![Topic::new(topic)],
                 message: data,
-            }).await.unwrap_or_else(|_| warn!("Could not send gossip message."));
+            });
     }
 }
 

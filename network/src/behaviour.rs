@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use libp2p::{
     floodsub::{Floodsub, FloodsubEvent,Topic},
-    identify::{Identify, IdentifyEvent},
     mdns::{Mdns, MdnsEvent},
     NetworkBehaviour,
     PeerId,
@@ -13,7 +12,7 @@ use libp2p::{identity::Keypair};
 
 use map_core::block::Block;
 
-use crate::{config, error, NetworkConfig};
+use crate::{config, error};
 use std::num::NonZeroU32;
 
 // We create a custom network behaviour that combines floodsub and mDNS.

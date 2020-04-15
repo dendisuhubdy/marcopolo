@@ -7,7 +7,7 @@ use libp2p::{
     yamux::Config as YamuxConfig,
     PeerId, Transport,
 };
-use std::{error::Error, task::{Context, Poll},time::Duration, };
+use std::{error::Error,time::Duration, };
 use async_std::{io};
 
 /// Builds the transport that serves as a common ground for all connections.
