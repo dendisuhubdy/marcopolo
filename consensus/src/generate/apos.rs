@@ -15,6 +15,7 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
+use core::block::{self,Block,BlockProof,VerificationItem};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -35,13 +36,29 @@ struct EpochItem {
 }
 pub struct APOS {
     epochInfos: HashMap<u64,EpochItem>,
+    eid: u64,
 }
 
 impl APOS {
     pub fn new() -> Self {
         APOS{
             epochInfos: HashMap::default(),
+            eid: 0,
         }
+    }
+    pub fn from_genesis(&mut self,genesis: &Block,state: &Balance) {
+        let &proofs = genesis.get_proofs();
+        let mut vals: Vec<ValidatorItem> = Vec::new();
+        for proof in proofs {
+            vals.push(ValidatorItem{
+                pubkey:         proof.0,
+                stakeAmount:    state.Balance(proof.to_address()),
+            });
+        }
+        self.epochInfos.insert(0,vals);
+    }
+    pub fn next_epoch(&mut self) {
+        self.eid = self.eid + 1
     }
     pub fn get_epoch_info(&self,eid: u64) -> Option<EpochItem> {
         match self.epochInfos.get(&eid) {
