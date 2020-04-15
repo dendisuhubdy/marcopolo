@@ -1,3 +1,4 @@
+use core::ops::DerefMut;
 use std::{error::Error, task::{Context, Poll}};
 use std::pin::Pin;
 use std::sync::{Arc, RwLock};
@@ -8,13 +9,13 @@ use libp2p::{
     floodsub::{Floodsub, Topic},
 };
 use parking_lot::Mutex;
+use trace_caller::trace;
 
 use chain::blockchain::BlockChain;
 
 use crate::{
     handler::{Libp2pEvent, Service}, NetworkConfig};
 use crate::error;
-use core::ops::{DerefMut};
 
 pub struct NetworkExecutor {
     service: Arc<Mutex<Service>>,
@@ -25,12 +26,11 @@ pub struct NetworkExecutor {
 impl NetworkExecutor {
     pub fn new(cfg: NetworkConfig, block_chain: Arc<RwLock<BlockChain>>) -> error::Result<Self> {
         // build the network channel
-        let ( network_send,  network_recv) = mpsc::unbounded::<NetworkMessage>();
+        let (network_send, network_recv) = mpsc::unbounded::<NetworkMessage>();
         // launch libp2p Network
-        let service = Arc::new(Mutex::new(Service::new(cfg)?));
+        let service = Arc::new(Mutex::new(Service::new(cfg, network_recv)?));
         let libp2p_exit = spawn_service(
             service.clone(),
-            network_recv,
             block_chain,
         )?;
 
@@ -45,7 +45,7 @@ impl NetworkExecutor {
 
     pub fn gossip(&mut self, topic: String, data: Vec<u8>) {
         self.network_send
-            .send(NetworkMessage::Publish {
+            .unbounded_send(NetworkMessage::Publish {
                 topics: vec![Topic::new(topic)],
                 message: data,
             });
@@ -54,38 +54,23 @@ impl NetworkExecutor {
 
 fn spawn_service(
     libp2p_service: Arc<Mutex<Service>>,
-    mut network_recv: mpsc::UnboundedReceiver<NetworkMessage>,
     block_chain: Arc<RwLock<BlockChain>>,
 ) -> error::Result<futures::channel::oneshot::Sender<()>> {
     let (sender, receiver) = futures::channel::oneshot::channel();
 
     // spawn on the current executor
     task::spawn(future::poll_fn(move |cx: &mut Context| {
-        loop {
-            // poll the network channel
-            let msg = match network_recv.poll_next_unpin(cx) {
-                Poll::Ready(Some(msg)) => msg,
-                Poll::Ready(None) => return Poll::Ready(()),
-                Poll::Pending => break,
-            };
-            match msg {
-                NetworkMessage::Publish { topics, message } => {
-                    debug!("Sending pubsub message topics {:?}", format!("{:?}", topics));
-                    for topic in topics {
-                        libp2p_service.lock().swarm.floodsub.publish(topic, message.clone());
-                    }
-                }
-            }
-        }
-
+        println!("task loop");
         loop {
             // Process the next action coming from the network.
-
             match Future::poll(Pin::new(&mut libp2p_service.lock().deref_mut()), cx) {
-                Poll::Pending => break,
+                Poll::Pending => {
+                    println!("task loop Pending");
+                    break
+                }
                 Poll::Ready(Ok(Libp2pEvent::PubsubMessage {
-                                                      source,
-                                                      topics, message, })) => {
+                                   source,
+                                   topics, message, })) => {
                     debug!("Gossip message received: {:?}", message);
                     //-----------------------------------------  block chain
                 }
@@ -99,13 +84,13 @@ fn spawn_service(
                     info!("Network ok : {:?}", e);
                 }
                 Poll::Ready(Err(e)) => {
-                    info!("Network error : {:?}", e);
+                    println!("task loop Pending");
+                    return Poll::Ready(())
                 }
-            };
+            }
         }
         Poll::Pending
     }));
-
 
     Ok(sender)
 }

@@ -126,6 +126,7 @@ for Behaviour
 }
 
 /// The types of events than can be obtained from polling the behaviour.
+#[derive(Debug)]
 pub enum BehaviourEvent {
     AnnounceBlock(PeerId, Block),
     PeerDialed(PeerId),

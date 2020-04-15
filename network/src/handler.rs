@@ -1,22 +1,18 @@
-use std::{task::{Poll}};
+use std::{task::Poll};
 use std::pin::Pin;
 
-use futures::{prelude::*};
+use futures::{channel::mpsc, channel::oneshot, future, prelude::*};
 use libp2p::{
-    floodsub::{self,Topic},
+    floodsub::{self, Topic},
     multiaddr::{self},
     PeerId,
     swarm::SwarmEvent,
 };
 
 use map_core::{block::Block, transaction::Transaction};
-use crate::error;
-use crate::{behaviour::{BehaviourEvent, Behaviour}, config, NetworkConfig};
 
-enum NetworkMessage {
-    PropagateTx(Transaction),
-    AnnounceBlock(Block),
-}
+use crate::{behaviour::{Behaviour, BehaviourEvent}, config, executor::NetworkMessage, NetworkConfig};
+use crate::error;
 
 impl Unpin for Service {}
 
@@ -28,10 +24,11 @@ pub struct Service {
     pub swarm: Swarm,
     /// This node's PeerId.
     local_peer_id: PeerId,
+    network_recv: mpsc::UnboundedReceiver<NetworkMessage>,
 }
 
 impl Service {
-    pub fn new(cfg: NetworkConfig) -> error::Result<Self> {
+    pub fn new(cfg: NetworkConfig, network_recv: mpsc::UnboundedReceiver<NetworkMessage>) -> error::Result<Self> {
         // Load the private key from CLI disk or generate a new random PeerId
         let local_key = config::load_private_key(&cfg);
         let local_peer_id = PeerId::from(local_key.public());
@@ -75,9 +72,11 @@ impl Service {
         Ok(Service {
             local_peer_id: local_peer_id,
             swarm,
+            network_recv,
         })
     }
 }
+
 //futures::future::Future
 impl futures::future::Future for Service {
     //Future<Item=Foo, Error=Bar>
@@ -85,6 +84,35 @@ impl futures::future::Future for Service {
     type Output = Result<Libp2pEvent, crate::error::Error>;
     fn poll(mut self: Pin<&mut Self>, cx: &mut std::task::Context) -> Poll<Self::Output> {
         let this = &mut *self;
+        println!("futures::future::Future poll");
+
+        loop {
+            // poll the network channel
+            println!("futures::future::Future poll poll");
+            let msg = match this.network_recv.poll_next_unpin(cx) {
+                Poll::Ready(Some(msg)) => msg,
+                Poll::Ready(None) => {
+                    println!("spawn_service msg poll_next_unpin");
+                    break;
+                }
+                Poll::Pending => {
+                    println!("spawn_service msg poll_next_unpin Pending");
+                    break;
+                }
+            };
+
+            println!("spawn_service msg network_recv");
+            match msg {
+                NetworkMessage::Publish { topics, message } => {
+                    debug!("Sending pubsub message topics {:?}", format!("{:?}", topics));
+                    for topic in topics {
+                        this.swarm.floodsub.publish(topic, message.clone());
+                    }
+                }
+            }
+            println!("spawn_service network_recv");
+        }
+
         loop {
             // Process the next action coming from the network.
             let next_event = this.swarm.next_event();
@@ -121,6 +149,12 @@ impl futures::future::Future for Service {
                 _ => break,
             }
         }
+        println!("spawn_service msg network_recv over");
+
+        for addr in Swarm::listeners(&this.swarm) {
+            println!("Listening on {:?}", addr);
+        }
+
         Poll::Pending
     }
 }

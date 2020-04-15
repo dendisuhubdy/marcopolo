@@ -129,8 +129,8 @@ pub fn run() {
             }
         }
     }
-    if matches.is_present("dial_addr") {
-        if let Some(addresses_str) = matches.value_of("dial_addr") {
+    if matches.is_present("dial_addrs") {
+        if let Some(addresses_str) = matches.value_of("dial_addrs") {
             config.dial_addrs = addresses_str
                 .split(',')
                 .map(|multiaddr| {
