@@ -31,6 +31,11 @@ impl Hash {
     pub fn to_slice(&self) -> &[u8] {
         return &self.0
     }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        return &self.0
+    }
+
     pub fn to_vec(&self) -> Vec<u8> {
         self.0.to_vec()
     }

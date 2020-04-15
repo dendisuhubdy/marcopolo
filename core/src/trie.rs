@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
-// use std::hash;
 use std::marker::PhantomData;
 use std::borrow::Borrow;
 use std::ops::Range;
@@ -263,6 +262,14 @@ impl NodeCodec for BinNodeCodec<Blake2Hasher> {
 pub type TrieDBMut<'db> = trie_db::TrieDBMut<'db, ExtensionLayout>;
 
 pub type TrieDB<'db> = trie_db::TrieDB<'db, ExtensionLayout>;
+
+pub type TrieFactory = trie_db::TrieFactory<ExtensionLayout>;
+
+pub type MemoryDB = memory_db::MemoryDB<
+    Blake2Hasher,
+    memory_db::HashKey<Blake2Hasher>,
+    trie_db::DBValue,
+>;
 
 #[cfg(test)]
 mod tests {
