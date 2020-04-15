@@ -19,6 +19,7 @@
 extern crate enum_display_derive;
 #[macro_use]
 extern crate log;
+extern crate ed25519;
 
 use failure::{Backtrace,err_msg, Context, Fail};
 use std::fmt::{self, Display,Debug};
