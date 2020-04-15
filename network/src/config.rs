@@ -33,10 +33,12 @@ impl Config {
         Config::default()
     }
 
-    pub fn update_network_cfg(&mut self, data_dir: PathBuf, dial_addrs: Vec<Multiaddr>) -> Result<(), String> {
+    pub fn update_network_cfg(&mut self, data_dir: PathBuf, dial_addrs: Vec<Multiaddr>,p2p_port : u16) -> Result<(), String> {
         // If a `datadir` has been specified, set the network dir to be inside it.
         self.network_dir = data_dir.join("network");
         self.dial_addrs = dial_addrs;
+        self.listen_address = iter::once(multiaddr::Protocol::Ip4(Ipv4Addr::new(0, 0, 0, 0)))
+            .chain(iter::once(multiaddr::Protocol::Tcp(p2p_port))).collect();
         Ok(())
     }
 }

@@ -67,6 +67,13 @@ pub fn run() {
             .takes_value(true)
             .help("One or more  multiaddrs to manually connect to a p2p peer")
         )
+        .arg(
+            Arg::with_name("p2p_port")
+                .long("p2p_port")
+                .takes_value(true)
+                .default_value("40313")
+                .help("Customize p2p listening port"),
+        )
         .subcommand(SubCommand::with_name("clean")
             .about("Remove the whole chain data"))
         .get_matches();
@@ -94,6 +101,12 @@ pub fn run() {
         let port = rpc_port.parse::<u16>()
             .map_err(|_| format!("Invalid rpc_port port: {}", rpc_port)).unwrap();
         config.rpc_port = port;
+    }
+
+    if let Some(p2p_port) = matches.value_of("p2p_port") {
+        let port = p2p_port.parse::<u16>()
+            .map_err(|_| format!("Invalid p2p_port port: {}", p2p_port)).unwrap();
+        config.p2p_port = port;
     }
 
     if matches.is_present("key") {

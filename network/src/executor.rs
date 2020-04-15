@@ -51,8 +51,7 @@ impl NetworkExecutor {
             .send(NetworkMessage::Publish {
                 topics: vec![Topic::new(topic)],
                 message: data,
-            })
-            .unwrap_or_else(|_| warn!("Could not send gossip message."));
+            }).await.unwrap_or_else(|_| warn!("Could not send gossip message."));
     }
 }
 

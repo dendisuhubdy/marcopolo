@@ -49,6 +49,7 @@ pub struct NodeConfig {
     pub poa_privkey:  String,
     /// List of p2p nodes to initially connect to.
     pub dial_addrs: Vec<Multiaddr>,
+    pub p2p_port: u16,
 }
 
 impl Default for NodeConfig {
@@ -61,6 +62,7 @@ impl Default for NodeConfig {
             key:        "".into(),
             poa_privkey:"".into(),
             dial_addrs:vec![],
+            p2p_port: 40313,
         }
     }
 }
@@ -95,7 +97,7 @@ impl Service {
         }
 
         let mut config = NetworkConfig::new();
-        config.update_network_cfg(cfg.data_dir, cfg.dial_addrs).unwrap();
+        config.update_network_cfg(cfg.data_dir, cfg.dial_addrs, cfg.p2p_port).unwrap();
         network_executor::NetworkExecutor::new(config,self.block_chain.clone());
 
         let rpc = http_server::start_http(http_server::RpcConfig{

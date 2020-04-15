@@ -35,7 +35,7 @@ impl Service {
         // Load the private key from CLI disk or generate a new random PeerId
         let local_key = config::load_private_key(&cfg);
         let local_peer_id = PeerId::from(local_key.public());
-        println!("Local peer id: {:?}", local_peer_id);
+        info!("Local peer id: {:?}", local_peer_id);
 
         // Set up a an encrypted DNS-enabled TCP Transport over the Mplex and Yamux protocols
         let transport = libp2p::build_development_transport(local_key.clone()).expect("build transport error");
@@ -50,16 +50,6 @@ impl Service {
             Swarm::new(transport, behaviour, local_peer_id.clone())
         };
 
-        // attempt to connect to cli p2p nodes
-        for addr in cfg.dial_addrs {
-            println!("dial {}", addr);
-            match Swarm::dial_addr(&mut swarm, addr.clone()) {
-                Ok(()) => debug!("Dialing p2p peer address => {:?} ", addr),
-                Err(err) => debug!(
-                    "Could not connect to peer address {}", format!("{:?} Error {:?}", addr, err)),
-            };
-        }
-
         // Listen on listen_address
         match Swarm::listen_on(&mut swarm, cfg.listen_address.clone()) {
             Ok(_) => {
@@ -71,6 +61,16 @@ impl Service {
                 "Cannot listen on: {} because: {:?}", cfg.listen_address, err
             ),
         };
+
+        // attempt to connect to cli p2p nodes
+        for addr in cfg.dial_addrs {
+            println!("dial {}", addr);
+            match Swarm::dial_addr(&mut swarm, addr.clone()) {
+                Ok(()) => info!("Dialing p2p peer address => {:?} ", addr),
+                Err(err) => debug!(
+                    "Could not connect to peer address {}", format!("{:?} Error {:?}", addr, err)),
+            };
+        }
 
         Ok(Service {
             local_peer_id: local_peer_id,
@@ -93,7 +93,7 @@ impl futures::future::Future for Service {
 
             match poll_value {
                 //Behaviour events
-                Poll::Ready(SwarmEvent::Behaviour((event))) => match event {
+                Poll::Ready(SwarmEvent::Behaviour(event)) => match event {
                     BehaviourEvent::PubsubMessage {
                         source,
                         topics,
