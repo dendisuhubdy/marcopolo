@@ -11,33 +11,34 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
+extern crate chain;
+extern crate consensus;
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 extern crate core;
-extern crate consensus;
-extern crate chain;
-extern crate rpc;
-extern crate network;
+extern crate errors;
 extern crate executor;
 #[macro_use]
 extern crate log;
-extern crate errors;
+extern crate network;
+extern crate rpc;
 
-use core::block::{self,Block,Header};
-use core::types::Hash;
-use core::balance::Balance;
-use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
-use consensus::{poa::POA,ConsensusErrorKind};
-use chain::blockchain::{BlockChain};
-use chain::tx_pool::TxPoolManager;
-use executor::Executor;
-use rpc::http_server;
-use network::{executor as network_executor, NetworkConfig, Multiaddr};
-use std::{thread,thread::JoinHandle,sync::mpsc};
-use std::time::{Duration, SystemTime};
+use std::{sync::mpsc, thread, thread::JoinHandle};
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::time::{Duration, SystemTime};
+
+use chain::blockchain::BlockChain;
+use chain::tx_pool::TxPoolManager;
+use consensus::{ConsensusErrorKind, poa::POA};
+use core::balance::Balance;
+use core::block::{self, Block, Header};
+use core::genesis::{ed_genesis_priv_key, ed_genesis_pub_key};
+use core::types::Hash;
 use errors::Error;
+use executor::Executor;
+use network::{executor as network_executor, Multiaddr, NetworkConfig};
+use rpc::http_server;
 
 #[derive(Clone, Debug)]
 pub struct NodeConfig {
@@ -45,8 +46,8 @@ pub struct NodeConfig {
     pub data_dir: PathBuf,
     pub rpc_addr: String,
     pub rpc_port: u16,
-    pub key:      String,
-    pub poa_privkey:  String,
+    pub key: String,
+    pub poa_privkey: String,
     /// List of p2p nodes to initially connect to.
     pub dial_addrs: Vec<Multiaddr>,
     pub p2p_port: u16,
@@ -57,11 +58,11 @@ impl Default for NodeConfig {
         NodeConfig {
             log: "info".into(),
             data_dir: PathBuf::from("."),
-            rpc_addr:"127.0.0.1".into(),
-            rpc_port:9545,
-            key:        "".into(),
-            poa_privkey:"".into(),
-            dial_addrs:vec![],
+            rpc_addr: "127.0.0.1".into(),
+            rpc_port: 9545,
+            key: "".into(),
+            poa_privkey: "".into(),
+            dial_addrs: vec![],
             p2p_port: 40313,
         }
     }
@@ -99,15 +100,13 @@ impl Service {
 
         let mut config = NetworkConfig::new();
         config.update_network_cfg(cfg.data_dir, cfg.dial_addrs, cfg.p2p_port).unwrap();
-        let builder = thread::spawn(move || {
-            network_executor::NetworkExecutor::new(config.clone(),network_block_chain);
-        });
+        let network = network_executor::NetworkExecutor::new(config.clone(), network_block_chain).expect("Network start error");
 
-        let rpc = http_server::start_http(http_server::RpcConfig{
-            rpc_addr:cfg.rpc_addr,
-            rpc_port:cfg.rpc_port,
-            key:cfg.key,
-        },self.block_chain.clone(),self.tx_pool.clone());
+        let rpc = http_server::start_http(http_server::RpcConfig {
+            rpc_addr: cfg.rpc_addr,
+            rpc_port: cfg.rpc_port,
+            key: cfg.key,
+        }, self.block_chain.clone(), self.tx_pool.clone());
 
         let (tx,rx): (mpsc::Sender<i32>,mpsc::Receiver<i32>) = mpsc::channel();
         let shared_block_chain = self.block_chain.clone();
@@ -129,6 +128,7 @@ impl Service {
                 thread::sleep(Duration::from_millis(POA::get_interval()));
                 if rx.try_recv().is_ok() {
                     rpc.close();
+                    network.exit_signal.send(1).expect("network exit error");
                     break;
                 }
             }
@@ -184,8 +184,9 @@ impl Service {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::fmt;
+
+    use super::*;
 
     #[test]
     fn test_service() {

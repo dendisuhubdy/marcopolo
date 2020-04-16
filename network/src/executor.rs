@@ -1,4 +1,4 @@
-use std::{error::Error, task::{Context, Poll}};
+use std::{error::Error, task::{Context, Poll},thread};
 use std::sync::{Arc, RwLock};
 
 use futures::prelude::*;
@@ -25,8 +25,8 @@ use crate::error;
 
 pub struct NetworkExecutor {
     service: Arc<Mutex<Service>>,
-    exit_signal: oneshot::Sender<()>,
-    network_send: mpsc::UnboundedSender<NetworkMessage>,
+    pub exit_signal: oneshot::Sender<i32>,
+    pub network_send: mpsc::UnboundedSender<NetworkMessage>,
     log: slog::Logger,
 }
 
@@ -43,7 +43,7 @@ impl NetworkExecutor {
 
         let service = Arc::new(Mutex::new(Service::new(cfg, log.clone())?));
 
-        let exit_signal = spawn_service(
+        let exit_signal = start_service(
             service.clone(),
             network_recv,
             block_chain,
@@ -70,28 +70,31 @@ impl NetworkExecutor {
     }
 }
 
-fn spawn_service(
+fn start_service(
     libp2p_service: Arc<Mutex<Service>>,
     network_recv: mpsc::UnboundedReceiver<NetworkMessage>,
     block_chain: Arc<RwLock<BlockChain>>,
     log: slog::Logger,
-) -> error::Result<tokio::sync::oneshot::Sender<()>> {
-    let (sender, exit_rx) = tokio::sync::oneshot::channel();
-    // spawn on the current executor
-    tokio::run(
-        network_service(
-            libp2p_service,
-            network_recv,
-            block_chain,
-            log.clone(),
-        )
-            // allow for manual termination
-            .select(exit_rx.then(|_| Ok(())))
-            .then(move |_| {
-                info!(log, "Network shutdown");
-                Ok(())
-            }),
-    );
+) -> error::Result<tokio::sync::oneshot::Sender<i32>> {
+    let (sender, exit_rx) = tokio::sync::oneshot::channel::<i32>();
+
+    thread::spawn(move || {
+        // spawn on the current executor
+        tokio::run(
+            network_service(
+                libp2p_service,
+                network_recv,
+                block_chain,
+                log.clone(),
+            )
+                // allow for manual termination
+                .select(exit_rx.then(|_| Ok(())))
+                .then(move |_| {
+                    info!(log, "Stop p2p network");
+                    Ok(())
+                }),
+        );
+    });
 
     Ok(sender)
 }
@@ -103,7 +106,6 @@ fn network_service(
     log: slog::Logger,
 ) -> impl futures::Future<Item=(), Error=error::Error> {
     futures::future::poll_fn(move || -> Result<_, error::Error> {
-        println!("task loop");
 
         loop {
             // poll the network channel
@@ -123,8 +125,6 @@ fn network_service(
                 }
             }
         }
-
-        println!("spawn_service network_recv");
 
         loop {
             // poll the swarm
@@ -154,8 +154,6 @@ fn network_service(
                 Err(_) => break,
             }
         }
-
-        println!("spawn_service msg network_recv over");
 
         Ok(Async::NotReady)
     })
