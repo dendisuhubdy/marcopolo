@@ -1,43 +1,60 @@
-use core::ops::DerefMut;
 use std::{error::Error, task::{Context, Poll}};
-use std::pin::Pin;
 use std::sync::{Arc, RwLock};
 
-use async_std::{io, task};
-use futures::{channel::mpsc, channel::oneshot, future, prelude::*};
+use futures::prelude::*;
+use futures::Stream;
 use libp2p::{
-    floodsub::{Floodsub, Topic},
+    gossipsub::{Topic, TopicHash},
 };
 use parking_lot::Mutex;
+use slog::{debug, Drain, info, o, warn};
+use tokio::runtime::Runtime;
+use tokio::runtime::TaskExecutor;
+use tokio::sync::{mpsc, oneshot};
 use trace_caller::trace;
 
 use chain::blockchain::BlockChain;
 
 use crate::{
-    handler::{Libp2pEvent, Service}, NetworkConfig};
+    {behaviour::{Behaviour, BehaviourEvent}
+    },
+    handler::{Libp2pEvent, Service},
+    NetworkConfig,
+};
 use crate::error;
 
 pub struct NetworkExecutor {
     service: Arc<Mutex<Service>>,
     exit_signal: oneshot::Sender<()>,
     network_send: mpsc::UnboundedSender<NetworkMessage>,
+    log: slog::Logger,
 }
 
 impl NetworkExecutor {
     pub fn new(cfg: NetworkConfig, block_chain: Arc<RwLock<BlockChain>>) -> error::Result<Self> {
         // build the network channel
-        let (network_send, network_recv) = mpsc::unbounded::<NetworkMessage>();
+        let (network_send, network_recv) = mpsc::unbounded_channel::<NetworkMessage>();
         // launch libp2p Network
-        let service = Arc::new(Mutex::new(Service::new(cfg, network_recv)?));
-        let libp2p_exit = spawn_service(
+
+        let decorator = slog_term::TermDecorator::new().build();
+        let drain = slog_term::CompactFormat::new(decorator).build().fuse();
+        let drain = slog_async::Async::new(drain).build().fuse();
+        let log = slog::Logger::root(drain, o!());
+
+        let service = Arc::new(Mutex::new(Service::new(cfg, log.clone())?));
+
+        let exit_signal = spawn_service(
             service.clone(),
+            network_recv,
             block_chain,
+            log.clone(),
         )?;
 
         let network_service = NetworkExecutor {
             service,
-            exit_signal: libp2p_exit,
+            exit_signal,
             network_send,
+            log,
         };
 
         Ok(network_service)
@@ -45,54 +62,106 @@ impl NetworkExecutor {
 
     pub fn gossip(&mut self, topic: String, data: Vec<u8>) {
         self.network_send
-            .unbounded_send(NetworkMessage::Publish {
+            .try_send(NetworkMessage::Publish {
                 topics: vec![Topic::new(topic)],
                 message: data,
-            });
+            })
+            .unwrap_or_else(|_| warn!(self.log, "Could not send gossip message."));
     }
 }
 
 fn spawn_service(
     libp2p_service: Arc<Mutex<Service>>,
+    network_recv: mpsc::UnboundedReceiver<NetworkMessage>,
     block_chain: Arc<RwLock<BlockChain>>,
-) -> error::Result<futures::channel::oneshot::Sender<()>> {
-    let (sender, receiver) = futures::channel::oneshot::channel();
-
+    log: slog::Logger,
+) -> error::Result<tokio::sync::oneshot::Sender<()>> {
+    let (sender, exit_rx) = tokio::sync::oneshot::channel();
     // spawn on the current executor
-    task::spawn(future::poll_fn(move |cx: &mut Context| {
+    let runtime = Runtime::new()
+        .map_err(|e| format!("Failed to start runtime: {:?}", e))
+        .unwrap();
+    runtime.executor().spawn(
+        network_service(
+            libp2p_service,
+            network_recv,
+            block_chain,
+            log.clone(),
+        )
+            // allow for manual termination
+            .select(exit_rx.then(|_| Ok(())))
+            .then(move |_| {
+                info!(log, "Network shutdown");
+                Ok(())
+            }),
+    );
+
+    Ok(sender)
+}
+
+fn network_service(
+    libp2p_service: Arc<Mutex<Service>>,
+    mut network_recv: mpsc::UnboundedReceiver<NetworkMessage>,
+    block_chain: Arc<RwLock<BlockChain>>,
+    log: slog::Logger,
+) -> impl futures::Future<Item=(), Error=error::Error> {
+    futures::future::poll_fn(move || -> Result<_, error::Error> {
         println!("task loop");
+
         loop {
-            // Process the next action coming from the network.
-            match Future::poll(Pin::new(&mut libp2p_service.lock().deref_mut()), cx) {
-                Poll::Pending => {
-                    println!("task loop Pending");
-                    break
+            // poll the network channel
+            match network_recv.poll() {
+                Ok(Async::Ready(Some(message))) => match message {
+                    NetworkMessage::Publish { topics, message } => {
+                        debug!(log, "Sending pubsub message"; "topics" => format!("{:?}",topics));
+                        libp2p_service.lock().swarm.publish(topics, message.clone());
+                    }
+                },
+                Ok(Async::NotReady) => break,
+                Ok(Async::Ready(None)) => {
+                    return Err(error::Error::from("Network channel closed"));
                 }
-                Poll::Ready(Ok(Libp2pEvent::PubsubMessage {
-                                   source,
-                                   topics, message, })) => {
-                    debug!("Gossip message received: {:?}", message);
-                    //-----------------------------------------  block chain
-                }
-                Poll::Ready(Ok(Libp2pEvent::PeerDialed(peer_id))) => {
-                    debug!("Peer Dialed: {:?}", peer_id);
-                }
-                Poll::Ready(Ok(Libp2pEvent::PeerDisconnected(peer_id))) => {
-                    debug!("Peer Disconnected: {:?}", peer_id);
-                }
-                Poll::Ready(Ok(e)) => {
-                    info!("Network ok : {:?}", e);
-                }
-                Poll::Ready(Err(e)) => {
-                    println!("task loop Pending");
-                    return Poll::Ready(())
+                Err(_) => {
+                    return Err(error::Error::from("Network channel error"));
                 }
             }
         }
-        Poll::Pending
-    }));
 
-    Ok(sender)
+        println!("spawn_service network_recv");
+
+        loop {
+            // poll the swarm
+            match libp2p_service.lock().poll() {
+                Ok(Async::Ready(Some(event))) => match event {
+                    Libp2pEvent::PubsubMessage {
+                        source,
+                        topics,
+                        message,
+                    } => {
+                        debug!(log, "Gossip message received: {:?}", message);
+                        //-----------------------------------------  block chain;
+                    }
+                    Libp2pEvent::ImportBlock(peer_id, event) => {
+                        //debug!(self.log,"Received RPC message from: {:?}", peer_id);
+                        debug!(log, "Peer ImportBlock received: {:?}", peer_id);
+                    }
+                    Libp2pEvent::PeerDialed(peer_id) => {
+                        debug!(log, "Peer Dialed: {:?}", peer_id);
+                    }
+                    Libp2pEvent::PeerDisconnected(peer_id) => {
+                        debug!(log, "Peer Disconnected: {:?}", peer_id);
+                    }
+                },
+                Ok(Async::Ready(None)) => unreachable!("Stream never ends"),
+                Ok(Async::NotReady) => break,
+                Err(_) => break,
+            }
+        }
+
+        println!("spawn_service msg network_recv over");
+
+        Ok(Async::NotReady)
+    })
 }
 
 //Future<Item=Foo, Error=Bar>

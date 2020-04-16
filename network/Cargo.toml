@@ -7,14 +7,24 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libp2p = { version = "0.16.2", default-features = false, features = ["libp2p-websocket"] }
-futures = "0.3.1"
-async-std = "1.5"
-log = "0.4.8"
-dirs = "2.0.1"
 chain = { package = "chain", path = "../chain" }
 map-core = { path = "../core" }
 bincode = "1.2.0"
 parking_lot = "0.10.0"
 error-chain = "0.12.0"
 trace_caller = "0.2.0"
+libp2p =  { git = "https://github.com/SigP/rust-libp2p", rev = "735313ebda6a98604929f6c4606aefac19e00760" }
+serde = "1.0.102"
+serde_derive = "1.0.102"
+slog = { version = "^2.4.1" , features = ["max_level_trace"] }
+slog-term = "^2.4.0"
+slog-async = "^2.3.0"
+tokio = "0.1.16"
+tokio-io-timeout = "0.3.1"
+futures = "0.1.25"
+dirs = "2.0.1"
+tokio-io = "0.1.12"
+smallvec = "0.6.10"
+fnv = "1.0.6"
+unsigned-varint = "0.2.2"
+bytes = "0.4.12"

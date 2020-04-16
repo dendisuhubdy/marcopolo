@@ -8,6 +8,7 @@ use std::io::prelude::*;
 
 use libp2p::{identity::Keypair};
 use libp2p::{multiaddr, multiaddr::Multiaddr, PeerId};
+use slog::{info, warn,debug};
 
 const NODE_KEY_FILENAME: &str = "nodekey";
 
@@ -33,7 +34,7 @@ impl Config {
         Config::default()
     }
 
-    pub fn update_network_cfg(&mut self, data_dir: PathBuf, dial_addrs: Vec<Multiaddr>,p2p_port : u16) -> Result<(), String> {
+    pub fn update_network_cfg(&mut self, data_dir: PathBuf, dial_addrs: Vec<Multiaddr>, p2p_port: u16) -> Result<(), String> {
         // If a `datadir` has been specified, set the network dir to be inside it.
         self.network_dir = data_dir.join("network");
         self.dial_addrs = dial_addrs;
@@ -64,7 +65,7 @@ impl Default for Config {
 /// generated and is then saved to disk.
 ///
 /// Currently only secp256k1 keys are allowed
-pub fn load_private_key(config: &Config) -> Keypair {
+pub fn load_private_key(config: &Config, log: slog::Logger) -> Keypair {
     // check for key from disk
     let key_file = config.network_dir.join(NODE_KEY_FILENAME);
     if let Ok(mut network_key_file) = File::open(key_file.clone()) {
@@ -76,13 +77,12 @@ pub fn load_private_key(config: &Config) -> Keypair {
                 libp2p::core::identity::secp256k1::SecretKey::from_bytes(&mut key_bytes)
                 {
                     let kp: libp2p::core::identity::secp256k1::Keypair = secret_key.into();
-                    debug!("Loaded node key from disk.");
                     return Keypair::Secp256k1(kp);
                 } else {
-                    debug!("Node key file is not a valid secp256k1 key");
+                    info!(log, "Node key file is not a valid secp256k1 key");
                 }
             }
-            Err(_) => debug!("Could not read node key file"),
+            Err(_) => info!(log, "Could not read node key file"),
         }
     }
 
@@ -94,10 +94,10 @@ pub fn load_private_key(config: &Config) -> Keypair {
             .and_then(|mut f| f.write_all(&key.secret().to_bytes()))
         {
             Ok(_) => {
-                debug!("New node key generated and written to disk");
+                info!(log, "New node key generated and written to disk");
             }
             Err(e) => {
-                warn!("Could not write node key to file: {:?}. Error: {}", key_file, e);
+                info!(log, "Could not write node key to file: {:?}. Error: {}", key_file, e);
             }
         }
     }
