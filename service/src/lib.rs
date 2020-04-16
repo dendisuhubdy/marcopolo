@@ -95,10 +95,13 @@ impl Service {
             let mut statedb = self.state.write().unwrap();
             self.get_write_blockchain().load(&mut statedb);
         }
+        let network_block_chain = self.block_chain.clone();
 
         let mut config = NetworkConfig::new();
         config.update_network_cfg(cfg.data_dir, cfg.dial_addrs, cfg.p2p_port).unwrap();
-        network_executor::NetworkExecutor::new(config,self.block_chain.clone());
+        let builder = thread::spawn(move || {
+            network_executor::NetworkExecutor::new(config.clone(),network_block_chain);
+        });
 
         let rpc = http_server::start_http(http_server::RpcConfig{
             rpc_addr:cfg.rpc_addr,

@@ -14,7 +14,7 @@ use slog::{debug, info, warn};
 
 use map_core::{block::Block, transaction::Transaction};
 
-use crate::{behaviour::{Behaviour, BehaviourEvent}, config, executor::NetworkMessage, NetworkConfig,transport};
+use crate::{behaviour::{Behaviour, BehaviourEvent}, config, executor::NetworkMessage, NetworkConfig, transport};
 use crate::error;
 
 type Libp2pStream = Boxed<(PeerId, StreamMuxerBox), Error>;
@@ -108,8 +108,8 @@ impl Stream for Service {
                             message,
                         })));
                     }
-                    BehaviourEvent::ImportBlock ( peer_id, book) => {
-                        return Ok(Async::Ready(Some(Libp2pEvent::ImportBlock (peer_id, book))));
+                    BehaviourEvent::ImportBlock(peer_id, book) => {
+                        return Ok(Async::Ready(Some(Libp2pEvent::ImportBlock(peer_id, book))));
                     }
                     BehaviourEvent::PeerDialed(peer_id) => {
                         return Ok(Async::Ready(Some(Libp2pEvent::PeerDialed(peer_id))));
@@ -119,7 +119,12 @@ impl Stream for Service {
                     }
                 },
                 Ok(Async::Ready(None)) => unreachable!("Swarm stream shouldn't end"),
-                Ok(Async::NotReady) => break,
+                Ok(Async::NotReady) => {
+                    if let Some(a) = Swarm::listeners(&self.swarm).next() {
+                        println!("Listening on {:?}", a);
+                    }
+                    break;
+                }
                 _ => break,
             }
         }

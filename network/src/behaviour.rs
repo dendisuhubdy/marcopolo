@@ -9,6 +9,7 @@ use libp2p::{
     swarm::{NetworkBehaviourAction, NetworkBehaviourEventProcess},
     tokio_io::{AsyncRead, AsyncWrite},
     NetworkBehaviour, PeerId,
+    mdns::{Mdns, MdnsEvent},
 };
 use slog::{o, debug};
 use std::num::NonZeroU32;
@@ -28,6 +29,7 @@ pub struct Behaviour<TSubstream: AsyncRead + AsyncWrite> {
     gossipsub: Gossipsub<TSubstream>,
     /// Keep regular connection to peers and disconnect if absent.
     ping: Ping<TSubstream>,
+    mdns: Mdns<TSubstream>,
     /// Provides IP addresses and peer information.
     identify: Identify<TSubstream>,
     #[behaviour(ignore)]
@@ -65,6 +67,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
                 .heartbeat_interval(Duration::from_secs(20))
                 .build()),
             ping: Ping::new(ping_config),
+            mdns: Mdns::new().expect("Failed to create mDNS service"),
             identify,
             events: Vec::new(),
             log: behaviour_log,
@@ -88,6 +91,27 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<GossipsubE
             }
             GossipsubEvent::Subscribed { .. } => {}
             GossipsubEvent::Unsubscribed { .. } => {}
+        }
+    }
+}
+
+impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<MdnsEvent>
+for Behaviour<TSubstream>
+{
+    fn inject_event(&mut self, event: MdnsEvent) {
+        match event {
+            MdnsEvent::Discovered(list) => {
+                for (peer, _) in list {
+                    println!("inject_event Discovered {:?}",peer);
+                }
+            },
+            MdnsEvent::Expired(list) => {
+                for (peer, _) in list {
+                    println!("inject_event Expired {:?}",peer);
+                    if !self.mdns.has_node(&peer) {
+                    }
+                }
+            }
         }
     }
 }

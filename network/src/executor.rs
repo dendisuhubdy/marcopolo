@@ -2,7 +2,7 @@ use std::{error::Error, task::{Context, Poll}};
 use std::sync::{Arc, RwLock};
 
 use futures::prelude::*;
-use futures::Stream;
+use futures::{future, Future, Stream};
 use libp2p::{
     gossipsub::{Topic, TopicHash},
 };
@@ -78,10 +78,7 @@ fn spawn_service(
 ) -> error::Result<tokio::sync::oneshot::Sender<()>> {
     let (sender, exit_rx) = tokio::sync::oneshot::channel();
     // spawn on the current executor
-    let runtime = Runtime::new()
-        .map_err(|e| format!("Failed to start runtime: {:?}", e))
-        .unwrap();
-    runtime.executor().spawn(
+    tokio::run(
         network_service(
             libp2p_service,
             network_recv,
