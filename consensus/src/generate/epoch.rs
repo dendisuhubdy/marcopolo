@@ -25,15 +25,15 @@ impl tmp_blocks {
 #[derive(Debug, Clone)]
 pub struct slot {
     timeout:    u32,     // millsecond
-    id:         u32,
+    id:         i32,
     vindex:     u32,
 }
 impl slot {
-    pub fn new(id: u32,vindex: u32) -> Self {
+    pub fn new(sid: i32,index: u32) -> Self {
         slot{
             timeout:    5000,
-            id:         id,
-            vindex:     vindex,    
+            id:         sid,
+            vindex:     index,    
         }
     }
 }
@@ -56,11 +56,15 @@ impl EpochProcess {
     pub fn vrf(seed: u64,eid: u64,sid: u32,validators: &Vec<ValidatorItem>) -> i32 {
         0
     }
-    pub fn is_my_produce(&self) -> bool {
-        true
+    pub fn is_my_produce(&self,sid: i32,state: &APOS) -> bool {
+        if let Some(item) = state.get_validator(sid,self.cur_eid) {
+            self.myid.equal(&item.into())
+        } else {
+            false
+        }
     }
     pub fn get_my_pk(&self) -> Option<Pubkey> {
-        None   
+        None
     }
     pub fn assign_validator(&mut self,state: &APOS) -> Result<(),Error> {
         if let Some(&vals) = state.get_validators(self.cur_eid){

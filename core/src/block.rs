@@ -20,8 +20,8 @@ extern crate hash;
 use serde::{Serialize, Deserialize};
 // use super::traits::{TxMsg};
 use super::transaction::{Transaction};
-use super::types::Hash;
-use ed25519::{signature::SignatureInfo,Message};
+use super::types::{Hash,Address};
+use ed25519::{signature::SignatureInfo,Message,pubkey::Pubkey};
 // use hash;
 use bincode;
 
@@ -101,6 +101,13 @@ impl BlockProof {
         }
         self.2
     }
+    pub fn to_address(&self) -> Address {
+        if self.2 == 0u8 {
+            Pubkey::from_bytes(&self.0[..]).into()
+        } else {
+            Address([0u8;20])
+        }
+    }
 }
 
 pub fn get_hash_from_txs(txs: &Vec<Transaction>) -> Hash {
@@ -166,6 +173,9 @@ impl  Block {
     }
     pub fn proof_one(&self) -> Option<&BlockProof> {
         self.proofs.get(0)
+    }
+    pub fn get_proofs(&self) -> &Vec<BlockProof> {
+        &self.proofs
     }
     pub fn add_verify_item(&mut self,item: VerificationItem) {
         self.signs.push(item)

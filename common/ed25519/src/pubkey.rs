@@ -34,7 +34,9 @@ pub struct Pubkey {
 }
 
 impl Pubkey {
-
+    pub fn equal(&self,p: &Pubkey) -> bool {
+        return self.inner.0 == p.inner.0
+    }
     pub fn to_bytes(&self)->Vec<u8> {
         Vec::from(&self.inner.0[..])
     }
