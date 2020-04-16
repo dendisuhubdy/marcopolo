@@ -66,7 +66,7 @@ impl APOS {
             None => None,
         }
     }
-    fn get_validator(&self, index: u32,eid: u64) -> Option<ValidatorItem> {
+    pub fn get_validator(&self, index: u32,eid: u64) -> Option<ValidatorItem> {
         match self.get_epoch_info(eid) {
             Some(items)  =>{
                 let i : i32 = index as i32;
@@ -78,5 +78,20 @@ impl APOS {
             },
             None => None,
         } 
+    }
+    pub fn get_validators(&self, eid: u64) -> Option<&Vec<ValidatorItem>> {
+        match self.get_epoch_info(eid) {
+            Some(items) => {
+                Some(&items.validators)
+            },
+            None => None,
+        }
+    }
+    pub fn get_seed_by_epochid(&self,eid: u64) -> u64 {
+        if let Some(items) = self.get_epoch_info(eid) {
+            items.seed
+        } else {
+            0
+        }
     }
 }
