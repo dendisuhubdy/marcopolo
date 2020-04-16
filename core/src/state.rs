@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use serde::{Serialize, Deserialize};
 use bincode;
 use hash_db::{HashDB, AsHashDB, Prefix};
@@ -45,6 +45,34 @@ impl CachingDB {
             Some(value)
         } else {
             None
+        }
+    }
+
+    /// Write memory changes to backend db
+    pub fn commit(&mut self) {
+        for i in self.cached.drain() {
+            let (key, (value, rc)) = i;
+            if rc != 0 {
+                match self.payload(&key) {
+                    Some(x) => {
+                        let total_rc: i32 = x.count as i32 + rc;
+                        if total_rc < 0 {
+                            panic!("negtive count of trie item");
+                        }
+                        let encoded = bincode::serialize(&Payload::new(total_rc as u32, x.value)).unwrap();
+                        let backend = Arc::get_mut(&mut self.backend).expect("deref bakend db err");
+                        backend.put(key.as_bytes(), &encoded).expect("wirte backend");
+                    }
+                    None => {
+                        if rc < 0 {
+                            panic!("negtive count of trie item");
+                        }
+                        let encoded = bincode::serialize(&Payload::new(rc as u32, value)).unwrap();
+                        let backend = Arc::get_mut(&mut self.backend).expect("deref bakend db err");
+                        backend.put(key.as_bytes(), &encoded).expect("write backend");
+                    }
+                };
+            }
         }
     }
 }
@@ -108,6 +136,7 @@ impl HashDB<Blake2Hasher, DBValue> for CachingDB {
     fn emplace(&mut self, key: Hash, prefix: Prefix, value: DBValue) {
         self.cached.emplace(key, prefix, value);
     }
+
     fn remove(&mut self, key: &Hash, prefix: Prefix) {
         self.cached.remove(key, prefix);
     }
