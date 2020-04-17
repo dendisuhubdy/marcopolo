@@ -80,6 +80,10 @@ impl Service {
         }
         info!(log, "Subscribed to topics"; "topics" => format!("{:?}", subscribed_topics.iter().map(|t| format!("{}", t)).collect::<Vec<String>>()));
 
+        if let Some(a) = Swarm::listeners(&swarm).next() {
+            println!("Listening on {:?}", a);
+        }
+
         Ok(Service {
             local_peer_id: local_peer_id,
             swarm,
@@ -120,9 +124,6 @@ impl Stream for Service {
                 },
                 Ok(Async::Ready(None)) => unreachable!("Swarm stream shouldn't end"),
                 Ok(Async::NotReady) => {
-                    if let Some(a) = Swarm::listeners(&self.swarm).next() {
-                        println!("Listening on {:?}", a);
-                    }
                     break;
                 }
                 _ => break,

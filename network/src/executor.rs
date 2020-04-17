@@ -1,8 +1,8 @@
-use std::{error::Error, task::{Context, Poll},thread};
+use std::{error::Error, task::{Context, Poll}, thread};
 use std::sync::{Arc, RwLock};
 
-use futures::prelude::*;
 use futures::{future, Future, Stream};
+use futures::prelude::*;
 use libp2p::{
     gossipsub::{Topic, TopicHash},
 };

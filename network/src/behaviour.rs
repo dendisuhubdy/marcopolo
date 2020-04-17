@@ -55,8 +55,8 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
             .with_keep_alive(false);
 
         let identify = Identify::new(
-            "map/libp2p".into(),
-            "0.0.1".to_string(),
+            "map/p2p".into(),
+            "0.1".to_string(),
             local_key.public(),
         );
 
