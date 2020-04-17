@@ -127,8 +127,8 @@ impl Service {
                 };
                 thread::sleep(Duration::from_millis(POA::get_interval()));
                 if rx.try_recv().is_ok() {
-                    rpc.close();
                     network.exit_signal.send(1).expect("network exit error");
+                    rpc.close();
                     break;
                 }
             }

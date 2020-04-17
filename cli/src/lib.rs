@@ -43,13 +43,13 @@ pub fn run() {
             .value_name("LOG_FILTER")
             .takes_value(true)
             .help("Sets logging filter with <LOG_FILTER>."))
-        .arg(Arg::with_name("rpcaddr")
-            .long("rpc-addr")
+        .arg(Arg::with_name("rpc_addr")
+            .long("rpc_addr")
             .takes_value(true)
             .help("Customize RPC listening address"))
         .arg(
-            Arg::with_name("rpcport")
-            .long("rpc-port")
+            Arg::with_name("rpc_port")
+            .long("rpc_port")
             .takes_value(true)
             .default_value("9545")
             .help("Customize RPC listening port"),
@@ -94,10 +94,10 @@ pub fn run() {
         logger::init(LogConfig::default());
     }
 
-    if let Some(rpc_addr) = matches.value_of("rpcaddr") {
+    if let Some(rpc_addr) = matches.value_of("rpc_addr") {
         config.rpc_addr = rpc_addr.to_string();
     }
-    if let Some(rpc_port) = matches.value_of("rpcport") {
+    if let Some(rpc_port) = matches.value_of("rpc_port") {
         let port = rpc_port.parse::<u16>()
             .map_err(|_| format!("Invalid rpc_port port: {}", rpc_port)).unwrap();
         config.rpc_port = port;
