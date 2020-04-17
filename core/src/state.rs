@@ -21,19 +21,18 @@ use hash_db::{HashDB, AsHashDB, Prefix};
 use trie_db::DBValue;
 use map_store::mapdb::MapDB;
 use map_store::KVDB;
-use map_store::Config;
 use crate::types::Hash;
 use crate::trie::{MemoryDB, EMPTY_TRIE, Blake2Hasher};
 
 #[derive(Clone)]
 pub struct CachingDB {
-    backend: Arc<KVDB>,
+    backend: Arc<RwLock<dyn KVDB>>,
     cached: MemoryDB,
 }
 
 impl CachingDB {
     /// Create a storage backend of trie structure along with memory caching
-    pub fn new(backend: Arc<MapDB>) -> Self {
+    pub fn new(backend: Arc<RwLock<dyn KVDB>>) -> Self {
         CachingDB {
             backend: backend,
             cached: MemoryDB::new(EMPTY_TRIE),
@@ -41,7 +40,7 @@ impl CachingDB {
     }
 
     fn payload(&self, key: &Hash) -> Option<Payload> {
-        if let Some(data) = self.backend.get(key.as_bytes()).unwrap() {
+        if let Some(data) = self.backend.read().unwrap().get(key.as_bytes()).unwrap() {
             let value: Payload = bincode::deserialize(&data.as_slice()).unwrap();
             Some(value)
         } else {
@@ -61,7 +60,7 @@ impl CachingDB {
                             panic!("negtive count of trie item");
                         }
                         let encoded = bincode::serialize(&Payload::new(total_rc as u32, x.value)).unwrap();
-                        let backend = Arc::get_mut(&mut self.backend).expect("deref bakend db err");
+                        let mut backend = self.backend.write().unwrap();
                         backend.put(key.as_bytes(), &encoded).expect("wirte backend");
                     }
                     None => {
@@ -69,7 +68,7 @@ impl CachingDB {
                             panic!("negtive count of trie item");
                         }
                         let encoded = bincode::serialize(&Payload::new(rc as u32, value)).unwrap();
-                        let backend = Arc::get_mut(&mut self.backend).expect("deref bakend db err");
+                        let mut backend = self.backend.write().unwrap();
                         backend.put(key.as_bytes(), &encoded).expect("write backend");
                     }
                 };
@@ -160,17 +159,34 @@ impl Payload {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-    use map_store::Config;
-    use map_store::mapdb::MapDB;
+    use std::sync::{Arc, RwLock};
+    use std::cell::{RefCell};
+    use map_store::{MemoryKV, KVDB};
     use hash_db::{EMPTY_PREFIX, HashDB};
     use super::{CachingDB};
 
     #[test]
     fn test_caching_insert() {
-        let mut m = MapDB::open(Config::default()).unwrap();
-        let mut db = CachingDB::new(Arc::new(m));
-        let foo = db.insert(EMPTY_PREFIX, b"foo");
-        assert!(db.contains(&foo, EMPTY_PREFIX));
+        let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
+
+        {
+            let mut db = CachingDB::new(Arc::clone(&backend));
+            let foo = db.insert(EMPTY_PREFIX, b"foo");
+            assert!(db.contains(&foo, EMPTY_PREFIX));
+
+            let replicated = CachingDB::new(Arc::clone(&backend));
+            assert!(!replicated.contains(&foo, EMPTY_PREFIX));
+        }
+
+        {
+            // commit changes to backend db
+            let mut db = CachingDB::new(Arc::clone(&backend));
+            let foo = db.insert(EMPTY_PREFIX, b"foo");
+            db.commit();
+            assert!(db.contains(&foo, EMPTY_PREFIX));
+
+            let replicated = CachingDB::new(Arc::clone(&backend));
+            assert!(replicated.contains(&foo, EMPTY_PREFIX));
+        }
     }
 }
