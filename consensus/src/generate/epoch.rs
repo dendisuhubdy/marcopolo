@@ -117,9 +117,10 @@ impl EpochProcess {
             // boradcast the block and insert the block
         }
     }
-    pub fn start_slot_walk(mut self,new_block: &TypeNewBlockEvent,new_interval: &TypeNewTimerIntervalEvent) -> TypeStopEpoch {
+    pub fn start_slot_walk_in_epoch(mut self,new_block: &TypeNewBlockEvent,
+        new_interval: &TypeNewTimerIntervalEvent,state: &APOS) -> TypeStopEpoch {
         let (stop_epoch_send, stop_epoch_receiver) = bounded::<()>(1);
-    
+        let mut walk_pos :i32 = 0;
         let mut thread_builder = thread::Builder::new();
         thread_builder = thread_builder.name("slot_walk".to_string());
         let join_handle = thread_builder
@@ -128,19 +129,30 @@ impl EpochProcess {
                     recv(stop_epoch_receiver) -> _ => {
                         break;
                     }
-                    recv(new_block) -> msg => self.handle_new_block_event(msg),
-                    recv(new_interval) -> _ => self.handle_new_time_interval_event(),
+                    recv(new_block) -> msg => {
+                        self.handle_new_block_event(msg,walk_pos,state);
+                        walk_pos = walk_pos + 1;
+                    },
+                    recv(new_interval) -> _ => {
+                        self.handle_new_time_interval_event(walk_pos,state);
+                        walk_pos = walk_pos + 1;
+                    },
                 }
             })
             .expect("Start slot_walk failed");
     
         stop_epoch_send
     }
-    fn handle_new_block_event(&mut self, msg: Result<Block, RecvError>) {
-
+    fn handle_new_block_event(&mut self, msg: Result<Block, RecvError>,sid: &i32,state: &APOS) {
+        match msg {
+            Ok(b) => {
+                self.slot_handle(sid,state);
+            },
+            Err(e) => println!("insert_block Error: {:?}", e),
+        }
     }
-    fn handle_new_time_interval_event(&mut self) {
-
+    fn handle_new_time_interval_event(&mut self,sid: &i32,state: &APOS) {
+        self.slot_handle(sid,state);
     }
 }
 
