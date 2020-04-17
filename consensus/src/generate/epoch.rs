@@ -16,11 +16,22 @@
 
 
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use core::block::{self,Block,BlockProof,VerificationItem};
+use core::types::{Hash};
 
 const epoch_length: i32 = 100;
 struct tmp_blocks {}
 impl tmp_blocks {
-
+    pub fn make_new_block(&self,height: u64,h: Hash) -> Option<Block> {
+        Block::default()
+    }
+    pub fn get_current_Height(&self) -> u64 {
+        0
+    } 
+    pub fn get_hash_by_height(&self,height: u64) -> Option<Hash> {
+        Hash([0u8;32])
+    }
 }
 #[derive(Debug, Clone)]
 pub struct slot {
@@ -38,19 +49,21 @@ impl slot {
     }
 }
 pub struct EpochProcess {
-    myid:       Pubkey,
-    cur_eid:    u64,
+    myid:           Pubkey,
+    cur_eid:        u64,
     cur_seed:       u64,
-    slots:      Vec<slot>,
+    slots:          Vec<slot>,
+    block_chain:    Arc<RwLock<tmp_blocks>>
 }
 
 impl EpochProcess {
-    pub fn new(mid: Pubkey,eid: u64,seed: u64) -> Self {
+    pub fn new(mid: Pubkey,eid: u64,seed: u64,b: &Arc<RwLock<tmp_blocks>>) -> Self {
         EpochProcess{
-            myid:   mid,
-            cur_eid: eid,
-            cur_seed:    seed,
-            slots: Vec::new(),
+            myid:           mid,
+            cur_eid:        eid,
+            cur_seed:       seed,
+            slots:          Vec::new(),
+            block_chain:    b,
         }
     }
     pub fn vrf(seed: u64,eid: u64,sid: u32,validators: &Vec<ValidatorItem>) -> i32 {
@@ -64,7 +77,7 @@ impl EpochProcess {
         }
     }
     pub fn get_my_pk(&self) -> Option<Pubkey> {
-        None
+        Some(self.myid)
     }
     pub fn assign_validator(&mut self,state: &APOS) -> Result<(),Error> {
         if let Some(&vals) = state.get_validators(self.cur_eid){
@@ -78,9 +91,25 @@ impl EpochProcess {
         } else {
             Err(ConsensusErrorKind::NotMatchEpochID.into())
         } 
-        
     }
-    pub fn slot_handle(&mut self,id: u32) {
+    pub fn slot_handle(&mut self,sid: i32,state: &APOS) {
+        if self.is_my_produce(sid,state) {
+           let c_height = self.block_chain
+                              .read()
+                              .expect("acquiring shared_block_chain read lock")
+                              .get_current_Height();
+            let c_hash = self.block_chain
+                             .read()
+                             .expect("acquiring shared_block_chain read lock")
+                             .get_hash_by_height(c_height);
+            let b = self.block_chain
+                        .write()
+                        .expect("acquiring shared_block_chain write lock")
+                        .make_new_block(c_height,c_hash);
+            // boradcast the block and insert the block
+        }
+    }
+    pub fn process() {
         
     }
 }
