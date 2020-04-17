@@ -15,8 +15,9 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::sync::{Arc, RwLock};
+use std::io;
 use rocksdb::{DB,WriteBatch};
-use crate::Config;
+use crate::{Config, KVDB};
 use super::Error;
 
 pub struct MapDB{
@@ -55,6 +56,25 @@ impl MapDB {
     pub fn write_batch(&mut self,wb :WriteBatch) -> Result<(),Error> {
         let db = self.inner.write().unwrap();
         db.write(wb)
+    }
+}
+
+impl KVDB for MapDB {
+    fn put(&mut self, key: &[u8], value: &[u8]) -> io::Result<()> {
+        let db = self.inner.write().unwrap();
+        db.put(key, value).expect("db write exception");
+        Ok(())
+    }
+
+    fn get(&self, key: &[u8]) -> io::Result<Option<Vec<u8>>> {
+        let db = self.inner.read().unwrap();
+        Ok(db.get(key).unwrap())
+    }
+
+    fn remove(&mut self, key: &[u8]) -> io::Result<()> {
+        let db = self.inner.write().unwrap();
+        db.delete(key).expect("db remove exception");
+        Ok(())
     }
 }
 

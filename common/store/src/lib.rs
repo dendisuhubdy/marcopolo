@@ -19,9 +19,17 @@ pub mod mapdb;
 pub type Error = rocksdb::Error;
 pub type WriteBatch = rocksdb::WriteBatch;
 
-// pub mod config {
 use std::path::PathBuf;
 use std::env;
+use std::io;
+
+pub trait KVDB {
+    fn get(&self, key: &[u8]) -> io::Result<Option<Vec<u8>>>;
+
+    fn put(&mut self, key: &[u8], value: &[u8]) -> io::Result<()>;
+
+    fn remove(&mut self, key: &[u8]) -> io::Result<()>;
+}
 
 #[derive(Clone,Debug)]
 pub struct Config {
@@ -46,5 +54,3 @@ impl Config {
         }
     }
 }
-// }
-
