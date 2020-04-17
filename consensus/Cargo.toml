@@ -15,3 +15,4 @@ core = { package = "map-core", path = "../core" }
 #bincode = "1.2.0"
 ed25519 = { package = "map-ed25519", path = "../common/ed25519" }
 errors = { package = "map-errors", path = "../common/errors" }
+crossbeam-channel = "0.4"

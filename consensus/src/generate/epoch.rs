@@ -17,10 +17,18 @@
 
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::thread;
 use core::block::{self,Block,BlockProof,VerificationItem};
+use crossbeam_channel::{bounded, select, Receiver, RecvError, Sender};
 use core::types::{Hash};
 
+
 const epoch_length: i32 = 100;
+type TypeNewBlockEvent = Receiver<Block>; 
+type TypeNewTimerIntervalEvent = Receiver<()>;
+pub type TypeStopEpoch = Sender<()>;
+
+
 struct tmp_blocks {}
 impl tmp_blocks {
     pub fn make_new_block(&self,height: u64,h: Hash) -> Option<Block> {
@@ -109,7 +117,30 @@ impl EpochProcess {
             // boradcast the block and insert the block
         }
     }
-    pub fn process() {
-        
+    pub fn start_slot_walk(mut self,new_block: &TypeNewBlockEvent,new_interval: &TypeNewTimerIntervalEvent) -> TypeStopEpoch {
+        let (stop_epoch_send, stop_epoch_receiver) = bounded::<()>(1);
+    
+        let mut thread_builder = thread::Builder::new();
+        thread_builder = thread_builder.name("slot_walk".to_string());
+        let join_handle = thread_builder
+            .spawn(move || loop {
+                select! {
+                    recv(stop_epoch_receiver) -> _ => {
+                        break;
+                    }
+                    recv(new_block) -> msg => self.handle_new_block_event(msg),
+                    recv(new_interval) -> _ => self.handle_new_time_interval_event(),
+                }
+            })
+            .expect("Start slot_walk failed");
+    
+        stop_epoch_send
+    }
+    fn handle_new_block_event(&mut self, msg: Result<Block, RecvError>) {
+
+    }
+    fn handle_new_time_interval_event(&mut self) {
+
     }
 }
+
