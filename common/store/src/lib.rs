@@ -22,13 +22,51 @@ pub type WriteBatch = rocksdb::WriteBatch;
 use std::path::PathBuf;
 use std::env;
 use std::io;
+use std::sync::RwLock;
+use std::collections::HashMap;
 
-pub trait KVDB {
+pub trait KVDB: Sync + Send {
     fn get(&self, key: &[u8]) -> io::Result<Option<Vec<u8>>>;
 
     fn put(&mut self, key: &[u8], value: &[u8]) -> io::Result<()>;
 
     fn remove(&mut self, key: &[u8]) -> io::Result<()>;
+}
+
+#[derive(Default)]
+pub struct MemoryKV {
+    db: RwLock<HashMap<Vec<u8>, Vec<u8>>>,
+}
+
+impl MemoryKV {
+    pub fn new() -> Self {
+        MemoryKV {
+            db: RwLock::new(HashMap::new()),
+        }
+    }
+}
+
+impl KVDB for MemoryKV {
+    fn put(&mut self, key: &[u8], value: &[u8]) -> io::Result<()> {
+        let mut db = self.db.write().unwrap();
+        db.insert(key.into(), value.into());
+        Ok(())
+    }
+
+    fn get(&self, key: &[u8]) -> io::Result<Option<Vec<u8>>> {
+        let db = self.db.read().unwrap();
+        let ret = match db.get(key) {
+            Some(v) => Some(v.clone()),
+            None => None,
+        };
+        Ok(ret)
+    }
+
+    fn remove(&mut self, key: &[u8]) -> io::Result<()> {
+        let mut db = self.db.write().unwrap();
+        db.remove(key);
+        Ok(())
+    }
 }
 
 #[derive(Clone,Debug)]
@@ -52,5 +90,23 @@ impl Config {
         Config {
             path: dir,
         }
+    }
+}
+
+mod tests {
+    use super::{MemoryKV, KVDB};
+
+    #[test]
+    fn test_memdb() {
+        let mut db = MemoryKV::new();
+
+        db.put(b"key1", b"a").unwrap();
+        assert_eq!(db.get(b"key1").unwrap().unwrap(), b"a");
+
+        db.put(b"key1", b"b").unwrap();
+        assert_eq!(db.get(b"key1").unwrap().unwrap(), b"b");
+
+        db.remove(b"key1").unwrap();
+        assert_eq!(db.get(b"key1").unwrap(), None);
     }
 }

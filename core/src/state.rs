@@ -20,13 +20,14 @@ use bincode;
 use hash_db::{HashDB, AsHashDB, Prefix};
 use trie_db::DBValue;
 use map_store::mapdb::MapDB;
+use map_store::KVDB;
 use map_store::Config;
 use crate::types::Hash;
 use crate::trie::{MemoryDB, EMPTY_TRIE, Blake2Hasher};
 
 #[derive(Clone)]
 pub struct CachingDB {
-    backend: Arc<MapDB>,
+    backend: Arc<KVDB>,
     cached: MemoryDB,
 }
 
@@ -40,7 +41,7 @@ impl CachingDB {
     }
 
     fn payload(&self, key: &Hash) -> Option<Payload> {
-        if let Some(data) = self.backend.get(key.as_bytes()) {
+        if let Some(data) = self.backend.get(key.as_bytes()).unwrap() {
             let value: Payload = bincode::deserialize(&data.as_slice()).unwrap();
             Some(value)
         } else {
