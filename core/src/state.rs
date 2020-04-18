@@ -25,6 +25,79 @@ use crate::types::Hash;
 use crate::trie::{MemoryDB, EMPTY_TRIE, Blake2Hasher};
 
 #[derive(Clone)]
+pub struct ArchiveDB {
+    backend: Arc<RwLock<dyn KVDB>>,
+    cached: MemoryDB,
+}
+
+impl AsHashDB<Blake2Hasher, DBValue> for ArchiveDB {
+    fn as_hash_db(&self) -> &dyn HashDB<Blake2Hasher, DBValue> {
+        self
+    }
+
+    fn as_hash_db_mut(&mut self) -> &mut dyn HashDB<Blake2Hasher, DBValue> {
+        self
+    }
+}
+
+impl ArchiveDB {
+    /// Create a storage backend of trie structure along with memory caching
+    pub fn new(backend: Arc<RwLock<dyn KVDB>>) -> Self {
+        ArchiveDB {
+            backend: backend,
+            cached: MemoryDB::new(EMPTY_TRIE),
+        }
+    }
+
+    fn payload(&self, key: &Hash) -> Option<DBValue> {
+        println!("load payload {:}", key);
+        self.backend.read().unwrap().get(key.as_bytes()).expect("get diskdb payload failed")
+    }
+
+    /// Write memory changes to backend db
+    pub fn commit(&mut self) {
+        for i in self.cached.drain() {
+            let (key, (value, rc)) = i;
+            if rc > 0 {
+                let mut backend = self.backend.write().unwrap();
+                println!("db set key={:}, value={:x?}", key, value);
+                backend.put(key.as_bytes(), &value).expect("wirte backend");
+            }
+        }
+    }
+}
+
+impl HashDB<Blake2Hasher, DBValue> for ArchiveDB {
+    fn get(&self, key: &Hash, prefix: Prefix) -> Option<DBValue> {
+        println!("hashdb get key={:}", key);
+        if let Some((d, rc)) = self.cached.raw(key, prefix) {
+            if rc > 0 {
+                return Some(d.clone());
+            }
+        }
+        self.payload(key)
+    }
+
+    fn contains(&self, key: &Hash, prefix: Prefix) -> bool {
+        self.get(key, prefix).is_some()
+    }
+
+    fn insert(&mut self, prefix: Prefix, value: &[u8]) -> Hash {
+        let key = self.cached.insert(prefix, value);
+        println!("hashdb insert key={:} value={:x?}", key, value);
+        key
+    }
+
+    fn emplace(&mut self, key: Hash, prefix: Prefix, value: DBValue) {
+        self.cached.emplace(key, prefix, value);
+    }
+
+    fn remove(&mut self, key: &Hash, prefix: Prefix) {
+        self.cached.remove(key, prefix);
+    }
+}
+
+#[derive(Clone)]
 pub struct CachingDB {
     backend: Arc<RwLock<dyn KVDB>>,
     cached: MemoryDB,
@@ -160,10 +233,27 @@ impl Payload {
 #[cfg(test)]
 mod tests {
     use std::sync::{Arc, RwLock};
-    use std::cell::{RefCell};
     use map_store::{MemoryKV, KVDB};
     use hash_db::{EMPTY_PREFIX, HashDB};
-    use super::{CachingDB};
+    use trie_db::TrieMut;
+    use crate::types::Hash;
+    use crate::trie::{TrieDBMut, TrieDB, Blake2Hasher, EMPTY_TRIE};
+    use super::{CachingDB, ArchiveDB};
+
+    #[test]
+    fn test_caching_ref() {
+        let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
+        let hashkey = Hash::default();
+
+        {
+            let mut db = CachingDB::new(Arc::clone(&backend));
+
+            db.emplace(hashkey, EMPTY_PREFIX, b"a".to_vec());
+            db.remove(&hashkey, EMPTY_PREFIX);
+            db.emplace(hashkey, EMPTY_PREFIX, b"foo".to_vec());
+            assert_eq!(db.get(&hashkey, EMPTY_PREFIX).unwrap(), b"foo");
+        }
+    }
 
     #[test]
     fn test_caching_insert() {
@@ -173,6 +263,7 @@ mod tests {
             let mut db = CachingDB::new(Arc::clone(&backend));
             let foo = db.insert(EMPTY_PREFIX, b"foo");
             assert!(db.contains(&foo, EMPTY_PREFIX));
+            assert_eq!(db.get(&foo, EMPTY_PREFIX).unwrap(), b"foo");
 
             let replicated = CachingDB::new(Arc::clone(&backend));
             assert!(!replicated.contains(&foo, EMPTY_PREFIX));
@@ -187,6 +278,23 @@ mod tests {
 
             let replicated = CachingDB::new(Arc::clone(&backend));
             assert!(replicated.contains(&foo, EMPTY_PREFIX));
+        }
+    }
+
+    #[test]
+    fn test_trie_reload() {
+        let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
+        let foo;
+        {
+            let mut db = ArchiveDB::new(Arc::clone(&backend));
+            foo = db.insert(EMPTY_PREFIX, b"foo");
+            assert_eq!(db.get(&foo, EMPTY_PREFIX).unwrap(), b"foo");
+            db.commit();
+
+        }
+        {
+            let db = ArchiveDB::new(Arc::clone(&backend));
+            assert_eq!(db.get(&foo, EMPTY_PREFIX).unwrap(), b"foo");
         }
     }
 }
