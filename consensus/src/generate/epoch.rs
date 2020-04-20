@@ -43,11 +43,21 @@ impl tmp_blocks {
     pub fn get_sid_from_current_block(&self) -> i32 {
         0
     }
+    pub fn get_best_chain(&self,height: u64) -> Option<Block> {
+        Block::default()
+    }
+    pub fn make_seed_in_epoch(&self,eid: u64) -> u64 {
+        let (low,hi) = epoch_info::get_height_from_eid(eid);
+        for i in low..hi {
+            let b = self.get_best_chain(i);
+        }
+        0
+    }
 }
 pub struct epoch_info {}
 impl epoch_info {
     pub fn get_epoch_from_height(h: u64) -> u64 {
-        let eid: u64 = h % epoch_length as u64 + 1;
+        let eid: u64 = h / epoch_length as u64 + 1;
         eid
     }
     pub fn get_epoch_from_id(sid: i32,cur_eid: i64) -> u64 {
@@ -56,6 +66,14 @@ impl epoch_info {
             eid = cur_eid + 1
         }
         eid
+    }
+    pub fn get_height_from_eid(eid: u64) ->(u64,u64) {
+        if eid as i64 <= 0 {
+            return (0,0);
+        }
+        let low: u64 = (eid -1) *  epoch_length as u64;
+        let hi: u64 = eid * epoch_length as u64 - 1;
+        (low,hi)
     }
 } 
 
