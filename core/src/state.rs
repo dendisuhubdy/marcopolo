@@ -14,15 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use serde::{Serialize, Deserialize};
 use bincode;
 use hash_db::{HashDB, AsHashDB, Prefix};
-use trie_db::DBValue;
-use map_store::mapdb::MapDB;
+use trie_db::{DBValue, TrieMut};
 use map_store::KVDB;
 use crate::types::Hash;
-use crate::trie::{MemoryDB, EMPTY_TRIE, Blake2Hasher};
+use crate::trie::{MemoryDB, EMPTY_TRIE, Blake2Hasher, TrieDBMut};
 
 #[derive(Clone)]
 pub struct ArchiveDB {
@@ -79,6 +79,7 @@ impl HashDB<Blake2Hasher, DBValue> for ArchiveDB {
     }
 
     fn contains(&self, key: &Hash, prefix: Prefix) -> bool {
+        println!("hashdb contains key={:}", key);
         self.get(key, prefix).is_some()
     }
 
@@ -230,6 +231,35 @@ impl Payload {
     }
 }
 
+pub struct StateDB {
+    // db: HashDB<Blake2Hasher, DBValue>,
+    db: ArchiveDB,
+    state_root: Hash,
+    local_cache: HashMap<Hash, Vec<u8>>,
+}
+
+impl StateDB {
+    pub fn new(db: &ArchiveDB) -> Self {
+        StateDB {
+            db: db.clone(),
+            state_root: Default::default(),
+            local_cache: HashMap::new(),
+        }
+    }
+
+    pub fn root(&self) -> Hash {
+        self.state_root
+    }
+
+    pub fn commit(&mut self) {
+        let mut t = TrieDBMut::new(&mut self.db, &mut self.state_root);
+        for (key, data) in self.local_cache.iter() {
+            t.insert(key.as_bytes(), &data).unwrap();
+        }
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use std::sync::{Arc, RwLock};
@@ -282,7 +312,7 @@ mod tests {
     }
 
     #[test]
-    fn test_trie_reload() {
+    fn test_triedb_reload() {
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let foo;
         {
@@ -295,6 +325,26 @@ mod tests {
         {
             let db = ArchiveDB::new(Arc::clone(&backend));
             assert_eq!(db.get(&foo, EMPTY_PREFIX).unwrap(), b"foo");
+        }
+    }
+
+    #[test]
+    fn test_triedb_insert() {
+        let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
+        let mut root: Hash = Default::default();
+        let mut db = ArchiveDB::new(Arc::clone(&backend));
+        {
+            let mut t = TrieDBMut::new(&mut db, &mut root);
+            t.insert(b"foo", b"b").unwrap();
+            assert_eq!(t.get(b"foo").unwrap().unwrap(), b"b".to_vec());
+        }
+        println!("root {:?}", root);
+        db.commit();
+        {
+            let mut db = ArchiveDB::new(Arc::clone(&backend));
+            let t = TrieDBMut::new(&mut db, &mut root);
+            // t.get(b"foo").unwrap().expect("get foo failed");
+            t.get(b"foo").unwrap();
         }
     }
 }
