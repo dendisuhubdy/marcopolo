@@ -28,7 +28,7 @@ type TypeNewBlockEvent = Receiver<Block>;
 type TypeNewTimerIntervalEvent = Receiver<()>;
 pub type TypeStopEpoch = Sender<()>;
 
-
+// block header has the pair of the (sid,height)
 struct tmp_blocks {}
 impl tmp_blocks {
     pub fn make_new_block(&self,height: u64,h: Hash) -> Option<Block> {
@@ -39,6 +39,9 @@ impl tmp_blocks {
     } 
     pub fn get_hash_by_height(&self,height: u64) -> Option<Hash> {
         Hash([0u8;32])
+    }
+    pub fn get_sid_from_current_block(&self) -> i32 {
+        0
     }
 }
 pub struct epoch_info {}
@@ -87,6 +90,20 @@ impl EpochProcess {
             cur_seed:       seed,
             slots:          Vec::new(),
             block_chain:    b,
+        }
+    }
+    pub fn start(mut self,state: &APOS,new_block: &TypeNewBlockEvent,
+        new_interval: &TypeNewTimerIntervalEvent) -> Result<TypeStopEpoch,Error> {
+        // setup validators
+        match self.assign_validator(state) {
+            Ok(()) => {
+                let sid = self.block_chain
+                              .read()
+                              .expect("acquiring shared_block_chain read lock")
+                              .get_sid_from_current_block();
+                Ok(self.start_slot_walk_in_epoch(sid,new_block, new_interval, state))
+            },
+            Err(e) => Err(e),
         }
     }
     pub fn vrf(seed: u64,eid: u64,sid: u32,validators: &Vec<ValidatorItem>) -> i32 {
