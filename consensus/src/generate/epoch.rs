@@ -41,6 +41,21 @@ impl tmp_blocks {
         Hash([0u8;32])
     }
 }
+pub struct epoch_info {}
+impl epoch_info {
+    pub fn get_epoch_from_height(h: u64) -> u64 {
+        let eid: u64 = h % epoch_length as u64 + 1;
+        eid
+    }
+    pub fn get_epoch_from_id(sid: i32,cur_eid: i64) -> u64 {
+        let mut eid = cur_eid;
+        if sid >= epoch_length {
+            eid = cur_eid + 1
+        }
+        eid
+    }
+} 
+
 #[derive(Debug, Clone)]
 pub struct slot {
     timeout:    u32,     // millsecond
@@ -86,6 +101,18 @@ impl EpochProcess {
     }
     pub fn get_my_pk(&self) -> Option<Pubkey> {
         Some(self.myid)
+    }
+    pub fn next_epoch(&mut self,sid: i32,state: &APOS) -> Result<bool,Error> {
+        let next_eid = epoch_info::get_epoch_from_id(sid,self.cur_eid);
+        if next_eid == self.cur_eid + 1 {
+            self.cur_eid = next_eid;
+            match self.assign_validator(state) {
+                Err(e) => Err(e),
+                Ok(()) => Ok(true),
+            }
+        } else {
+            Ok(false)
+        }
     }
     pub fn assign_validator(&mut self,state: &APOS) -> Result<(),Error> {
         if let Some(&vals) = state.get_validators(self.cur_eid){
@@ -136,6 +163,18 @@ impl EpochProcess {
                     recv(new_interval) -> _ => {
                         self.handle_new_time_interval_event(walk_pos,state);
                         walk_pos = walk_pos + 1;
+                    },
+                }
+                // new epoch 
+                match self.next_epoch(walk_pos,state) {
+                    Err(e) => {
+                        println!("start_slot_walk_in_epoch is quit,cause next epoch is err:{:?}",e);
+                        return ;
+                    },
+                    Ok(next) => {
+                        if next {
+                            walk_pos = 0;
+                        }
                     },
                 }
             })
