@@ -50,7 +50,7 @@ impl ArchiveDB {
     }
 
     fn payload(&self, key: &Hash) -> Option<DBValue> {
-        println!("load payload {:}", key);
+        debug!("load payload {:}", key);
         self.backend.read().unwrap().get(key.as_bytes()).expect("get diskdb payload failed")
     }
 
@@ -60,7 +60,7 @@ impl ArchiveDB {
             let (key, (value, rc)) = i;
             if rc > 0 {
                 let mut backend = self.backend.write().unwrap();
-                println!("db set key={:}, value={:x?}", key, value);
+                trace!("db set key={:}, value={:x?}", key, value);
                 backend.put(key.as_bytes(), &value).expect("wirte backend");
             }
         }
@@ -69,7 +69,6 @@ impl ArchiveDB {
 
 impl HashDB<Blake2Hasher, DBValue> for ArchiveDB {
     fn get(&self, key: &Hash, prefix: Prefix) -> Option<DBValue> {
-        println!("hashdb get key={:}", key);
         if let Some((d, rc)) = self.cached.raw(key, prefix) {
             if rc > 0 {
                 return Some(d.clone());
@@ -79,21 +78,22 @@ impl HashDB<Blake2Hasher, DBValue> for ArchiveDB {
     }
 
     fn contains(&self, key: &Hash, prefix: Prefix) -> bool {
-        println!("hashdb contains key={:}", key);
         self.get(key, prefix).is_some()
     }
 
     fn insert(&mut self, prefix: Prefix, value: &[u8]) -> Hash {
         let key = self.cached.insert(prefix, value);
-        println!("hashdb insert key={:} value={:x?}", key, value);
+        debug!("hashdb insert key={:} value={:x?}", key, value);
         key
     }
 
     fn emplace(&mut self, key: Hash, prefix: Prefix, value: DBValue) {
+        debug!("hashdb emplace key={:} value={:x?}", key, value);
         self.cached.emplace(key, prefix, value);
     }
 
     fn remove(&mut self, key: &Hash, prefix: Prefix) {
+        debug!("hashdb remove key={:}", key);
         self.cached.remove(key, prefix);
     }
 }
@@ -263,6 +263,7 @@ impl StateDB {
 #[cfg(test)]
 mod tests {
     use std::sync::{Arc, RwLock};
+    use env_logger;
     use map_store::{MemoryKV, KVDB};
     use hash_db::{EMPTY_PREFIX, HashDB};
     use trie_db::TrieMut;
@@ -312,7 +313,7 @@ mod tests {
     }
 
     #[test]
-    fn test_triedb_reload() {
+    fn test_hashdb_reload() {
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let foo;
         {
@@ -329,7 +330,8 @@ mod tests {
     }
 
     #[test]
-    fn test_triedb_insert() {
+    fn test_triedb_reload() {
+        let _ = env_logger::builder().is_test(true).try_init();
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let mut root: Hash = Default::default();
         let mut db = ArchiveDB::new(Arc::clone(&backend));
@@ -338,13 +340,12 @@ mod tests {
             t.insert(b"foo", b"b").unwrap();
             assert_eq!(t.get(b"foo").unwrap().unwrap(), b"b".to_vec());
         }
-        println!("root {:?}", root);
+        trace!("root {:?}", root);
         db.commit();
         {
             let mut db = ArchiveDB::new(Arc::clone(&backend));
-            let t = TrieDBMut::new(&mut db, &mut root);
-            // t.get(b"foo").unwrap().expect("get foo failed");
-            t.get(b"foo").unwrap();
+            let t = TrieDBMut::from_existing(&mut db, &mut root).expect("from trie error");
+            assert_eq!(t.get(b"foo").unwrap().unwrap(), b"b".to_vec());
         }
     }
 }

@@ -22,3 +22,6 @@ hash = { package = "map-hash", path = "../common/hash" }
 map-store = { path = "../common/store" }
 map-tree = { path = "../common/mtree" }
 errors = { package = "map-errors", path = "../common/errors" }
+
+[dev-dependencies]
+env_logger = "0.7.1"
