@@ -251,8 +251,12 @@ impl StateDB {
         self.state_root
     }
 
+    pub fn set_storage(&mut self, key: Hash, value: Vec<u8>) {
+        self.local_cache.insert(key, value.clone());
+    }
+
     pub fn commit(&mut self) {
-        let mut t = TrieDBMut::new(&mut self.db, &mut self.state_root);
+        let mut t = TrieDBMut::from_existing(&mut self.db, &mut self.state_root).expect("open trie error");
         for (key, data) in self.local_cache.iter() {
             t.insert(key.as_bytes(), &data).unwrap();
         }
