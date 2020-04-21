@@ -22,7 +22,7 @@ use hash_db::{HashDB, AsHashDB, Prefix};
 use trie_db::{DBValue, TrieMut};
 use map_store::KVDB;
 use crate::types::Hash;
-use crate::trie::{MemoryDB, EMPTY_TRIE, Blake2Hasher, TrieDBMut};
+use crate::trie::{MemoryDB, EMPTY_TRIE, Blake2Hasher, TrieDBMut, HASHED_NULL_NODE};
 
 #[derive(Clone)]
 pub struct ArchiveDB {
@@ -60,7 +60,7 @@ impl ArchiveDB {
             let (key, (value, rc)) = i;
             if rc > 0 {
                 let mut backend = self.backend.write().unwrap();
-                trace!("db set key={:}, value={:x?}", key, value);
+                debug!("db set key={:}, value={:x?}", key, value);
                 backend.put(key.as_bytes(), &value).expect("wirte backend");
             }
         }
@@ -242,7 +242,15 @@ impl StateDB {
     pub fn new(db: &ArchiveDB) -> Self {
         StateDB {
             db: db.clone(),
-            state_root: Default::default(),
+            state_root: HASHED_NULL_NODE,
+            local_cache: HashMap::new(),
+        }
+    }
+
+    pub fn from_root(db: &ArchiveDB, root: Hash) -> Self {
+        StateDB {
+            db: db.clone(),
+            state_root: root,
             local_cache: HashMap::new(),
         }
     }
@@ -251,15 +259,28 @@ impl StateDB {
         self.state_root
     }
 
-    pub fn set_storage(&mut self, key: Hash, value: Vec<u8>) {
-        self.local_cache.insert(key, value.clone());
+    pub fn set_storage(&mut self, key: Hash, value: &[u8]) {
+        self.local_cache.insert(key, value.to_vec());
+    }
+
+    pub fn get_storage(&mut self, key: &Hash) -> Option<Vec<u8>> {
+        if let Some(data) = self.local_cache.get(key) {
+            return Some(data.clone());
+        }
+        println!("open trie {:?}", self.state_root);
+        let t = TrieDBMut::from_existing(&mut self.db, &mut self.state_root).expect("open trie getter error");
+        t.get(key.as_bytes()).expect("state get key")
     }
 
     pub fn commit(&mut self) {
-        let mut t = TrieDBMut::from_existing(&mut self.db, &mut self.state_root).expect("open trie error");
-        for (key, data) in self.local_cache.iter() {
-            t.insert(key.as_bytes(), &data).unwrap();
+        {
+            let mut t = TrieDBMut::from_existing(&mut self.db, &mut self.state_root).expect("open trie error");
+            for (key, data) in self.local_cache.iter() {
+                t.insert(key.as_bytes(), &data).unwrap();
+            }
+
         }
+        self.db.commit();
     }
 }
 
@@ -273,7 +294,7 @@ mod tests {
     use trie_db::TrieMut;
     use crate::types::Hash;
     use crate::trie::{TrieDBMut, TrieDB, Blake2Hasher, EMPTY_TRIE};
-    use super::{CachingDB, ArchiveDB};
+    use super::{CachingDB, ArchiveDB, StateDB};
 
     #[test]
     fn test_caching_ref() {
@@ -350,6 +371,27 @@ mod tests {
             let mut db = ArchiveDB::new(Arc::clone(&backend));
             let t = TrieDBMut::from_existing(&mut db, &mut root).expect("from trie error");
             assert_eq!(t.get(b"foo").unwrap().unwrap(), b"b".to_vec());
+        }
+    }
+
+    #[test]
+    fn test_state_set() {
+        let _ = env_logger::builder().is_test(true).try_init();
+        let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
+        let key_null: Hash = Default::default();
+        let mut state_root = Hash::default();
+        {
+            let mut state = StateDB::new(&ArchiveDB::new(Arc::clone(&backend)));
+            state.set_storage(key_null, b"foo");
+            state.commit();
+            assert_eq!(state.get_storage(&key_null).unwrap(), b"foo");
+            state_root = state.root();
+            println!("prepare {:?}", state_root);
+        }
+        {
+            let mut state = StateDB::from_root(&ArchiveDB::new(Arc::clone(&backend)), state_root);
+            println!("get storage root {:?}", state.root());
+            assert_eq!(state.get_storage(&key_null).unwrap(), b"foo");
         }
     }
 }
