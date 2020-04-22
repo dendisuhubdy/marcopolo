@@ -49,25 +49,25 @@ impl Stakeholder {
 }
 
 #[derive(Debug, Clone,Default)]
-pub struct Node<'a> {
-	pub left: 		Option<&'a Node<'a>>,
-    pub right: 		Option<&'a Node<'a>>,
+pub struct Node {
+	pub left: 		Option<Box<Node>>,
+    pub right: 		Option<Box<Node>>,
 	pub sholder: 	Option<Stakeholder>,
 	pub hash: 		Hash,
 }
 
-impl<'a> Node<'a> {
+impl Node {
     pub fn isLeaf(&self) -> bool {
         return self.sholder.is_some()
     }
     pub fn getStakeholder(&self) -> &Option<Stakeholder> {
         return &self.sholder
     }
-    pub fn getLeftNode(&self) -> Option<&'a Node<'a>> {
-        return self.left
+    pub fn getLeftNode(&self) -> &Option<Box<Node>> {
+        return &self.left
     }
-    pub fn getRightNode(&self) -> Option<&'a Node<'a>> {
-        return self.right
+    pub fn getRightNode(&self) -> &Option<Box<Node>> {
+        return &self.right
     }
     pub fn getMerkleHash(&self) -> Hash {
         return self.hash.clone()
@@ -79,21 +79,29 @@ impl<'a> Node<'a> {
             return self.left.as_ref().unwrap().getCoins() + self.right.as_ref().unwrap().getCoins()
         }
     }
-    pub fn newNodeFromSHolder(s: Stakeholder) -> Option<Node<'a>> {
-        return Some(Node{
+    pub fn newNodeFromSHolder(s: Stakeholder) -> Self {
+        return Node{
             left:		None,
             right: 		None,
             sholder:	Some(s.clone()),
             hash:		make_hash(&s.toBytes()),
-        }) 
+        } 
     }
-    pub fn newNode1(left: &'a Node,right: &'a Node,hash: Hash) -> Option<Node<'a>> {
-        return Some(Node{
-            left:		Some(left),
-            right: 		Some(right),
+    pub fn newNode1(left: Option<Box<Node>>,right: Option<Box<Node>>,hash: Hash) -> Self {
+        return Node{
+            left:		left,
+            right: 		right,
             sholder:	None,
             hash:		hash,
-        })
+        }
+    }
+    pub fn newNode2(left: Node,right: Node,hash: Hash) -> Self {
+        return Node{
+            left:		Some(Box::new(left.clone())),
+            right: 		Some(Box::new(right.clone())),
+            sholder:	None,
+            hash:		hash,
+        }
     }
 }
 
@@ -169,25 +177,30 @@ pub fn nextInt(max: u128,rnd: &mut StdRng) -> u128 {
 	return rnd.gen_range(0,max)
 }
 
-pub fn CreateMerkleTree<'a>(stakeholders: Vec<Stakeholder>) -> Vec<Node<'a>> {
-    let mut tree: Vec<Node<'a>> = Vec::new();
+pub fn CreateMerkleTree(stakeholders: Vec<Stakeholder>) -> Vec<Node> {
+    let mut tree: Vec<Node> = Vec::new();
     tree.resize(stakeholders.len() * 2,Node::default());
     println!("Creating Merkle tree with:{} nodes",tree.len() - 1);
     for i in 0..stakeholders.len() {
         if let Some(v) = tree.get_mut(i) {
-            *v = Node::newNodeFromSHolder(stakeholders.get(i).unwrap().clone()).unwrap();
+            *v = Node::newNodeFromSHolder(stakeholders.get(i).unwrap().clone());
         }
     }
     for i in (1..stakeholders.len()).rev() {
-        let left = tree.get(i*2).unwrap();
-        let right = tree.get(i*2 + 1).unwrap();
-        let h = makeNodeHash(left.getMerkleHash().to_slice(),
-                            right.getMerkleHash().to_slice(),
-                            &left.getCoins().to_string().into_bytes(),
-                            &right.getCoins().to_string().into_bytes());
-        // if let Some(v) = tree.get_mut(i) {
-        //     *v = Node::newNode1(left, right, h).unwrap();
-        // }
+        let mut left: Node;
+        let mut right: Node;
+        let mut h: Hash;
+        {
+            left = tree.get(i*2).unwrap().clone();
+            right = tree.get(i*2 + 1).unwrap().clone();
+            h = makeNodeHash(left.getMerkleHash().to_slice(),
+                                right.getMerkleHash().to_slice(),
+                                &left.getCoins().to_string().into_bytes(),
+                                &right.getCoins().to_string().into_bytes());
+        }
+        if let Some(v) = tree.get_mut(i) {
+            *v = Node::newNode2(left, right, h);
+        }
     }
     for i in (1..tree.len()) {
         println!("HASH:{},Index:{}",tree.get(i).unwrap().getMerkleHash(),i);
