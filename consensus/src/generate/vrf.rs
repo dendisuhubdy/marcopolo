@@ -15,6 +15,8 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use core::types::{Hash,Address};
+use rand::rngs::StdRng;
+use rand::{Rng, SeedableRng};
 
 pub fn make_hash(data: &[u8]) -> Hash {
     Hash::make_hash(data)
@@ -46,7 +48,7 @@ impl Stakeholder {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone,Default)]
 pub struct Node<'a> {
 	pub left: 		Option<&'a Node<'a>>,
     pub right: 		Option<&'a Node<'a>>,
@@ -77,7 +79,7 @@ impl<'a> Node<'a> {
             return self.left.as_ref().unwrap().getCoins() + self.right.as_ref().unwrap().getCoins()
         }
     }
-    pub fn newNodeFromSHolder(s: &Stakeholder) -> Option<Node> {
+    pub fn newNodeFromSHolder(s: Stakeholder) -> Option<Node<'a>> {
         return Some(Node{
             left:		None,
             right: 		None,
@@ -153,4 +155,42 @@ impl ftsResult {
             merkleProof: proofs,
         }
     }
+}
+
+pub fn makeNodeHash(left: &[u8],right: &[u8],leftValue: &[u8],rightValue: &[u8]) -> Hash {
+    let mut b: Vec<u8> = Vec::new();
+    b.append(&mut left.clone().to_vec());
+    b.append(&mut right.clone().to_vec());
+    b.append(&mut leftValue.clone().to_vec());
+    b.append(&mut rightValue.clone().to_vec());
+	return make_hash(b.as_slice())
+}
+pub fn nextInt(max: u128,rnd: &mut StdRng) -> u128 {
+	return rnd.gen_range(0,max)
+}
+
+pub fn CreateMerkleTree<'a>(stakeholders: Vec<Stakeholder>) -> Vec<Node<'a>> {
+    let mut tree: Vec<Node<'a>> = Vec::new();
+    tree.resize(stakeholders.len() * 2,Node::default());
+    println!("Creating Merkle tree with:{} nodes",tree.len() - 1);
+    for i in 0..stakeholders.len() {
+        if let Some(v) = tree.get_mut(i) {
+            *v = Node::newNodeFromSHolder(stakeholders.get(i).unwrap().clone()).unwrap();
+        }
+    }
+    for i in (1..stakeholders.len()).rev() {
+        let left = tree.get(i*2).unwrap();
+        let right = tree.get(i*2 + 1).unwrap();
+        let h = makeNodeHash(left.getMerkleHash().to_slice(),
+                            right.getMerkleHash().to_slice(),
+                            &left.getCoins().to_string().into_bytes(),
+                            &right.getCoins().to_string().into_bytes());
+        // if let Some(v) = tree.get_mut(i) {
+        //     *v = Node::newNode1(left, right, h).unwrap();
+        // }
+    }
+    for i in (1..tree.len()) {
+        println!("HASH:{},Index:{}",tree.get(i).unwrap().getMerkleHash(),i);
+    }
+	return tree;
 }
