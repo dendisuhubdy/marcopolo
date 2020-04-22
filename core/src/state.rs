@@ -247,7 +247,7 @@ impl StateDB {
         }
     }
 
-    pub fn from_root(db: &ArchiveDB, root: Hash) -> Self {
+    pub fn from_existing(db: &ArchiveDB, root: Hash) -> Self {
         StateDB {
             db: db.clone(),
             state_root: root,
@@ -267,8 +267,10 @@ impl StateDB {
         if let Some(data) = self.local_cache.get(key) {
             return Some(data.clone());
         }
-        println!("open trie {:?}", self.state_root);
-        let t = TrieDBMut::from_existing(&mut self.db, &mut self.state_root).expect("open trie getter error");
+        let t = match TrieDBMut::from_existing(&mut self.db, &mut self.state_root) {
+            Ok(trie) => trie,
+            Err(_) => return None,
+        };
         t.get(key.as_bytes()).expect("state get key")
     }
 
@@ -283,7 +285,6 @@ impl StateDB {
         self.db.commit();
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -380,7 +381,7 @@ mod tests {
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let db = ArchiveDB::new(Arc::clone(&backend));
         let key_null: Hash = Default::default();
-        let mut state_root = Hash::default();
+        let state_root;
         {
             let mut state = StateDB::new(&db);
             state.set_storage(key_null, b"foo");
@@ -388,7 +389,7 @@ mod tests {
             state_root = state.root();
         }
         {
-            let mut state = StateDB::from_root(&db, state_root);
+            let mut state = StateDB::from_existing(&db, state_root);
             assert_eq!(state.get_storage(&key_null).unwrap(), b"foo");
         }
     }
@@ -407,7 +408,7 @@ mod tests {
             state_root = state.root();
         }
         {
-            let mut state = StateDB::from_root(&ArchiveDB::new(Arc::clone(&backend)), state_root);
+            let mut state = StateDB::from_existing(&ArchiveDB::new(Arc::clone(&backend)), state_root);
             assert_eq!(state.get_storage(&key_null).unwrap(), b"foo");
         }
     }
