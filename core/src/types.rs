@@ -62,6 +62,9 @@ impl Hash {
 
         Ok(Hash::from_bytes(&b))
     }
+    pub fn make_hash(data: &[u8]) -> Self {
+        Hash(hash::blake2b_256(data))
+    }
 }
 
 impl fmt::Debug for Hash {
