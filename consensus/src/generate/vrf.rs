@@ -35,7 +35,7 @@ impl Stakeholder {
     pub fn toBytes(&self) -> Vec<u8>{
         format!("{}{}",self.name,self.coins).into_bytes()
     }
-    pub fn toString(&self) -> String {
+    pub fn to_String(&self) -> String {
         return self.name.clone()
     }
     pub fn clone(&self) -> Self {
@@ -92,5 +92,65 @@ impl<'a> Node<'a> {
             sholder:	None,
             hash:		hash,
         })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ProofEntry {
+    pub hash: 	Hash,
+	pub x1:		u128,
+	pub x2:		u128,
+}
+
+impl ProofEntry {
+    pub fn getLeftBound(&self) -> u128 {
+        return self.x1
+    }
+    pub fn getRightBound(&self) -> u128 {
+        return self.x2
+    }
+    pub fn getMerkleHash(&self) -> Hash {
+        return self.hash
+    }
+    pub fn toString(&self) -> String {
+        return format!("{},{},{}",self.hash,self.x1,self.x2)
+    }
+    pub fn newProofEntry(hash: Hash,amount1: u128,amount2: u128) -> Self {
+        return ProofEntry{
+            hash: 	hash,
+            x1:		amount1,
+            x2:		amount2,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ftsResult {
+    pub sholder: 	    Option<Stakeholder>,
+	pub merkleProof:	Vec<ProofEntry>,
+}
+
+impl ftsResult {
+    pub fn getStakeholder(&self) -> &Option<Stakeholder> {
+        return &self.sholder
+    }
+    pub fn getMerkleProof(&self) -> &Vec<ProofEntry> {
+        return &self.merkleProof
+    }
+    pub fn toString(&self) -> String {
+        // let mut proofs: Vec<String> = Vec::new();
+        let mut proofs: String = "".to_string();
+        for v in &self.merkleProof {
+            let tmp = v.toString() + "\n";
+            proofs = proofs + &tmp;
+        }
+        return format!("merkleProof [\n {} ]\n stakeholder \n {} \n",proofs,
+        self.sholder.as_ref().unwrap().to_String())
+    }
+    pub fn newFtsResult(sholder: &Stakeholder,proofs: Vec<ProofEntry>) -> Self {
+        return ftsResult{
+            sholder: 	Some(sholder.clone()),
+            merkleProof: proofs,
+        }
     }
 }
