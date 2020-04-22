@@ -375,6 +375,25 @@ mod tests {
     }
 
     #[test]
+    fn test_state_db() {
+        let _ = env_logger::builder().is_test(true).try_init();
+        let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
+        let db = ArchiveDB::new(Arc::clone(&backend));
+        let key_null: Hash = Default::default();
+        let mut state_root = Hash::default();
+        {
+            let mut state = StateDB::new(&db);
+            state.set_storage(key_null, b"foo");
+            state.commit();
+            state_root = state.root();
+        }
+        {
+            let mut state = StateDB::from_root(&db, state_root);
+            assert_eq!(state.get_storage(&key_null).unwrap(), b"foo");
+        }
+    }
+
+    #[test]
     fn test_state_set() {
         let _ = env_logger::builder().is_test(true).try_init();
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
@@ -386,11 +405,9 @@ mod tests {
             state.commit();
             assert_eq!(state.get_storage(&key_null).unwrap(), b"foo");
             state_root = state.root();
-            println!("prepare {:?}", state_root);
         }
         {
             let mut state = StateDB::from_root(&ArchiveDB::new(Arc::clone(&backend)), state_root);
-            println!("get storage root {:?}", state.root());
             assert_eq!(state.get_storage(&key_null).unwrap(), b"foo");
         }
     }
