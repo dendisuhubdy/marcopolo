@@ -177,18 +177,18 @@ pub fn nextInt(max: u128,rnd: &mut StdRng) -> u128 {
 	return rnd.gen_range(0,max)
 }
 
-pub fn CreateMerkleTree(stakeholders: Vec<Stakeholder>) -> Vec<Node> {
-    let mut tree: Vec<Node> = Vec::new();
-    tree.resize(stakeholders.len() * 2,Node::default());
+pub fn CreateMerkleTree(stakeholders: Vec<Stakeholder>) -> Vec<Box<Node>> {
+    let mut tree: Vec<Box<Node>> = Vec::new();
+    tree.resize(stakeholders.len() * 2,Box::new(Node::default()));
     println!("Creating Merkle tree with:{} nodes",tree.len() - 1);
     for i in 0..stakeholders.len() {
         if let Some(v) = tree.get_mut(i) {
-            *v = Node::newNodeFromSHolder(stakeholders.get(i).unwrap().clone());
+            *v = Box::new(Node::newNodeFromSHolder(stakeholders.get(i).unwrap().clone()));
         }
     }
     for i in (1..stakeholders.len()).rev() {
-        let mut left: Node;
-        let mut right: Node;
+        let mut left: Box<Node>;
+        let mut right: Box<Node>;
         let mut h: Hash;
         {
             left = tree.get(i*2).unwrap().clone();
@@ -199,7 +199,7 @@ pub fn CreateMerkleTree(stakeholders: Vec<Stakeholder>) -> Vec<Node> {
                                 &right.getCoins().to_string().into_bytes());
         }
         if let Some(v) = tree.get_mut(i) {
-            *v = Node::newNode2(left, right, h);
+            *v = Box::new(Node::newNode1(Some(left), Some(right), h));
         }
     }
     for i in (1..tree.len()) {
