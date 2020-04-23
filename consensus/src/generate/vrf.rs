@@ -18,6 +18,7 @@ use core::types::{Hash,Address};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use std::sync::Arc;
+use std::cmp::Ordering;
 
 pub fn make_hash(data: &[u8]) -> Hash {
     Hash::make_hash(data)
@@ -200,15 +201,85 @@ pub fn CreateMerkleTree(stakeholders: Vec<Stakeholder>) -> Vec<Arc<Node>> {
     }
 	return tree;
 }
-
-
-
+pub fn FtsTree(tree: Vec<Arc<Node>>,rnd: &mut StdRng) -> Box<ftsResult> {
+    let mut merkleProof: Vec<ProofEntry> = Vec::new();
+	let mut i: usize = 1;
+	loop {
+		if tree[i].isLeaf() {
+            let s = tree[i].getStakeholder();
+			return Box::new(ftsResult::newFtsResult(s.as_ref().unwrap(),merkleProof));
+        }
+        let x1 = tree.get(i).unwrap()
+                    .getLeftNode()
+                    .as_ref()
+                    .unwrap()
+                    .getCoins();
+        let x2 = tree.get(i).unwrap()
+                    .getRightNode()
+                    .as_ref()
+                    .unwrap()
+                    .getCoins();
+		println!("left subtree coins:{} right subtree coins:{}",x1,x2);
+		let r = nextInt(x1 + x2,rnd) + 1;
+		println!("Picking coin number:{}",r);
+		if r <= x1 {
+			println!("Choosing left subtree...");
+            i *= 2;
+            merkleProof.push(ProofEntry::newProofEntry(
+                tree.get(i+1).unwrap().getMerkleHash(), 
+                x1, x2));
+		} else {
+			println!("Choosing right subtree...");
+            i = 2*i + 1;
+            merkleProof.push(ProofEntry::newProofEntry(
+                tree.get(i-1).unwrap().getMerkleHash(), 
+                x1, x2));
+		}
+	}
+}
+pub fn FtsVerify(merkleRootHash: Hash, res: Box<ftsResult>,rnd: &mut StdRng) -> bool {
+    let mut resPath: Vec<u8> = Vec::new(); 
+	for v in res.getMerkleProof().iter() {
+        let x1 = v.getLeftBound();
+        let x2 = v.getRightBound();
+		let r = nextInt(x1 + x2,rnd) + 1;
+		if r <= x1 {
+            println!("0");
+            resPath.push(0);
+		} else {
+			println!("1");
+			resPath.push(1);
+		}
+	}
+    println!("OK");
+    let ss = res.getStakeholder();
+    let mut hx = make_hash(&ss.as_ref().unwrap().toBytes());
+    for i in (0..res.getMerkleProof().len()).rev() {
+        let proof = res.getMerkleProof().get(i).unwrap();
+        let x1 = proof.getLeftBound().to_string().into_bytes();
+        let x2 = proof.getRightBound().to_string().into_bytes();
+		let hy = proof.getMerkleHash();
+		if resPath[i] == 0_u8 {
+			hx = makeNodeHash(hx.to_slice(),hy.to_slice(),&x1,&x2)
+		} else {
+			hx = makeNodeHash(hy.to_slice(),hx.to_slice(),&x1,&x2)
+		}
+		println!("Next hash:{}",hx);
+    }
+    if Ordering::Equal == merkleRootHash.to_vec().cmp(&hx.clone().to_vec()) {
+        println!("Root hash matches!");
+        return true
+    } else {
+        println!("Invalid Merkle proof");
+        return true
+    }
+}
 
 #[cfg(test)]
 pub mod tests {
     use std::sync::Arc;
     #[test]
-    fn test01() {
+    fn testBox01() {
         let mut bx = Box::new(5_i32);
         let mut bx_new = &bx;
         let mut bx_new_clone = bx_new.clone();
