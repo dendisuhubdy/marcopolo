@@ -17,6 +17,7 @@
 use core::types::{Hash,Address};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
+use std::sync::Arc;
 
 pub fn make_hash(data: &[u8]) -> Hash {
     Hash::make_hash(data)
@@ -50,8 +51,8 @@ impl Stakeholder {
 
 #[derive(Debug, Clone,Default)]
 pub struct Node {
-	pub left: 		Option<Box<Node>>,
-    pub right: 		Option<Box<Node>>,
+	pub left: 		Option<Arc<Node>>,
+    pub right: 		Option<Arc<Node>>,
 	pub sholder: 	Option<Stakeholder>,
 	pub hash: 		Hash,
 }
@@ -63,10 +64,10 @@ impl Node {
     pub fn getStakeholder(&self) -> &Option<Stakeholder> {
         return &self.sholder
     }
-    pub fn getLeftNode(&self) -> &Option<Box<Node>> {
+    pub fn getLeftNode(&self) -> &Option<Arc<Node>> {
         return &self.left
     }
-    pub fn getRightNode(&self) -> &Option<Box<Node>> {
+    pub fn getRightNode(&self) -> &Option<Arc<Node>> {
         return &self.right
     }
     pub fn getMerkleHash(&self) -> Hash {
@@ -87,18 +88,10 @@ impl Node {
             hash:		make_hash(&s.toBytes()),
         } 
     }
-    pub fn newNode1(left: Option<Box<Node>>,right: Option<Box<Node>>,hash: Hash) -> Self {
+    pub fn newNode1(left: Option<Arc<Node>>,right: Option<Arc<Node>>,hash: Hash) -> Self {
         return Node{
             left:		left,
             right: 		right,
-            sholder:	None,
-            hash:		hash,
-        }
-    }
-    pub fn newNode2(left: Node,right: Node,hash: Hash) -> Self {
-        return Node{
-            left:		Some(Box::new(left.clone())),
-            right: 		Some(Box::new(right.clone())),
             sholder:	None,
             hash:		hash,
         }
@@ -177,18 +170,18 @@ pub fn nextInt(max: u128,rnd: &mut StdRng) -> u128 {
 	return rnd.gen_range(0,max)
 }
 
-pub fn CreateMerkleTree(stakeholders: Vec<Stakeholder>) -> Vec<Box<Node>> {
-    let mut tree: Vec<Box<Node>> = Vec::new();
-    tree.resize(stakeholders.len() * 2,Box::new(Node::default()));
+pub fn CreateMerkleTree(stakeholders: Vec<Stakeholder>) -> Vec<Arc<Node>> {
+    let mut tree: Vec<Arc<Node>> = Vec::new();
+    tree.resize(stakeholders.len() * 2,Arc::new(Node::default()));
     println!("Creating Merkle tree with:{} nodes",tree.len() - 1);
     for i in 0..stakeholders.len() {
         if let Some(v) = tree.get_mut(i) {
-            *v = Box::new(Node::newNodeFromSHolder(stakeholders.get(i).unwrap().clone()));
+            *v = Arc::new(Node::newNodeFromSHolder(stakeholders.get(i).unwrap().clone()));
         }
     }
     for i in (1..stakeholders.len()).rev() {
-        let mut left: Box<Node>;
-        let mut right: Box<Node>;
+        let mut left: Arc<Node>;
+        let mut right: Arc<Node>;
         let mut h: Hash;
         {
             left = tree.get(i*2).unwrap().clone();
@@ -199,11 +192,32 @@ pub fn CreateMerkleTree(stakeholders: Vec<Stakeholder>) -> Vec<Box<Node>> {
                                 &right.getCoins().to_string().into_bytes());
         }
         if let Some(v) = tree.get_mut(i) {
-            *v = Box::new(Node::newNode1(Some(left), Some(right), h));
+            *v = Arc::new(Node::newNode1(Some(left), Some(right), h));
         }
     }
     for i in (1..tree.len()) {
         println!("HASH:{},Index:{}",tree.get(i).unwrap().getMerkleHash(),i);
     }
 	return tree;
+}
+
+
+
+
+#[cfg(test)]
+pub mod tests {
+    use std::sync::Arc;
+    #[test]
+    fn test01() {
+        let mut bx = Box::new(5_i32);
+        let mut bx_new = &bx;
+        let mut bx_new_clone = bx_new.clone();
+        *bx_new_clone = 8;
+        // println!("bx <value> address  : {:p}", &*bx);//box中5_f32的地址
+        // println!("bx address          : {:p}", &bx);//指针的指针
+        // println!("bx_new address      : {:p}", &bx_new);
+        // println!("bx_new_clone address: {:p}", &*bx_new_clone);
+        println!("bx:{}",bx);
+        println!("bx:{}",bx_new_clone);
+    }
 }
