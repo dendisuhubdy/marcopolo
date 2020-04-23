@@ -178,7 +178,7 @@ pub fn CreateMerkleTree(stakeholders: Vec<Stakeholder>) -> Vec<Arc<Node>> {
     tree.resize(stakeholders.len() * 2,Arc::new(Node::default()));
     println!("Creating Merkle tree with:{} nodes",tree.len() - 1);
     for i in 0..stakeholders.len() {
-        if let Some(v) = tree.get_mut(i) {
+        if let Some(v) = tree.get_mut(i+stakeholders.len()) {
             *v = Arc::new(Node::newNodeFromSHolder(stakeholders.get(i).unwrap().clone()));
         }
     }
@@ -317,6 +317,27 @@ pub mod tests {
     }
     #[test]
     fn testMakeFtsTree03() {
-       
+        let mut stakeholders: Vec<Stakeholder> = Vec::new();
+        let mut c: u128 = 20;
+        for i in 0..8 {
+            stakeholders.push(Stakeholder{
+                name: 	format!("Stakeholder {}",i),
+                coins:	c,
+            });
+            if c % 2 == 0 {
+                c = c / 2
+            } else {
+                c = c * 3 + 1
+            }
+        }
+        let tree = CreateMerkleTree(stakeholders);
+        println!("Doing follow-the-satoshi in the stake tree");
+        let mut rng1: StdRng = SeedableRng::seed_from_u64(50_u64); 
+        let mut rng2: StdRng = SeedableRng::seed_from_u64(50_u64);
+        let res = FtsTree(tree.clone(),&mut rng1);
+        println!("res:{}",res.toString());
+        println!("Verifying the result.");
+        FtsVerify(tree[1].getMerkleHash(),res,&mut rng2);
+        println!("finish");
     }
 }
