@@ -19,6 +19,7 @@ use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use std::sync::Arc;
 use std::cmp::Ordering;
+use rand::distributions::Uniform;
 
 pub fn make_hash(data: &[u8]) -> Hash {
     Hash::make_hash(data)
@@ -168,7 +169,8 @@ pub fn makeNodeHash(left: &[u8],right: &[u8],leftValue: &[u8],rightValue: &[u8])
 	return make_hash(b.as_slice())
 }
 pub fn nextInt(max: u128,rnd: &mut StdRng) -> u128 {
-	return rnd.gen_range(0,max)
+    //return rnd.gen_range(0,max)
+    return rnd.sample(Uniform::new(0u128, max));
 }
 
 pub fn CreateMerkleTree(stakeholders: Vec<Stakeholder>) -> Vec<Arc<Node>> {
@@ -277,7 +279,12 @@ pub fn FtsVerify(merkleRootHash: Hash, res: Box<ftsResult>,rnd: &mut StdRng) -> 
 
 #[cfg(test)]
 pub mod tests {
+    use super::*;
     use std::sync::Arc;
+    use rand::rngs::StdRng;
+    use rand::{Rng, SeedableRng};
+    use rand::distributions::Uniform;
+
     #[test]
     fn testBox01() {
         let mut bx = Box::new(5_i32);
@@ -290,5 +297,26 @@ pub mod tests {
         // println!("bx_new_clone address: {:p}", &*bx_new_clone);
         println!("bx:{}",bx);
         println!("bx:{}",bx_new_clone);
+    }
+    #[test]
+    fn testRand02() {
+        let mut rng1: StdRng = SeedableRng::seed_from_u64(50_u64); 
+        let mut rng2: StdRng = SeedableRng::seed_from_u64(50_u64);
+        for i in 0..10 {
+            // println!("{}",rng1.gen::<u128>());
+            let x = rng1.sample(Uniform::new(0u128, 100));
+            println!("{}",x);
+        }
+        println!("-------------------------------");
+        for i in 0..10 {
+            // println!("{}",rng2.gen::<u128>());
+            let x = rng2.sample(Uniform::new(0u128, 100));
+            println!("{}",x);
+        }
+        println!("finish")
+    }
+    #[test]
+    fn testMakeFtsTree03() {
+       
     }
 }
