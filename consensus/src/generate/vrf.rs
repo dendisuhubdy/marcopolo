@@ -82,7 +82,7 @@ impl Node {
             return self.left.as_ref().unwrap().getCoins() + self.right.as_ref().unwrap().getCoins()
         }
     }
-    pub fn newNodeFromSHolder(s: Stakeholder) -> Self {
+    pub fn new_node_from_SHolder(s: Stakeholder) -> Self {
         return Node{
             left:		None,
             right: 		None,
@@ -90,7 +90,7 @@ impl Node {
             hash:		make_hash(&s.toBytes()),
         } 
     }
-    pub fn newNode1(left: Option<Arc<Node>>,right: Option<Arc<Node>>,hash: Hash) -> Self {
+    pub fn new_node(left: Option<Arc<Node>>,right: Option<Arc<Node>>,hash: Hash) -> Self {
         return Node{
             left:		left,
             right: 		right,
@@ -117,10 +117,10 @@ impl ProofEntry {
     pub fn getMerkleHash(&self) -> Hash {
         return self.hash
     }
-    pub fn toString(&self) -> String {
-        return format!("{},{},{}",self.hash,self.x1,self.x2)
+    pub fn to_string(&self) -> String {
+        return format!("{:?},{},{}",self.hash,self.x1,self.x2)
     }
-    pub fn newProofEntry(hash: Hash,amount1: u128,amount2: u128) -> Self {
+    pub fn new_proof_entry(hash: Hash,amount1: u128,amount2: u128) -> Self {
         return ProofEntry{
             hash: 	hash,
             x1:		amount1,
@@ -142,17 +142,17 @@ impl ftsResult {
     pub fn getMerkleProof(&self) -> &Vec<ProofEntry> {
         return &self.merkleProof
     }
-    pub fn toString(&self) -> String {
+    pub fn to_string(&self) -> String {
         // let mut proofs: Vec<String> = Vec::new();
         let mut proofs: String = "".to_string();
         for v in &self.merkleProof {
-            let tmp = v.toString() + "\n";
+            let tmp = v.to_string() + "\n";
             proofs = proofs + &tmp;
         }
         return format!("merkleProof [\n {} ]\n stakeholder \n {} \n",proofs,
         self.sholder.as_ref().unwrap().to_String())
     }
-    pub fn newFtsResult(sholder: &Stakeholder,proofs: Vec<ProofEntry>) -> Self {
+    pub fn new_fts_result(sholder: &Stakeholder,proofs: Vec<ProofEntry>) -> Self {
         return ftsResult{
             sholder: 	Some(sholder.clone()),
             merkleProof: proofs,
@@ -173,13 +173,13 @@ pub fn nextInt(max: u128,rnd: &mut StdRng) -> u128 {
     return rnd.sample(Uniform::new(0u128, max));
 }
 
-pub fn CreateMerkleTree(stakeholders: Vec<Stakeholder>) -> Vec<Arc<Node>> {
+pub fn create_merkle_tree(stakeholders: Vec<Stakeholder>) -> Vec<Arc<Node>> {
     let mut tree: Vec<Arc<Node>> = Vec::new();
     tree.resize(stakeholders.len() * 2,Arc::new(Node::default()));
     println!("Creating Merkle tree with:{} nodes",tree.len() - 1);
     for i in 0..stakeholders.len() {
         if let Some(v) = tree.get_mut(i+stakeholders.len()) {
-            *v = Arc::new(Node::newNodeFromSHolder(stakeholders.get(i).unwrap().clone()));
+            *v = Arc::new(Node::new_node_from_SHolder(stakeholders.get(i).unwrap().clone()));
         }
     }
     for i in (1..stakeholders.len()).rev() {
@@ -195,21 +195,21 @@ pub fn CreateMerkleTree(stakeholders: Vec<Stakeholder>) -> Vec<Arc<Node>> {
                                 &right.getCoins().to_string().into_bytes());
         }
         if let Some(v) = tree.get_mut(i) {
-            *v = Arc::new(Node::newNode1(Some(left), Some(right), h));
+            *v = Arc::new(Node::new_node(Some(left), Some(right), h));
         }
     }
     for i in (1..tree.len()) {
-        println!("HASH:{},Index:{}",tree.get(i).unwrap().getMerkleHash(),i);
+        println!("HASH:{:?},Index:{}",tree.get(i).unwrap().getMerkleHash(),i);
     }
 	return tree;
 }
-pub fn FtsTree(tree: Vec<Arc<Node>>,rnd: &mut StdRng) -> Box<ftsResult> {
+pub fn random_from_fts_Tree(tree: Vec<Arc<Node>>,rnd: &mut StdRng) -> Box<ftsResult> {
     let mut merkleProof: Vec<ProofEntry> = Vec::new();
 	let mut i: usize = 1;
 	loop {
 		if tree[i].isLeaf() {
             let s = tree[i].getStakeholder();
-			return Box::new(ftsResult::newFtsResult(s.as_ref().unwrap(),merkleProof));
+			return Box::new(ftsResult::new_fts_result(s.as_ref().unwrap(),merkleProof));
         }
         let x1 = tree.get(i).unwrap()
                     .getLeftNode()
@@ -227,19 +227,19 @@ pub fn FtsTree(tree: Vec<Arc<Node>>,rnd: &mut StdRng) -> Box<ftsResult> {
 		if r <= x1 {
 			println!("Choosing left subtree...");
             i *= 2;
-            merkleProof.push(ProofEntry::newProofEntry(
+            merkleProof.push(ProofEntry::new_proof_entry(
                 tree.get(i+1).unwrap().getMerkleHash(), 
                 x1, x2));
 		} else {
 			println!("Choosing right subtree...");
             i = 2*i + 1;
-            merkleProof.push(ProofEntry::newProofEntry(
+            merkleProof.push(ProofEntry::new_proof_entry(
                 tree.get(i-1).unwrap().getMerkleHash(), 
                 x1, x2));
 		}
 	}
 }
-pub fn FtsVerify(merkleRootHash: Hash, res: Box<ftsResult>,rnd: &mut StdRng) -> bool {
+pub fn verify_fts(merkleRootHash: Hash, res: Box<ftsResult>,rnd: &mut StdRng) -> bool {
     let mut resPath: Vec<u8> = Vec::new(); 
 	for v in res.getMerkleProof().iter() {
         let x1 = v.getLeftBound();
@@ -330,14 +330,20 @@ pub mod tests {
                 c = c * 3 + 1
             }
         }
-        let tree = CreateMerkleTree(stakeholders);
+        let tree = create_merkle_tree(stakeholders);
         println!("Doing follow-the-satoshi in the stake tree");
         let mut rng1: StdRng = SeedableRng::seed_from_u64(50_u64); 
         let mut rng2: StdRng = SeedableRng::seed_from_u64(50_u64);
-        let res = FtsTree(tree.clone(),&mut rng1);
-        println!("res:{}",res.toString());
+        let res = random_from_fts_Tree(tree.clone(),&mut rng1);
+        println!("res:{}",res.to_string());
         println!("Verifying the result.");
-        FtsVerify(tree[1].getMerkleHash(),res,&mut rng2);
+        verify_fts(tree[1].getMerkleHash(),res,&mut rng2);
         println!("finish");
+    }
+    #[test]
+    fn testHash04() {
+        let data = [1u8,32];
+        let h = make_hash(&data[..]);
+        println!("Hash:{:?},len:{}",h,h.0.len());
     }
 }
