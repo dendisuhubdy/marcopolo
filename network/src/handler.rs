@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use futures::prelude::*;
 use futures::Stream;
-use libp2p::{gossipsub::{Topic, TopicHash}, multiaddr::Protocol, PeerId, Swarm};
+use libp2p::{gossipsub::{GossipsubMessage, Topic, TopicHash}, multiaddr::Protocol, PeerId, Swarm};
 use libp2p::core::{
     muxing::StreamMuxerBox,
     nodes::Substream,
@@ -102,13 +102,11 @@ impl Stream for Service {
                 Ok(Async::Ready(Some(event))) => match event {
                     BehaviourEvent::PubsubMessage {
                         source,
-                        topics,
                         message,
                     } => {
                         //debug!(self.log, "Gossipsub message received"; "Message" => format!("{:?}", topics[0]));
                         return Ok(Async::Ready(Some(Libp2pEvent::PubsubMessage {
                             source,
-                            topics,
                             message,
                         })));
                     }
@@ -145,7 +143,6 @@ pub enum Libp2pEvent {
     /// Received pubsub message.
     PubsubMessage {
         source: PeerId,
-        topics: Vec<TopicHash>,
-        message: Vec<u8>,
+        message: GossipsubMessage,
     },
 }

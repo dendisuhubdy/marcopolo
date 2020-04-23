@@ -11,9 +11,9 @@ use slog::{debug, Drain, info, o, warn};
 use tokio::runtime::Runtime;
 use tokio::runtime::TaskExecutor;
 use tokio::sync::{mpsc, oneshot};
-use trace_caller::trace;
 
 use chain::blockchain::BlockChain;
+use map_core::types::Hash;
 
 use crate::{
     {behaviour::{Behaviour, BehaviourEvent}
@@ -106,7 +106,6 @@ fn network_service(
     log: slog::Logger,
 ) -> impl futures::Future<Item=(), Error=error::Error> {
     futures::future::poll_fn(move || -> Result<_, error::Error> {
-
         loop {
             // poll the network channel
             match network_recv.poll() {
@@ -115,6 +114,7 @@ fn network_service(
                         debug!(log, "Sending pubsub message"; "topics" => format!("{:?}",topics));
                         libp2p_service.lock().swarm.publish(topics, message.clone());
                     }
+                    NetworkMessage::HandShake(_) => {}
                 },
                 Ok(Async::NotReady) => break,
                 Ok(Async::Ready(None)) => {
@@ -132,7 +132,6 @@ fn network_service(
                 Ok(Async::Ready(Some(event))) => match event {
                     Libp2pEvent::PubsubMessage {
                         source,
-                        topics,
                         message,
                     } => {
                         debug!(log, "Gossip message received: {:?}", message);
@@ -164,9 +163,22 @@ fn network_service(
 /// Types of messages that the network Network can receive.
 #[derive(Debug)]
 pub enum NetworkMessage {
+    HandShake(HandShakeMsg),
     /// Publish a message to pubsub mechanism.
     Publish {
         topics: Vec<Topic>,
         message: Vec<u8>,
     },
 }
+
+#[derive(Default, Copy, Clone, Debug, PartialEq)]
+pub struct HandShakeMsg {
+    pub networkID: u16,
+    pub genesisHash: Hash,
+    hash: Hash,
+    height: u128,
+}
+
+const STATUS_MSG: u32 = 1;
+const Block_MSG: u32 = 2;
+const Tx_MSG: u32 = 3;

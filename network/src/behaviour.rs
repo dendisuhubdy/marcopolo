@@ -1,21 +1,28 @@
-use crate::{error, NetworkConfig};
-use crate::{Topic, TopicHash};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::num::NonZeroU32;
+use std::time::Duration;
+
 use futures::prelude::*;
 use libp2p::{
     core::identity::Keypair,
-    gossipsub::{Gossipsub, GossipsubEvent,GossipsubConfig, GossipsubConfigBuilder},
+    gossipsub::{Gossipsub, GossipsubConfig, GossipsubConfigBuilder, GossipsubEvent, GossipsubMessage},
     identify::{Identify, IdentifyEvent},
-    ping::{Ping, PingConfig, PingEvent,PingFailure,PingSuccess},
+    kad::{GetClosestPeersError, Kademlia, KademliaConfig, KademliaEvent},
+    kad::record::store::MemoryStore,
+    mdns::{Mdns, MdnsEvent},
+    multiaddr::Multiaddr,
+    NetworkBehaviour,
+    PeerId, ping::{Ping, PingConfig, PingEvent, PingFailure, PingSuccess},
     swarm::{NetworkBehaviourAction, NetworkBehaviourEventProcess},
     tokio_io::{AsyncRead, AsyncWrite},
-    NetworkBehaviour, PeerId,
-    mdns::{Mdns, MdnsEvent},
 };
-use slog::{o, debug};
-use std::num::NonZeroU32;
-use std::time::Duration;
-use std::collections::HashSet;
+use slog::{debug, o};
+
 use map_core::block::Block;
+
+use crate::{error, NetworkConfig};
+use crate::{Topic, TopicHash};
 
 const MAX_IDENTIFY_ADDRESSES: usize = 20;
 
@@ -30,6 +37,7 @@ pub struct Behaviour<TSubstream: AsyncRead + AsyncWrite> {
     /// Keep regular connection to peers and disconnect if absent.
     ping: Ping<TSubstream>,
     mdns: Mdns<TSubstream>,
+    kademlia: Kademlia<TSubstream, MemoryStore>,
     /// Provides IP addresses and peer information.
     identify: Identify<TSubstream>,
     #[behaviour(ignore)]
@@ -38,6 +46,8 @@ pub struct Behaviour<TSubstream: AsyncRead + AsyncWrite> {
     /// Logger for behaviour actions.
     #[behaviour(ignore)]
     log: slog::Logger,
+    #[behaviour(ignore)]
+    pub peers: HashMap<PeerId, Multiaddr>,
 }
 
 impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
@@ -61,6 +71,13 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
         );
 
 
+        // Create a Kademlia behaviour.
+        let mut cfg = KademliaConfig::default();
+        cfg.set_query_timeout(Duration::from_secs(5 * 60));
+        let store = MemoryStore::new(local_peer_id.clone());
+        let kademlia = Kademlia::with_config(local_peer_id.clone(), store, cfg);
+        // behaviour.add_address(&"QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ".parse().unwrap(), "/ip4/104.131.131.82/tcp/4001".parse().unwrap());
+
         Ok(Behaviour {
             gossipsub: Gossipsub::new(local_peer_id, GossipsubConfigBuilder::new()
                 .max_transmit_size(1_048_576)
@@ -68,57 +85,43 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
                 .build()),
             ping: Ping::new(ping_config),
             mdns: Mdns::new().expect("Failed to create mDNS service"),
+            kademlia,
             identify,
             events: Vec::new(),
             log: behaviour_log,
+            peers: Default::default(),
         })
     }
 }
 
 // Implement the NetworkBehaviourEventProcess trait so that we can derive NetworkBehaviour for Behaviour
 impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<GossipsubEvent>
-    for Behaviour<TSubstream>
+for Behaviour<TSubstream>
 {
     fn inject_event(&mut self, event: GossipsubEvent) {
+        println!("GossipsubEvent inject_event{:?}", event);
         match event {
-            GossipsubEvent::Message(propagation_source, _peer_id, gs_msg) => {
+            GossipsubEvent::Message(peer_id, _msg_id, gs_msg) => {
                 //debug!(self.log, "Received GossipEvent"; "msg" => format!("{:?}", gs_msg));
                 self.events.push(BehaviourEvent::PubsubMessage {
-                    source: propagation_source,
-                    topics: gs_msg.topics,
-                    message: gs_msg.data
+                    source: peer_id,
+                    message: gs_msg,
                 });
             }
-            GossipsubEvent::Subscribed { .. } => {}
+            GossipsubEvent::Subscribed { peer_id, topic } => {
+                println!(
+                    "gossipsub: peer_id {} topic {:?}",
+                    peer_id.to_base58(),
+                    topic
+                );
+            }
             GossipsubEvent::Unsubscribed { .. } => {}
         }
     }
 }
 
-impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<MdnsEvent>
-for Behaviour<TSubstream>
-{
-    fn inject_event(&mut self, event: MdnsEvent) {
-        match event {
-            MdnsEvent::Discovered(list) => {
-                for (peer, _) in list {
-                    println!("inject_event Discovered {:?}",peer);
-                }
-            },
-            MdnsEvent::Expired(list) => {
-                for (peer, _) in list {
-                    println!("inject_event Expired {:?}",peer);
-                    if !self.mdns.has_node(&peer) {
-                    }
-                }
-            }
-        }
-    }
-}
-
-
 impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<PingEvent>
-    for Behaviour<TSubstream>
+for Behaviour<TSubstream>
 {
     fn inject_event(&mut self, event: PingEvent) {
         match event {
@@ -154,6 +157,64 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<PingEvent>
     }
 }
 
+impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<MdnsEvent>
+for Behaviour<TSubstream>
+{
+    fn inject_event(&mut self, event: MdnsEvent) {
+        println!("inject_event MdnsEvent  {:?}", event);
+        match event {
+            MdnsEvent::Discovered(list) => {
+                for (peer_id, multiaddr) in list {
+                    println!("inject_event Discovered {:?} {:?}", peer_id, multiaddr);
+                    self.kademlia.add_address(&peer_id, multiaddr);
+                }
+            }
+            MdnsEvent::Expired(list) => {
+                for (peer, _) in list {
+                    println!("inject_event Expired {:?}", peer);
+                    if !self.mdns.has_node(&peer) {}
+                }
+            }
+        }
+    }
+}
+
+impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<KademliaEvent>
+for Behaviour<TSubstream>
+{
+    // Called when `kademlia` produces an event.
+    fn inject_event(&mut self, message: KademliaEvent) {
+        println!("KademliaEvent inject_event( {:?} ", message);
+        match message {
+            KademliaEvent::GetClosestPeersResult(res) => {
+                match res {
+                    Ok(ok) => {
+                        if !ok.peers.is_empty() {
+                            println!("Query finished with closest peers: {:#?}", ok.peers);
+                        } else {
+                            // The example is considered failed as there
+                            // should always be at least 1 reachable peer.
+                            println!("Query finished with no closest peers.");
+                        }
+                    }
+                    Err(GetClosestPeersError::Timeout { peers, .. }) => {
+                        if !peers.is_empty() {
+                            println!("Query timed out with closest peers: {:#?}", peers);
+                        } else {
+                            // The example is considered failed as there
+                            // should always be at least 1 reachable peer.
+                            println!("Query timed out with no closest peers.");
+                        }
+                    }
+                }
+            }
+            _ => {
+                println!("KademliaEvent inject_event else ");
+            }
+        }
+    }
+}
+
 impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
     /// Consumes the events list when polled.
     fn poll<TBehaviourIn>(
@@ -168,7 +229,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
 }
 
 impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<IdentifyEvent>
-    for Behaviour<TSubstream>
+for Behaviour<TSubstream>
 {
     fn inject_event(&mut self, event: IdentifyEvent) {
         match event {
@@ -213,6 +274,12 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
             self.gossipsub.publish(&topic, message.clone());
         }
     }
+
+    /// Publishes a message on the pubsub (gossipsub) behaviour.
+    pub fn query_kad(&mut self, to_search: PeerId) {
+        println!("Searching for the closest peers to {:?}", to_search);
+        self.kademlia.get_closest_peers(to_search);
+    }
 }
 
 /// The types of events than can be obtained from polling the behaviour.
@@ -222,7 +289,6 @@ pub enum BehaviourEvent {
     PeerDisconnected(PeerId),
     PubsubMessage {
         source: PeerId,
-        topics: Vec<TopicHash>,
-        message: Vec<u8>,
+        message: GossipsubMessage,
     },
 }

@@ -12,7 +12,6 @@ map-core = { path = "../core" }
 bincode = "1.2.0"
 parking_lot = "0.10.0"
 error-chain = "0.12.0"
-trace_caller = "0.2.0"
 libp2p =  { git = "https://github.com/SigP/rust-libp2p", rev = "735313ebda6a98604929f6c4606aefac19e00760" }
 serde = "1.0.102"
 serde_derive = "1.0.102"
