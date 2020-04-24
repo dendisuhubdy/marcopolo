@@ -26,13 +26,13 @@ use crate::{Topic, TopicHash};
 
 const MAX_IDENTIFY_ADDRESSES: usize = 20;
 
-/// Builds the network behaviour that manages the core protocols of eth2.
+/// Builds the network behaviour that manages the core protocols of map.
 /// This core behaviour is managed by `Behaviour` which adds peer management to all core
 /// behaviours.
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "BehaviourEvent", poll_method = "poll")]
 pub struct Behaviour<TSubstream: AsyncRead + AsyncWrite> {
-    /// The routing pub-sub mechanism for eth2.
+    /// The routing pub-sub mechanism for map.
     gossipsub: Gossipsub<TSubstream>,
     /// Keep regular connection to peers and disconnect if absent.
     ping: Ping<TSubstream>,

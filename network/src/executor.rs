@@ -138,7 +138,7 @@ fn network_service(
                         //-----------------------------------------  block chain;
                     }
                     Libp2pEvent::ImportBlock(peer_id, event) => {
-                        //debug!(self.log,"Received RPC message from: {:?}", peer_id);
+                        //debug!(self.log,"Received P2P message from: {:?}", peer_id);
                         debug!(log, "Peer ImportBlock received: {:?}", peer_id);
                     }
                     Libp2pEvent::PeerDialed(peer_id) => {

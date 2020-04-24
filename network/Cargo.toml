@@ -13,8 +13,7 @@ bincode = "1.2.0"
 parking_lot = "0.10.0"
 error-chain = "0.12.0"
 libp2p =  { git = "https://github.com/SigP/rust-libp2p", rev = "735313ebda6a98604929f6c4606aefac19e00760" }
-serde = "1.0.102"
-serde_derive = "1.0.102"
+serde = { version = "1.0.102", features = ["derive"] }
 slog = { version = "^2.4.1" , features = ["max_level_trace"] }
 slog-term = "^2.4.0"
 slog-async = "^2.3.0"

@@ -134,7 +134,7 @@ impl Stream for Service {
 /// Events that can be obtained from polling the Libp2p Service.
 #[derive(Debug)]
 pub enum Libp2pEvent {
-    /// An RPC response request has been received on the swarm.
+    /// An P2P response request has been received on the swarm.
     ImportBlock(PeerId, Block),
     /// Initiated the connection to a new peer.
     PeerDialed(PeerId),
