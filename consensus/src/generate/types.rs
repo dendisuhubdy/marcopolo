@@ -21,6 +21,7 @@ use ed25519::{pubkey::Pubkey};
 pub struct Stakeholder {
     pub name:   String,
     pub coins:  u128,
+    pub index:  i32,
 }
 impl Stakeholder {
     pub fn getName(&self) -> String {
@@ -39,7 +40,14 @@ impl Stakeholder {
         return Stakeholder{
             name:	self.name.clone(),
             coins: 	self.coins,
+            index:  self.index,
         }
+    }
+    pub fn get_index(&self) -> i32 {
+        self.index
+    }
+    pub fn set_index(&mut self,i: i32) {
+        self.index = i;
     }
 }
 
@@ -103,12 +111,27 @@ impl ftsResult {
 }
 
 #[derive(Debug, Clone)]
-struct ValidatorItem {
+pub struct ValidatorItem {
     pubkey: [u8;32],
     stakeAmount: u128,
+    sid:        i32,
+}
+impl ValidatorItem {
+    pub fn set_sid(&mut self,i: i32) {
+        self.sid = i;
+    }
 }
 impl From<ValidatorItem> for Pubkey {
     fn from(v: ValidatorItem) -> Self {
         Pubkey::from_bytes(&v.pubkey)
+    }
+}
+impl From<ValidatorItem> for Stakeholder {
+    fn from(v: ValidatorItem) -> Self {
+        Stakeholder{
+            name:   String::from_utf8_lossy(&v.pubkey[..4]).to_string(),
+            coins:  v.stakeAmount,
+            index:  -1 as i32,
+        }
     }
 }

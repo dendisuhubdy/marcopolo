@@ -20,7 +20,8 @@ use rand::{Rng, SeedableRng};
 use std::sync::Arc;
 use std::cmp::Ordering;
 use rand::distributions::Uniform;
-use super::types::{ftsResult,Stakeholder,ProofEntry};
+use super::types::{ftsResult,Stakeholder,ProofEntry,ValidatorItem};
+use errors::Error;
 
 pub fn make_hash(data: &[u8]) -> Hash {
     Hash::make_hash(data)
@@ -192,6 +193,22 @@ pub fn verify_fts(merkleRootHash: Hash, res: Box<ftsResult>,rnd: &mut StdRng) ->
     }
 }
 
+pub fn assign_valditator_to_slot(vals: &mut Vec<ValidatorItem>,seed: u64) -> Result<(),Error> {
+    let mut rng: StdRng = SeedableRng::seed_from_u64(seed); 
+    let mut stakeholders: Vec<Stakeholder> = Vec::new();
+    for (i,v) in vals.iter().enumerate() {
+        let mut s:Stakeholder = v.clone().into();
+        s.set_index(i as i32);
+        stakeholders.push(s);
+    }
+    // let tree = create_merkle_tree(stakeholders);
+    // for i in vals.iter_mut() {
+    //     let res = random_from_fts_Tree(tree.clone(),&mut rng);
+
+    // }
+    return Ok(())
+} 
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
@@ -238,6 +255,7 @@ pub mod tests {
             stakeholders.push(Stakeholder{
                 name: 	format!("Stakeholder {}",i),
                 coins:	c,
+                index:  i as i32,
             });
             if c % 2 == 0 {
                 c = c / 2
