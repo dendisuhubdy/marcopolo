@@ -201,18 +201,29 @@ pub fn assign_valditator_to_slot(vals: &mut Vec<ValidatorItem>,seed: u64) -> Res
         s.set_index(i as i32);
         stakeholders.push(s);
     }
-    // let tree = create_merkle_tree(stakeholders);
-    // for i in vals.iter_mut() {
-    //     let res = random_from_fts_Tree(tree.clone(),&mut rng);
+    let mut v_indexs: Vec<(i32,i32)> = Vec::new();
+    let tree = create_merkle_tree(stakeholders);
+    for (i,v) in vals.iter_mut().enumerate() {
+        let res = random_from_fts_Tree(tree.clone(),&mut rng);
+        v_indexs.push((res.sholder.unwrap().get_index(),i as i32));
+    }
 
-    // }
+    for i in v_indexs.iter() {
+        if let Some(validator) = vals.get_mut(i.0 as usize) {
+            validator.set_sid(i.1 as i32);
+        }
+    }
     return Ok(())
 } 
+
 
 #[cfg(test)]
 pub mod tests {
     use super::*;
     use std::sync::Arc;
+
+
+
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
     use rand::distributions::Uniform;
