@@ -20,35 +20,10 @@ use rand::{Rng, SeedableRng};
 use std::sync::Arc;
 use std::cmp::Ordering;
 use rand::distributions::Uniform;
+use super::types::{ftsResult,Stakeholder,ProofEntry};
 
 pub fn make_hash(data: &[u8]) -> Hash {
     Hash::make_hash(data)
-}
-
-#[derive(Debug, Clone)]
-pub struct Stakeholder {
-    pub name:   String,
-    pub coins:  u128,
-}
-impl Stakeholder {
-    pub fn getName(&self) -> String {
-        return self.name.clone()
-    }
-    pub fn getCoins(&self) -> u128 {
-        return self.coins
-    }
-    pub fn toBytes(&self) -> Vec<u8>{
-        format!("{}{}",self.name,self.coins).into_bytes()
-    }
-    pub fn to_String(&self) -> String {
-        return self.name.clone()
-    }
-    pub fn clone(&self) -> Self {
-        return Stakeholder{
-            name:	self.name.clone(),
-            coins: 	self.coins,
-        }
-    }
 }
 
 #[derive(Debug, Clone,Default)]
@@ -96,66 +71,6 @@ impl Node {
             right: 		right,
             sholder:	None,
             hash:		hash,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ProofEntry {
-    pub hash: 	Hash,
-	pub x1:		u128,
-	pub x2:		u128,
-}
-
-impl ProofEntry {
-    pub fn getLeftBound(&self) -> u128 {
-        return self.x1
-    }
-    pub fn getRightBound(&self) -> u128 {
-        return self.x2
-    }
-    pub fn getMerkleHash(&self) -> Hash {
-        return self.hash
-    }
-    pub fn to_string(&self) -> String {
-        return format!("{:?},{},{}",self.hash,self.x1,self.x2)
-    }
-    pub fn new_proof_entry(hash: Hash,amount1: u128,amount2: u128) -> Self {
-        return ProofEntry{
-            hash: 	hash,
-            x1:		amount1,
-            x2:		amount2,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ftsResult {
-    pub sholder: 	    Option<Stakeholder>,
-	pub merkleProof:	Vec<ProofEntry>,
-}
-
-impl ftsResult {
-    pub fn getStakeholder(&self) -> &Option<Stakeholder> {
-        return &self.sholder
-    }
-    pub fn getMerkleProof(&self) -> &Vec<ProofEntry> {
-        return &self.merkleProof
-    }
-    pub fn to_string(&self) -> String {
-        // let mut proofs: Vec<String> = Vec::new();
-        let mut proofs: String = "".to_string();
-        for v in &self.merkleProof {
-            let tmp = v.to_string() + "\n";
-            proofs = proofs + &tmp;
-        }
-        return format!("merkleProof [\n {} ]\n stakeholder \n {} \n",proofs,
-        self.sholder.as_ref().unwrap().to_String())
-    }
-    pub fn new_fts_result(sholder: &Stakeholder,proofs: Vec<ProofEntry>) -> Self {
-        return ftsResult{
-            sholder: 	Some(sholder.clone()),
-            merkleProof: proofs,
         }
     }
 }

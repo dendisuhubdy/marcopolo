@@ -17,17 +17,7 @@
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 use core::block::{self,Block,BlockProof,VerificationItem};
 use std::collections::HashMap;
-
-#[derive(Debug, Clone)]
-struct ValidatorItem {
-    pubkey: [u8;32],
-    stakeAmount: u128,
-}
-impl From<ValidatorItem> for Pubkey {
-    fn from(v: ValidatorItem) -> Self {
-        Pubkey::from_bytes(&v.pubkey)
-    }
-}
+use super::types::{ValidatorItem};
 
 #[derive(Debug, Clone)]
 struct EpochItem {
