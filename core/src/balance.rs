@@ -20,8 +20,7 @@ use serde::{Serialize, Deserialize};
 use bincode;
 use hash;
 use crate::types::{Hash, Address};
-use map_store::mapdb::MapDB;
-use map_tree::mapTree::MapTree;
+use crate::state::{ArchiveDB, StateDB};
 
 const BALANCE_POS: u64 = 1;
 const NONCE_POS: u64 = 2;
@@ -46,20 +45,25 @@ impl Account {
 
 pub struct Balance {
     cache: HashMap<Hash, Account>,
-    treedb: MapTree,
+    treedb: StateDB,
     root_hash: Hash,
 }
 
 impl Balance {
 
-    pub fn new(datadir: PathBuf) -> Self {
-        let mut dir = datadir.clone();
-        dir.push("data");
-        let tree = MapTree::open(&dir, 256).unwrap();
+    pub fn new(backend: &ArchiveDB) -> Self {
         Balance {
             cache: HashMap::new(),
-            treedb: tree,
+            treedb: StateDB::new(backend),
             root_hash: Hash::default(),
+        }
+    }
+
+    pub fn from_state(backend: &ArchiveDB, root: Hash) -> Self {
+        Balance {
+            cache: HashMap::new(),
+            treedb: StateDB::from_existing(backend, root),
+            root_hash: root,
         }
     }
 
@@ -136,15 +140,11 @@ impl Balance {
     pub fn commit(&mut self) -> Hash {
         for (addr_hash, account) in self.cache.iter() {
             let encoded: Vec<u8> = bincode::serialize(&account).unwrap();
-            if self.root_hash == Hash::default() {
-                self.root_hash = Hash(self.treedb.insert_one(
-                    None, &addr_hash.0, &encoded).unwrap());
-            } else {
-                self.root_hash = Hash(self.treedb.insert_one(
-                    Some(&self.root_hash.0), &addr_hash.0, &encoded).unwrap());
-            }
+            self.treedb.set_storage(*addr_hash, &encoded);
         }
+        self.treedb.commit();
         self.cache.clear();
+        self.root_hash = self.treedb.root();
         self.root_hash
     }
 
@@ -153,8 +153,7 @@ impl Balance {
         //     Some(s) => s,
         //     None => return Account::default(),
         // };
-        let serialized = match self.treedb.get_one(&self.root_hash.0,
-            &Self::address_key(addr).0).expect("tree read exception") {
+        let serialized = match self.treedb.get_storage(&Self::address_key(addr)) {
             Some(s) => s,
             None => return Account::default(),
         };
@@ -163,16 +162,9 @@ impl Balance {
         obj
     }
 
-    pub fn set_account(&mut self, addr: Address, account: &Account) -> Hash {
+    pub fn set_account(&mut self, addr: Address, account: &Account) {
         let encoded: Vec<u8> = bincode::serialize(account).unwrap();
-        let root;
-        if self.root_hash == Hash::default() {
-            root = self.treedb.insert_one(None, &Self::address_key(addr).0, &encoded).unwrap();
-        } else {
-            root = self.treedb.insert_one(Some(&self.root_hash.0), &Self::address_key(addr).0, &encoded).unwrap();
-        }
-        self.root_hash = Hash(root);
-        self.root_hash
+        self.treedb.set_storage(Self::address_key(addr), &encoded);
     }
 
     pub fn load_root(&mut self, root: Hash) {

@@ -71,19 +71,16 @@ impl Default for NodeConfig {
 //#[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Service {
     pub block_chain: Arc<RwLock<BlockChain>>,
-    pub state: Arc<RwLock<Balance>>,
     pub tx_pool : Arc<RwLock<TxPoolManager>>,
     pub cfg: NodeConfig,
 }
 
 impl Service {
     pub fn new_service(cfg: NodeConfig) -> Self {
-        let state = Arc::new(RwLock::new(Balance::new(cfg.data_dir.clone())));
-
+        let chain = Arc::new(RwLock::new(BlockChain::new(cfg.data_dir.clone(),cfg.poa_privkey.clone())));
         Service {
-            block_chain: Arc::new(RwLock::new(BlockChain::new(cfg.data_dir.clone(),cfg.poa_privkey.clone()))),
-            state: state.clone(),
-            tx_pool: Arc::new(RwLock::new(TxPoolManager::start(state.clone()))),
+            block_chain: chain.clone(),
+            tx_pool: Arc::new(RwLock::new(TxPoolManager::start(chain.clone()))),
             cfg:   cfg.clone(),
         }
     }
@@ -92,10 +89,7 @@ impl Service {
         POA::new_from_string(key)
     }
     pub fn start(mut self,cfg: NodeConfig) -> (mpsc::Sender<i32>,JoinHandle<()>) {
-        {
-            let mut statedb = self.state.write().unwrap();
-            self.get_write_blockchain().load(&mut statedb);
-        }
+        self.get_write_blockchain().load();
         let network_block_chain = self.block_chain.clone();
 
         let mut config = NetworkConfig::new();
@@ -141,7 +135,6 @@ impl Service {
     pub fn generate_block(&mut self) -> Result<Block,Error> {
         let cur_block = self.get_write_blockchain().current_block();
         let tx_pool = self.tx_pool.clone();
-
         let txs =
             tx_pool.read().expect("acquiring tx_pool read lock").get_txs();
 
@@ -157,7 +150,8 @@ impl Service {
         info!("seal block, height={}, parent={}, tx={}", header.height, header.parent_hash, txs.len());
         let b = Block::new(header,txs,Vec::new(),Vec::new());
         let finalize = self.get_POA();
-        let mut statedb = self.state.write().unwrap();
+        let chain = self.block_chain.read().unwrap();
+        let mut statedb = chain.state_at(cur_block.state_root());
         let h = Executor::exc_txs_in_block(&b, &mut statedb, &POA::get_default_miner())?;
         tx_pool.write().expect("acquiring tx_pool write lock").notify_block(&b);
         finalize.finalize_block(b,h)

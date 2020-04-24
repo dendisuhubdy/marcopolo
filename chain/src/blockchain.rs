@@ -16,11 +16,14 @@
 
 use std::path::PathBuf;
 use crate::store::ChainDB;
+use std::sync::{Arc, RwLock};
 use map_store;
+use map_store::mapdb::MapDB;
 use map_core;
 use map_core::block::{Block, Header};
 use map_core::types::Hash;
 use map_core::genesis;
+use map_core::state::{ArchiveDB, StateDB};
 use map_core::balance::Balance;
 use map_consensus::poa;
 use super::BlockChainErrorKind;
@@ -28,6 +31,7 @@ use errors::Error;
 
 pub struct BlockChain {
     db: ChainDB,
+    state_backend: ArchiveDB,
     validator: Validator,
     genesis: Block,
     consensus: poa::POA
@@ -37,16 +41,27 @@ impl BlockChain {
     pub fn new(datadir: PathBuf,key: String) -> Self {
         info!("using datadir {}", datadir.display());
         let db_cfg = map_store::Config::new(datadir.clone());
+        let backend;
+        {
+            let mut dir = datadir.clone();
+            dir.push("data");
+            let db = MapDB::open(map_store::Config::new(dir.clone())).unwrap();
+            let kv: Arc<RwLock<dyn map_store::KVDB>> = Arc::new(RwLock::new(db));
+            backend = ArchiveDB::new(Arc::clone(&kv));
+        }
+
         BlockChain {
             db: ChainDB::new(db_cfg).unwrap(),
             genesis: genesis::to_genesis(),
+            state_backend: backend,
             validator: Validator{},
             consensus: poa::POA::new_from_string(key),
         }
     }
 
-    pub fn setup_genesis(&mut self, state: &mut Balance) -> Hash {
-        let root = genesis::setup_allocation(state);
+    pub fn setup_genesis(&mut self) -> Hash {
+        let mut state = Balance::new(&self.state_backend);
+        let root = genesis::setup_allocation(&mut state);
         self.genesis.set_state_root(root);
         self.db.write_block(&self.genesis).expect("can not write block");
         self.db.write_head_hash(self.genesis.hash()).expect("can not wirte head");
@@ -54,21 +69,25 @@ impl BlockChain {
         self.genesis.hash()
     }
 
-    pub fn load(&mut self, state: &mut Balance) {
+    pub fn load(&mut self) {
         if self.db.get_block_by_number(0).is_none() {
-            self.setup_genesis(state);
-        } else {
-            let current = self.current_block();
-            state.load_root(current.state_root());
-            info!("load block height={} hash={}", current.height(), current.hash());
+            self.setup_genesis();
         }
+    }
+
+    pub fn statedb(&self) -> &ArchiveDB {
+        &self.state_backend
+    }
+
+    pub fn state_at(&self, root: Hash) -> Balance {
+        Balance::from_state(&self.state_backend, root)
     }
 
     pub fn genesis_hash(&mut self) -> Hash {
         self.genesis.hash()
     }
 
-    pub fn current_block(&mut self) -> Block {
+    pub fn current_block(&self) -> Block {
         self.db.head_block().unwrap()
     }
 

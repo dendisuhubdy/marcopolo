@@ -18,11 +18,11 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use serde::{Serialize, Deserialize};
 use bincode;
-use hash_db::{HashDB, AsHashDB, Prefix};
-use trie_db::{DBValue, TrieMut};
+use hash_db::{HashDB, HashDBRef, AsHashDB, Prefix};
+use trie_db::{DBValue, Trie, TrieMut};
 use map_store::KVDB;
 use crate::types::Hash;
-use crate::trie::{MemoryDB, EMPTY_TRIE, Blake2Hasher, TrieDBMut, HASHED_NULL_NODE};
+use crate::trie::{MemoryDB, EMPTY_TRIE, Blake2Hasher, TrieDBMut, TrieDB, NULL_ROOT};
 
 #[derive(Clone)]
 pub struct ArchiveDB {
@@ -78,7 +78,7 @@ impl HashDB<Blake2Hasher, DBValue> for ArchiveDB {
     }
 
     fn contains(&self, key: &Hash, prefix: Prefix) -> bool {
-        self.get(key, prefix).is_some()
+        HashDB::get(self, key, prefix).is_some()
     }
 
     fn insert(&mut self, prefix: Prefix, value: &[u8]) -> Hash {
@@ -95,6 +95,16 @@ impl HashDB<Blake2Hasher, DBValue> for ArchiveDB {
     fn remove(&mut self, key: &Hash, prefix: Prefix) {
         debug!("hashdb remove key={:}", key);
         self.cached.remove(key, prefix);
+    }
+}
+
+impl HashDBRef<Blake2Hasher, DBValue> for ArchiveDB {
+    fn get(&self, key: &Hash, prefix: Prefix) -> Option<DBValue> {
+        HashDB::get(self, key, prefix)
+    }
+
+    fn contains(&self, key: &Hash, prefix: Prefix) -> bool {
+        HashDB::contains(self, key, prefix)
     }
 }
 
@@ -235,15 +245,15 @@ pub struct StateDB {
     // db: HashDB<Blake2Hasher, DBValue>,
     db: ArchiveDB,
     state_root: Hash,
-    local_cache: HashMap<Hash, Vec<u8>>,
+    local_changes: HashMap<Hash, Vec<u8>>,
 }
 
 impl StateDB {
     pub fn new(db: &ArchiveDB) -> Self {
         StateDB {
             db: db.clone(),
-            state_root: HASHED_NULL_NODE,
-            local_cache: HashMap::new(),
+            state_root: NULL_ROOT,
+            local_changes: HashMap::new(),
         }
     }
 
@@ -251,7 +261,7 @@ impl StateDB {
         StateDB {
             db: db.clone(),
             state_root: root,
-            local_cache: HashMap::new(),
+            local_changes: HashMap::new(),
         }
     }
 
@@ -260,14 +270,14 @@ impl StateDB {
     }
 
     pub fn set_storage(&mut self, key: Hash, value: &[u8]) {
-        self.local_cache.insert(key, value.to_vec());
+        self.local_changes.insert(key, value.to_vec());
     }
 
-    pub fn get_storage(&mut self, key: &Hash) -> Option<Vec<u8>> {
-        if let Some(data) = self.local_cache.get(key) {
+    pub fn get_storage(&self, key: &Hash) -> Option<Vec<u8>> {
+        if let Some(data) = self.local_changes.get(key) {
             return Some(data.clone());
         }
-        let t = match TrieDBMut::from_existing(&mut self.db, &mut self.state_root) {
+        let t = match TrieDB::new(&self.db, &self.state_root) {
             Ok(trie) => trie,
             Err(_) => return None,
         };
@@ -277,7 +287,7 @@ impl StateDB {
     pub fn commit(&mut self) {
         {
             let mut t = TrieDBMut::from_existing(&mut self.db, &mut self.state_root).expect("open trie error");
-            for (key, data) in self.local_cache.iter() {
+            for (key, data) in self.local_changes.iter() {
                 t.insert(key.as_bytes(), &data).unwrap();
             }
 

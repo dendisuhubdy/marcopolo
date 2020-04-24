@@ -28,7 +28,7 @@ use crate::types::Hash;
 
 const HASHED_NULL_NODE_BYTES :[u8;32] = [0x3a, 0xc4, 0xbf, 0x3c, 0xc9, 0x2d, 0x05, 0x46, 0x3d, 0x1e, 0x9c, 0x40, 0x24, 0xca, 0xab, 0x4c, 0x78, 0x0f, 0x9d, 0x99, 0xd2, 0x4d, 0xd2, 0xf4, 0x55, 0x70, 0x86, 0x94, 0xb5, 0x0a, 0x00, 0xc9];
 /// hash of null node with rlp encoded([0x80])
-pub const HASHED_NULL_NODE : Hash = Hash(HASHED_NULL_NODE_BYTES);
+pub const NULL_ROOT : Hash = Hash(HASHED_NULL_NODE_BYTES);
 /// Empty node with rlp of null item
 pub const EMPTY_TRIE: &[u8] = &[0x80];
 
@@ -277,13 +277,13 @@ mod tests {
     use memory_db::{MemoryDB, HashKey};
     use crate::types::Hash;
     use hash as core_hash;
-    use super::{TrieDBMut, TrieDB, Blake2Hasher, HASHED_NULL_NODE, EMPTY_TRIE};
+    use super::{TrieDBMut, TrieDB, Blake2Hasher, NULL_ROOT, EMPTY_TRIE};
 
     #[test]
     fn test_trie_mut() {
         // empty item of rlp
         let null_root = Hash(core_hash::blake2b_256(EMPTY_TRIE));
-        assert_eq!(null_root, HASHED_NULL_NODE);
+        assert_eq!(null_root, NULL_ROOT);
         let long_node = vec![1u8;33];
 
         let mut memdb = MemoryDB::<Blake2Hasher, HashKey<_>, DBValue>::new(EMPTY_TRIE);
@@ -291,7 +291,7 @@ mod tests {
         {
             let mut t = TrieDBMut::new(&mut memdb, &mut root);
             assert!(t.is_empty());
-            assert_eq!(*t.root(), HASHED_NULL_NODE);
+            assert_eq!(*t.root(), NULL_ROOT);
             t.insert(b"foo", b"b").unwrap();
             t.insert(b"fog", b"a").unwrap();
         }

@@ -5,11 +5,12 @@ use map_core::balance::Balance;
 use map_core::block::Block;
 use map_core::transaction::Transaction;
 use map_core::types::{Address, Hash};
+use crate::blockchain::BlockChain;
 
 #[derive(Clone)]
 pub struct TxPoolManager {
     txs: HashMap<Hash, Transaction>,
-    state: Arc<RwLock<Balance>>,
+    blockchain: Arc<RwLock<BlockChain>>,
 }
 
 impl TxPoolManager {
@@ -32,16 +33,16 @@ impl TxPoolManager {
         }
     }
 
-    pub fn start(state: Arc<RwLock<Balance>>) -> TxPoolManager {
+    pub fn start(chain: Arc<RwLock<BlockChain>>) -> TxPoolManager {
         TxPoolManager {
             txs: HashMap::new(),
-            state,
+            blockchain: chain,
         }
     }
 
     fn validate_tx(&self, tx: &Transaction) -> Result<(), String> {
-        let account = self.state.read().expect("state lock").get_account(tx.sender);
-        println!("balance {}, nonce {} ", account.get_balance(), account.get_nonce());
+        let chain = self.blockchain.read().unwrap();
+        let account = chain.state_at(chain.current_block().state_root()).get_account(tx.sender);
 
         if account.get_balance() < tx.get_value() {
             return Err(format!("not sufficient funds {}, tx value {}", account.get_balance(), tx.get_value()));
@@ -54,7 +55,8 @@ impl TxPoolManager {
     }
 
     pub fn get_nonce(&self, addr: &Address) -> u64 {
-        let account = self.state.read().expect("state lock").get_account(addr.clone());
+        let chain = self.blockchain.read().unwrap();
+        let account = chain.state_at(chain.current_block().state_root()).get_account(addr.clone());
         account.get_nonce()
     }
 }
