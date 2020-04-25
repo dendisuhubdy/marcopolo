@@ -70,8 +70,14 @@ impl BlockChain {
     }
 
     pub fn load(&mut self) {
-        if self.db.get_block_by_number(0).is_none() {
+        let block_zero = self.get_block_by_number(0);
+        if block_zero.is_none() {
             self.setup_genesis();
+        } else {
+            self.genesis = block_zero.unwrap();
+            let current = self.current_block();
+            info!("load genesis hash={}", self.genesis.hash());
+            info!("load block height={} hash={}", current.height(), current.hash());
         }
     }
 
