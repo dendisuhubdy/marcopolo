@@ -21,6 +21,7 @@ use bincode;
 use hash;
 use crate::types::{Hash, Address};
 use crate::state::{ArchiveDB, StateDB};
+use crate::trie::NULL_ROOT;
 
 const BALANCE_POS: u64 = 1;
 const NONCE_POS: u64 = 2;
@@ -55,7 +56,7 @@ impl Balance {
         Balance {
             cache: HashMap::new(),
             treedb: StateDB::new(backend),
-            root_hash: Hash::default(),
+            root_hash: NULL_ROOT,
         }
     }
 
@@ -206,13 +207,20 @@ impl Balance {
     }
 }
 
+#[cfg(test)]
 mod tests {
-    use super::*;
+    use std::sync::{Arc, RwLock};
+    use env_logger;
+    use map_store::{MemoryKV, KVDB};
+    use super::{Balance, Account};
 
     #[test]
-    fn test_set_account() {
+    fn set_account() {
+        let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
+        let db = ArchiveDB::new(Arc::clone(&backend));
+        let mut state = Balance::new(&db);
+
         let addr = Address::default();
-        let mut state = Balance::new(PathBuf::from("."));
         let mut account = state.load_account(addr);
         assert_eq!(account, Account::default());
 
@@ -226,10 +234,13 @@ mod tests {
     }
 
     #[test]
-    fn test_change_accounts() {
+    fn change_accounts() {
+        let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
+        let db = ArchiveDB::new(Arc::clone(&backend));
+        let mut state = Balance::new(&db);
+
         let from = Address([0; 20]);
         let to = Address([1; 20]);
-        let mut state = Balance::new(PathBuf::from("."));
         state.set_account(from, &Account {
             balance: 1,
             nonce: 1,
@@ -243,8 +254,12 @@ mod tests {
     }
 
     #[test]
-    fn test_transfer() {
-        let mut state = Balance::new(PathBuf::from("."));
+    fn transfer() {
+        env_logger::init();
+        let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
+        let db = ArchiveDB::new(Arc::clone(&backend));
+        let mut state = Balance::new(&db);
+
         let addr = Address::default();
         state.set_account(addr, &Account {
             balance: 1,
@@ -258,9 +273,14 @@ mod tests {
         });
 
         state.transfer(addr, receiver, 1);
-        state.commit();
-        let account = state.load_account(receiver);
-        assert_eq!(account.balance, 1);
-        assert_eq!(state.balance(receiver), 1);
+        let state_root = state.commit();
+
+        {
+            // Reload statedb
+            let state = Balance::from_state(&db, state_root);
+            let account = state.load_account(receiver);
+            assert_eq!(account.balance, 1);
+            assert_eq!(state.balance(receiver), 1);
+        }
     }
 }
