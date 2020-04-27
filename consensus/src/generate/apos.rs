@@ -16,6 +16,7 @@
 
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 use core::block::{self,Block,BlockProof,VerificationItem};
+use core::balance::{Balance};
 use std::collections::HashMap;
 use super::types::{ValidatorItem};
 
@@ -39,13 +40,18 @@ impl APOS {
     pub fn from_genesis(&mut self,genesis: &Block,state: &Balance) {
         let &proofs = genesis.get_proofs();
         let mut vals: Vec<ValidatorItem> = Vec::new();
+        let seed: u64 = 0;
         for proof in proofs {
             vals.push(ValidatorItem{
                 pubkey:         proof.0,
-                stakeAmount:    state.Balance(proof.to_address()),
+                stakeAmount:    state.balance(proof.to_address()),
+                sid:            -1 as i32,
             });
         }
-        self.epochInfos.insert(0,vals);
+        self.epochInfos.insert(0,EpochItem{
+            seed:       seed,
+            validators: vals,
+        });
     }
     pub fn next_epoch(&mut self) {
         self.eid = self.eid + 1
