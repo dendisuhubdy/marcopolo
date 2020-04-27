@@ -1,6 +1,7 @@
 
 extern crate rand;
-pub(crate) use self::apos::APOS;
+// pub(crate) use self::apos::APOS;
+// pub (crate) use self::vrf;
 use errors::{Error,ErrorKind};
 pub(crate) use super::ConsensusErrorKind;
 

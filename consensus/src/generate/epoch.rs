@@ -21,6 +21,10 @@ use std::thread;
 use core::block::{self,Block,BlockProof,VerificationItem};
 use crossbeam_channel::{bounded, select, Receiver, RecvError, Sender};
 use core::types::{Hash};
+use super::apos::APOS;
+use super::vrf;
+use super::ConsensusErrorKind;
+use errors::{Error,ErrorKind};
 
 
 const epoch_length: i32 = 100;
@@ -32,19 +36,19 @@ pub type TypeStopEpoch = Sender<()>;
 struct tmp_blocks {}
 impl tmp_blocks {
     pub fn make_new_block(&self,height: u64,h: Hash) -> Option<Block> {
-        Block::default()
+        Some(Block::default())
     }
     pub fn get_current_Height(&self) -> u64 {
         0
     } 
     pub fn get_hash_by_height(&self,height: u64) -> Option<Hash> {
-        Hash([0u8;32])
+        Some(Hash([0u8;32]))
     }
     pub fn get_sid_from_current_block(&self) -> i32 {
         0
     }
     pub fn get_best_chain(&self,height: u64) -> Option<Block> {
-        Block::default()
+        Some(Block::default())
     }
     pub fn make_seed_in_epoch(&self,eid: u64) -> u64 {
         let (low,hi) = epoch_info::get_height_from_eid(eid);
@@ -60,7 +64,7 @@ impl epoch_info {
         let eid: u64 = h / epoch_length as u64 + 1;
         eid
     }
-    pub fn get_epoch_from_id(sid: i32,cur_eid: i64) -> u64 {
+    pub fn get_epoch_from_id(sid: i32,cur_eid: u64) -> u64 {
         let mut eid = cur_eid;
         if sid >= epoch_length {
             eid = cur_eid + 1
@@ -101,13 +105,13 @@ pub struct EpochProcess {
 }
 
 impl EpochProcess {
-    pub fn new(mid: Pubkey,eid: u64,seed: u64,b: &Arc<RwLock<tmp_blocks>>) -> Self {
+    pub fn new(mid: Pubkey,eid: u64,seed: u64,b: Arc<RwLock<tmp_blocks>>) -> Self {
         EpochProcess{
             myid:           mid,
             cur_eid:        eid,
             cur_seed:       seed,
             slots:          Vec::new(),
-            block_chain:    b,
+            block_chain:    b.clone(),
         }
     }
     pub fn start(mut self,state: &APOS,new_block: &TypeNewBlockEvent,
@@ -124,7 +128,8 @@ impl EpochProcess {
             Err(e) => Err(e),
         }
     }
-    pub fn vrf(seed: u64,eid: u64,sid: u32,validators: &Vec<ValidatorItem>) -> i32 {
+    pub fn make_next_seed() -> u64 {
+        // make next seed from blockchain
         0
     }
     pub fn is_my_produce(&self,sid: i32,state: &APOS) -> bool {
@@ -152,9 +157,12 @@ impl EpochProcess {
     pub fn assign_validator(&mut self,state: &APOS) -> Result<(),Error> {
         if let Some(&vals) = state.get_validators(self.cur_eid){
             self.slots.clear();
-            for i in 0..vals.len() {
+            let mut validators = vals.clone();
+            let seed = self.cur_seed;
+            vrf::assign_valditator_to_slot(&mut validators, seed)?;
+            for (i,v) in validators.iter().enumerate() {
                 self.slots.push(
-                    slot::new(i,EpochProcess::vrf(self.cur_seed,self.cur_eid,i,vals))
+                    slot::new(v.get_sid(),i as u32)
                 );
             }
             Ok(())
@@ -175,7 +183,7 @@ impl EpochProcess {
             let b = self.block_chain
                         .write()
                         .expect("acquiring shared_block_chain write lock")
-                        .make_new_block(c_height,c_hash);
+                        .make_new_block(c_height,c_hash.unwrap());
             // boradcast the block and insert the block
         }
     }
@@ -184,19 +192,18 @@ impl EpochProcess {
         let (stop_epoch_send, stop_epoch_receiver) = bounded::<()>(1);
         let mut walk_pos :i32 = sid;
         let mut thread_builder = thread::Builder::new();
-        thread_builder = thread_builder.name("slot_walk".to_string());
-        let join_handle = thread_builder
-            .spawn(move || loop {
+        // thread_builder = thread_builder.name("slot_walk".to_string());
+        let join_handle = thread_builder.spawn(move || loop {
                 select! {
                     recv(stop_epoch_receiver) -> _ => {
                         break;
                     }
                     recv(new_block) -> msg => {
-                        self.handle_new_block_event(msg,walk_pos,state);
+                        self.handle_new_block_event(msg,&walk_pos,state);
                         walk_pos = walk_pos + 1;
                     },
                     recv(new_interval) -> _ => {
-                        self.handle_new_time_interval_event(walk_pos,state);
+                        self.handle_new_time_interval_event(&walk_pos,state);
                         walk_pos = walk_pos + 1;
                     },
                 }
@@ -219,13 +226,13 @@ impl EpochProcess {
     fn handle_new_block_event(&mut self, msg: Result<Block, RecvError>,sid: &i32,state: &APOS) {
         match msg {
             Ok(b) => {
-                self.slot_handle(sid,state);
+                self.slot_handle(*sid,state);
             },
             Err(e) => println!("insert_block Error: {:?}", e),
         }
     }
     fn handle_new_time_interval_event(&mut self,sid: &i32,state: &APOS) {
-        self.slot_handle(sid,state);
+        self.slot_handle(*sid,state);
     }
 }
 

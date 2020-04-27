@@ -120,6 +120,9 @@ impl ValidatorItem {
     pub fn set_sid(&mut self,i: i32) {
         self.sid = i;
     }
+    pub fn get_sid(&self) -> i32 {
+        self.sid
+    }
 }
 impl From<ValidatorItem> for Pubkey {
     fn from(v: ValidatorItem) -> Self {
