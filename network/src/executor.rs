@@ -4,7 +4,7 @@ use std::sync::{Arc, RwLock};
 use futures::{future, Future, Stream};
 use futures::prelude::*;
 use libp2p::{
-    gossipsub::{Topic, TopicHash},
+    gossipsub::{Topic, TopicHash,MessageId},
 };
 use parking_lot::Mutex;
 use slog::{debug, Drain, info, o, warn};
@@ -13,20 +13,23 @@ use tokio::runtime::TaskExecutor;
 use tokio::sync::{mpsc, oneshot};
 
 use chain::blockchain::BlockChain;
+use map_core::block::Block;
 use map_core::types::Hash;
 
 use crate::{
-    {behaviour::{Behaviour, BehaviourEvent}
+    {behaviour::{Behaviour, BehaviourEvent, PubsubMessage}
     },
+    GossipTopic,
     handler::{Libp2pEvent, Service},
     NetworkConfig,
+    PeerId,
 };
 use crate::error;
 
 pub struct NetworkExecutor {
     service: Arc<Mutex<Service>>,
     pub exit_signal: oneshot::Sender<i32>,
-    pub network_send: mpsc::UnboundedSender<NetworkMessage>,
+    network_send: mpsc::UnboundedSender<NetworkMessage>,
     log: slog::Logger,
 }
 
@@ -60,11 +63,14 @@ impl NetworkExecutor {
         Ok(network_service)
     }
 
-    pub fn gossip(&mut self, topic: String, data: Vec<u8>) {
+    pub fn gossip(&mut self, data: Block) {
+        // create the network topic to send on
+        let topic = GossipTopic::MapBlock;
+        let message = PubsubMessage::Block(bincode::serialize(&data).unwrap());
         self.network_send
             .try_send(NetworkMessage::Publish {
-                topics: vec![Topic::new(topic)],
-                message: data,
+                topics: vec![topic.into()],
+                message,
             })
             .unwrap_or_else(|_| warn!(self.log, "Could not send gossip message."));
     }
@@ -112,7 +118,7 @@ fn network_service(
                 Ok(Async::Ready(Some(message))) => match message {
                     NetworkMessage::Publish { topics, message } => {
                         debug!(log, "Sending pubsub message"; "topics" => format!("{:?}",topics));
-                        libp2p_service.lock().swarm.publish(topics, message.clone());
+                        libp2p_service.lock().swarm.publish(&topics, message.clone());
                     }
                     NetworkMessage::HandShake(_) => {}
                 },
@@ -131,15 +137,12 @@ fn network_service(
             match libp2p_service.lock().poll() {
                 Ok(Async::Ready(Some(event))) => match event {
                     Libp2pEvent::PubsubMessage {
+                        id,
                         source,
                         message,
+                        ..
                     } => {
-                        debug!(log, "Gossip message received: {:?}", message);
-                        //-----------------------------------------  block chain;
-                    }
-                    Libp2pEvent::ImportBlock(peer_id, event) => {
-                        //debug!(self.log,"Received P2P message from: {:?}", peer_id);
-                        debug!(log, "Peer ImportBlock received: {:?}", peer_id);
+                        handle_gossip(id, source, message, block_chain.clone(), libp2p_service.clone(),log.clone());
                     }
                     Libp2pEvent::PeerDialed(peer_id) => {
                         debug!(log, "Peer Dialed: {:?}", peer_id);
@@ -158,6 +161,31 @@ fn network_service(
     })
 }
 
+/// Handle RPC messages
+fn handle_gossip(id: MessageId, peer_id: PeerId, gossip_message: PubsubMessage, block_chain: Arc<RwLock<BlockChain>>,
+                 libp2p_service: Arc<Mutex<Service>>, log :slog::Logger) {
+    match gossip_message {
+        PubsubMessage::Block(message) => match bincode::deserialize(&message[..]) {
+            Ok(block) => {
+                debug!(log, "Gossip message received: {:?}", block);
+                match block_chain.write().expect("").insert_block(block) {
+                    Ok(_) => {
+                        libp2p_service.lock().swarm.propagate_message(&peer_id, id);
+                    },
+                    Err(e) => println!("network insert_block,Error: {:?}", e),
+                }
+            }
+            Err(e) => {
+                debug!(log, "Invalid gossiped block"; "peer_id" => format!("{}", peer_id), "Error" => format!("{:?}", e));
+            }
+        },
+        PubsubMessage::Unknown(message) => {
+            // Received a message from an unknown topic. Ignore for now
+            debug!(log, "Unknown Gossip Message"; "peer_id" => format!("{}", peer_id), "Message" => format!("{:?}", message));
+        }
+    }
+}
+
 //Future<Item=Foo, Error=Bar>
 //Future<Output=Result<Foo, Bar>>
 /// Types of messages that the network Network can receive.
@@ -167,7 +195,7 @@ pub enum NetworkMessage {
     /// Publish a message to pubsub mechanism.
     Publish {
         topics: Vec<Topic>,
-        message: Vec<u8>,
+        message: PubsubMessage,
     },
 }
 

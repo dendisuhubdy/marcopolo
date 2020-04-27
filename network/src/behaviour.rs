@@ -6,7 +6,7 @@ use std::time::Duration;
 use futures::prelude::*;
 use libp2p::{
     core::identity::Keypair,
-    gossipsub::{Gossipsub, GossipsubConfig, GossipsubConfigBuilder, GossipsubEvent, GossipsubMessage},
+    gossipsub::{Gossipsub, GossipsubConfig, GossipsubConfigBuilder, GossipsubEvent, GossipsubMessage, MessageId},
     identify::{Identify, IdentifyEvent},
     kad::{GetClosestPeersError, Kademlia, KademliaConfig, KademliaEvent},
     kad::record::store::MemoryStore,
@@ -19,10 +19,10 @@ use libp2p::{
 };
 use slog::{debug, o};
 
-use map_core::block::Block;
-
 use crate::{error, NetworkConfig};
-use crate::{Topic, TopicHash};
+use crate::{GossipTopic, Topic, TopicHash};
+use lru::LruCache;
+use sha2::{Digest, Sha256};
 
 const MAX_IDENTIFY_ADDRESSES: usize = 20;
 
@@ -48,6 +48,10 @@ pub struct Behaviour<TSubstream: AsyncRead + AsyncWrite> {
     log: slog::Logger,
     #[behaviour(ignore)]
     pub peers: HashMap<PeerId, Multiaddr>,
+    /// A cache of recently seen gossip messages. This is used to filter out any possible
+    /// duplicates that may still be seen over gossipsub.
+    #[behaviour(ignore)]
+    seen_gossip_messages: LruCache<MessageId, ()>,
 }
 
 impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
@@ -78,9 +82,21 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
         let kademlia = Kademlia::with_config(local_peer_id.clone(), store, cfg);
         // behaviour.add_address(&"QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ".parse().unwrap(), "/ip4/104.131.131.82/tcp/4001".parse().unwrap());
 
+        // The function used to generate a gossipsub message id
+        // We use base64(SHA256(data)) for content addressing
+        let gossip_message_id = |message: &GossipsubMessage| {
+            MessageId(base64::encode_config(
+                &Sha256::digest(&message.data),
+                base64::URL_SAFE,
+            ))
+        };
+
         Ok(Behaviour {
             gossipsub: Gossipsub::new(local_peer_id, GossipsubConfigBuilder::new()
                 .max_transmit_size(1_048_576)
+                .manual_propagation() // require validation before propagation
+                .no_source_id()
+                .message_id_fn(gossip_message_id)
                 .heartbeat_interval(Duration::from_secs(20))
                 .build()),
             ping: Ping::new(ping_config),
@@ -90,6 +106,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
             events: Vec::new(),
             log: behaviour_log,
             peers: Default::default(),
+            seen_gossip_messages: LruCache::new(100_000),
         })
     }
 }
@@ -99,15 +116,25 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<GossipsubE
 for Behaviour<TSubstream>
 {
     fn inject_event(&mut self, event: GossipsubEvent) {
-        println!("GossipsubEvent inject_event{:?}", event);
         match event {
-            GossipsubEvent::Message(peer_id, _msg_id, gs_msg) => {
-                //debug!(self.log, "Received GossipEvent"; "msg" => format!("{:?}", gs_msg));
-                self.events.push(BehaviourEvent::PubsubMessage {
-                    source: peer_id,
-                    message: gs_msg,
-                });
+            GossipsubEvent::Message(propagation_source, id, gs_msg) => {
+                let msg = PubsubMessage::from_topics(&gs_msg.topics, gs_msg.data);
+
+                // Note: We are keeping track here of the peer that sent us the message, not the
+                // peer that originally published the message.
+                if self.seen_gossip_messages.put(id.clone(), ()).is_none() {
+                    // if this message isn't a duplicate, notify the network
+                    self.events.push(BehaviourEvent::GossipMessage {
+                        id,
+                        source: propagation_source,
+                        topics: gs_msg.topics,
+                        message: msg,
+                    });
+                } else {
+                    debug!(self.log, "A duplicate message was received"; "message" => format!("{:?}", msg));
+                }
             }
+
             GossipsubEvent::Subscribed { peer_id, topic } => {
                 println!(
                     "gossipsub: peer_id {} topic {:?}",
@@ -161,7 +188,6 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<MdnsEvent>
 for Behaviour<TSubstream>
 {
     fn inject_event(&mut self, event: MdnsEvent) {
-        println!("inject_event MdnsEvent  {:?}", event);
         match event {
             MdnsEvent::Discovered(list) => {
                 for (peer_id, multiaddr) in list {
@@ -269,9 +295,10 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
     }
 
     /// Publishes a message on the pubsub (gossipsub) behaviour.
-    pub fn publish(&mut self, topics: Vec<Topic>, message: Vec<u8>) {
+    pub fn publish(&mut self, topics: &[Topic], message: PubsubMessage) {
+        let message_data = message.into_data();
         for topic in topics {
-            self.gossipsub.publish(&topic, message.clone());
+            self.gossipsub.publish(topic, message_data.clone());
         }
     }
 
@@ -280,15 +307,64 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
         println!("Searching for the closest peers to {:?}", to_search);
         self.kademlia.get_closest_peers(to_search);
     }
+
+    /// Forwards a message that is waiting in gossipsub's mcache. Messages are only propagated
+/// once validated by the beacon chain.
+    pub fn propagate_message(&mut self, propagation_source: &PeerId, message_id: MessageId) {
+        self.gossipsub
+            .propagate_message(&message_id, propagation_source);
+    }
 }
 
 /// The types of events than can be obtained from polling the behaviour.
 pub enum BehaviourEvent {
-    ImportBlock(PeerId, Block),
     PeerDialed(PeerId),
     PeerDisconnected(PeerId),
-    PubsubMessage {
+    /// A gossipsub message has been received.
+    GossipMessage {
+        /// The gossipsub message id. Used when propagating blocks after validation.
+        id: MessageId,
+        /// The peer from which we received this message, not the peer that published it.
         source: PeerId,
-        message: GossipsubMessage,
+        /// The topics that this message was sent on.
+        topics: Vec<TopicHash>,
+        /// The message itself.
+        message: PubsubMessage,
     },
+}
+
+/// Messages that are passed to and from the pubsub (Gossipsub) behaviour. These are encoded and
+/// decoded upstream.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum PubsubMessage {
+    /// Gossipsub message providing notification of a new block.
+    Block(Vec<u8>),
+    /// Gossipsub message from an unknown topic.
+    Unknown(Vec<u8>),
+}
+
+impl PubsubMessage {
+    /* Note: This is assuming we are not hashing topics. If we choose to hash topics, these will
+     * need to be modified.
+     *
+     * Also note that a message can be associated with many topics. As soon as one of the topics is
+     * known we match. If none of the topics are known we return an unknown state.
+     */
+    fn from_topics(topics: &[TopicHash], data: Vec<u8>) -> Self {
+        for topic in topics {
+            match GossipTopic::from(topic.as_str()) {
+                GossipTopic::MapBlock => return PubsubMessage::Block(data),
+                GossipTopic::Shard => return PubsubMessage::Unknown(data),
+                GossipTopic::Unknown(_) => continue,
+            }
+        }
+        PubsubMessage::Unknown(data)
+    }
+
+    fn into_data(self) -> Vec<u8> {
+        match self {
+            PubsubMessage::Block(data)
+            | PubsubMessage::Unknown(data) => data,
+        }
+    }
 }

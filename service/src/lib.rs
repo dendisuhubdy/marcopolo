@@ -94,7 +94,7 @@ impl Service {
 
         let mut config = NetworkConfig::new();
         config.update_network_cfg(cfg.data_dir, cfg.dial_addrs, cfg.p2p_port).unwrap();
-        let network = network_executor::NetworkExecutor::new(config.clone(), network_block_chain).expect("Network start error");
+        let mut network = network_executor::NetworkExecutor::new(config.clone(), network_block_chain).expect("Network start error");
 
         let rpc = http_server::start_http(http_server::RpcConfig {
             rpc_addr: cfg.rpc_addr,
@@ -113,9 +113,11 @@ impl Service {
                         if let Err(e) = shared_block_chain
                             .write()
                             .expect("acquiring shared_block_chain write lock")
-                            .insert_block(b) {
+                            .insert_block(b.clone()) {
                                 error!("insert_block Error: {:?}", e);
-                            }
+                            } else {
+                            network.gossip(b);
+                        }
                     },
                     Err(e) => error!("generate_block,Error: {:?}", e),
                 };

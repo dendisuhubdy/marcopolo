@@ -4,17 +4,17 @@ use std::time::Duration;
 
 use futures::prelude::*;
 use futures::Stream;
-use libp2p::{gossipsub::{GossipsubMessage, Topic, TopicHash}, multiaddr::Protocol, PeerId, Swarm};
+use libp2p::{gossipsub::{GossipsubMessage, Topic, TopicHash,MessageId}, multiaddr::Protocol, PeerId, Swarm};
 use libp2p::core::{
     muxing::StreamMuxerBox,
     nodes::Substream,
     transport::boxed::Boxed,
 };
-use slog::{debug, info, warn};
+use slog::{debug, info, warn,trace};
 
 use map_core::{block::Block, transaction::Transaction};
 
-use crate::{behaviour::{Behaviour, BehaviourEvent}, config, executor::NetworkMessage, NetworkConfig, transport};
+use crate::{behaviour::{Behaviour, BehaviourEvent, PubsubMessage}, config, executor::NetworkMessage, GossipTopic, NetworkConfig, transport};
 use crate::error;
 
 type Libp2pStream = Boxed<(PeerId, StreamMuxerBox), Error>;
@@ -68,17 +68,21 @@ impl Service {
         }
 
         // subscribe to default gossipsub topics
-        let topics = vec![Topic::new("map".to_string())];
+        let topics = vec![
+            GossipTopic::MapBlock,
+        ];
 
-        let mut subscribed_topics = vec![];
+        let mut subscribed_topics: Vec<String> = vec![];
         for topic in topics {
-            if swarm.subscribe(topic.clone()) {
-                subscribed_topics.push(topic);
+            let raw_topic: Topic = topic.into();
+            let topic_string = raw_topic.no_hash();
+            if swarm.subscribe(raw_topic.clone()) {
+                subscribed_topics.push(topic_string.as_str().into());
             } else {
-                warn!(log, "Could not subscribe to topic: {:?}", topic)
+                warn!(log, "Could not subscribe to topic"; "topic" => format!("{}",topic_string));
             }
         }
-        info!(log, "Subscribed to topics"; "topics" => format!("{:?}", subscribed_topics.iter().map(|t| format!("{}", t)).collect::<Vec<String>>()));
+        info!(log, "Subscribed to topics"; "topics" => format!("{:?}", subscribed_topics));
 
         if let Some(a) = Swarm::listeners(&swarm).next() {
             println!("Listening on {:?}", a);
@@ -100,18 +104,18 @@ impl Stream for Service {
             match self.swarm.poll() {
                 //Behaviour events
                 Ok(Async::Ready(Some(event))) => match event {
-                    BehaviourEvent::PubsubMessage {
+                    BehaviourEvent::GossipMessage {
+                        id,
                         source,
+                        topics,
                         message,
                     } => {
-                        //debug!(self.log, "Gossipsub message received"; "Message" => format!("{:?}", topics[0]));
                         return Ok(Async::Ready(Some(Libp2pEvent::PubsubMessage {
+                            id,
                             source,
+                            topics,
                             message,
                         })));
-                    }
-                    BehaviourEvent::ImportBlock(peer_id, book) => {
-                        return Ok(Async::Ready(Some(Libp2pEvent::ImportBlock(peer_id, book))));
                     }
                     BehaviourEvent::PeerDialed(peer_id) => {
                         return Ok(Async::Ready(Some(Libp2pEvent::PeerDialed(peer_id))));
@@ -134,15 +138,15 @@ impl Stream for Service {
 /// Events that can be obtained from polling the Libp2p Service.
 #[derive(Debug)]
 pub enum Libp2pEvent {
-    /// An P2P response request has been received on the swarm.
-    ImportBlock(PeerId, Block),
     /// Initiated the connection to a new peer.
     PeerDialed(PeerId),
     /// A peer has disconnected.
     PeerDisconnected(PeerId),
     /// Received pubsub message.
     PubsubMessage {
+        id: MessageId,
         source: PeerId,
-        message: GossipsubMessage,
+        topics: Vec<TopicHash>,
+        message: PubsubMessage,
     },
 }
