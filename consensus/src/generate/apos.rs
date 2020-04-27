@@ -65,8 +65,8 @@ impl APOS {
     pub fn get_validator(&self, index: i32,eid: u64) -> Option<ValidatorItem> {
         match self.get_epoch_info(eid) {
             Some(items)  =>{
-                if items.validators.len() > index {
-                    Some(items.validators[index].clone())
+                if items.validators.len() > index as usize{
+                    Some(items.validators[index as usize].clone())
                 } else {
                     None
                 }

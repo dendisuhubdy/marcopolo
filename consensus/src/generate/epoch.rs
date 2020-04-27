@@ -114,8 +114,8 @@ impl EpochProcess {
             block_chain:    b.clone(),
         }
     }
-    pub fn start(mut self,state: &APOS,new_block: &TypeNewBlockEvent,
-        new_interval: &TypeNewTimerIntervalEvent) -> Result<TypeStopEpoch,Error> {
+    pub fn start(mut self,state: &APOS,new_block: TypeNewBlockEvent,
+        new_interval: TypeNewTimerIntervalEvent) -> Result<TypeStopEpoch,Error> {
         // setup validators
         match self.assign_validator(state) {
             Ok(()) => {
@@ -170,7 +170,7 @@ impl EpochProcess {
             Err(ConsensusErrorKind::NotMatchEpochID.into())
         } 
     }
-    pub fn slot_handle(&mut self,sid: i32,state: &APOS) {
+    pub fn slot_handle(&mut self,sid: i32,state: APOS) {
         if self.is_my_produce(sid,state) {
            let c_height = self.block_chain
                               .read()
@@ -187,8 +187,8 @@ impl EpochProcess {
             // boradcast the block and insert the block
         }
     }
-    pub fn start_slot_walk_in_epoch(mut self,sid: i32,new_block: &TypeNewBlockEvent,
-        new_interval: &TypeNewTimerIntervalEvent,state: &APOS) -> TypeStopEpoch {
+    pub fn start_slot_walk_in_epoch(mut self,sid: i32,new_block: TypeNewBlockEvent,
+        new_interval: TypeNewTimerIntervalEvent,state: &APOS) -> TypeStopEpoch {
         let (stop_epoch_send, stop_epoch_receiver) = bounded::<()>(1);
         let mut walk_pos :i32 = sid;
         let mut thread_builder = thread::Builder::new();
@@ -236,3 +236,13 @@ impl EpochProcess {
     }
 }
 
+
+
+#[cfg(test)]
+pub mod tests {
+    
+    #[test]
+    fn make_epoch() {
+
+    }
+}
