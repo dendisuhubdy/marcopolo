@@ -21,7 +21,7 @@ use std::collections::HashMap;
 use super::types::{ValidatorItem};
 
 #[derive(Debug, Clone)]
-struct EpochItem {
+pub struct EpochItem {
     seed: u64,
     validators: Vec<ValidatorItem>,    
 }
@@ -38,7 +38,7 @@ impl APOS {
         }
     }
     pub fn from_genesis(&mut self,genesis: &Block,state: &Balance) {
-        let &proofs = genesis.get_proofs();
+        let proofs = genesis.get_proofs();
         let mut vals: Vec<ValidatorItem> = Vec::new();
         let seed: u64 = 0;
         for proof in proofs {
@@ -74,10 +74,10 @@ impl APOS {
             None => None,
         } 
     }
-    pub fn get_validators(&self, eid: u64) -> Option<&Vec<ValidatorItem>> {
+    pub fn get_validators(&self, eid: u64) -> Option<Vec<ValidatorItem>> {
         match self.get_epoch_info(eid) {
             Some(items) => {
-                Some(&items.validators)
+                Some(items.validators)
             },
             None => None,
         }

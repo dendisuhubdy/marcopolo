@@ -112,9 +112,9 @@ impl ftsResult {
 
 #[derive(Debug, Clone)]
 pub struct ValidatorItem {
-    pubkey: [u8;32],
-    stakeAmount: u128,
-    sid:        i32,
+    pub pubkey: [u8;32],
+    pub stakeAmount: u128,
+    pub sid:        i32,
 }
 impl ValidatorItem {
     pub fn set_sid(&mut self,i: i32) {

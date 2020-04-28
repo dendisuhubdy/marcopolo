@@ -33,7 +33,7 @@ type TypeNewTimerIntervalEvent = Receiver<()>;
 pub type TypeStopEpoch = Sender<()>;
 
 // block header has the pair of the (sid,height)
-struct tmp_blocks {}
+pub struct tmp_blocks {}
 impl tmp_blocks {
     pub fn make_new_block(&self,height: u64,h: Hash) -> Option<Block> {
         Some(Block::default())
@@ -114,16 +114,16 @@ impl EpochProcess {
             block_chain:    b.clone(),
         }
     }
-    pub fn start(mut self,state: &APOS,new_block: TypeNewBlockEvent,
+    pub fn start(mut self,state: Arc<RwLock<APOS>>,new_block: TypeNewBlockEvent,
         new_interval: TypeNewTimerIntervalEvent) -> Result<TypeStopEpoch,Error> {
         // setup validators
-        match self.assign_validator(state) {
+        match self.assign_validator(state.clone()) {
             Ok(()) => {
                 let sid = self.block_chain
                               .read()
                               .expect("acquiring shared_block_chain read lock")
                               .get_sid_from_current_block();
-                Ok(self.start_slot_walk_in_epoch(sid,new_block, new_interval, state))
+                Ok(self.start_slot_walk_in_epoch(sid,new_block, new_interval, state.clone()))
             },
             Err(e) => Err(e),
         }
@@ -132,17 +132,19 @@ impl EpochProcess {
         // make next seed from blockchain
         0
     }
-    pub fn is_my_produce(&self,sid: i32,state: &APOS) -> bool {
-        if let Some(item) = state.get_validator(sid,self.cur_eid) {
+    pub fn is_my_produce(&self,sid: i32,state: Arc<RwLock<APOS>>) -> bool {
+        if let Some(item) = state.read()
+        .expect("acquiring apos read lock")
+        .get_validator(sid,self.cur_eid) {
             self.myid.equal(&item.into())
         } else {
             false
         }
     }
     pub fn get_my_pk(&self) -> Option<Pubkey> {
-        Some(self.myid)
+        Some(self.myid.clone())
     }
-    pub fn next_epoch(&mut self,sid: i32,state: &APOS) -> Result<bool,Error> {
+    pub fn next_epoch(&mut self,sid: i32,state: Arc<RwLock<APOS>>) -> Result<bool,Error> {
         let next_eid = epoch_info::get_epoch_from_id(sid,self.cur_eid);
         if next_eid == self.cur_eid + 1 {
             self.cur_eid = next_eid;
@@ -154,10 +156,12 @@ impl EpochProcess {
             Ok(false)
         }
     }
-    pub fn assign_validator(&mut self,state: &APOS) -> Result<(),Error> {
-        if let Some(&vals) = state.get_validators(self.cur_eid){
+    pub fn assign_validator(&mut self,state: Arc<RwLock<APOS>>) -> Result<(),Error> {
+        if let Some(vals) = state.read()
+        .expect("acquiring apos read lock")
+        .get_validators(self.cur_eid){
             self.slots.clear();
-            let mut validators = vals.clone();
+            let mut validators = vals;
             let seed = self.cur_seed;
             vrf::assign_valditator_to_slot(&mut validators, seed)?;
             for (i,v) in validators.iter().enumerate() {
@@ -170,7 +174,7 @@ impl EpochProcess {
             Err(ConsensusErrorKind::NotMatchEpochID.into())
         } 
     }
-    pub fn slot_handle(&mut self,sid: i32,state: APOS) {
+    pub fn slot_handle(&mut self,sid: i32,state: Arc<RwLock<APOS>>) {
         if self.is_my_produce(sid,state) {
            let c_height = self.block_chain
                               .read()
@@ -188,7 +192,7 @@ impl EpochProcess {
         }
     }
     pub fn start_slot_walk_in_epoch(mut self,sid: i32,new_block: TypeNewBlockEvent,
-        new_interval: TypeNewTimerIntervalEvent,state: &APOS) -> TypeStopEpoch {
+        new_interval: TypeNewTimerIntervalEvent,state: Arc<RwLock<APOS>>) -> TypeStopEpoch {
         let (stop_epoch_send, stop_epoch_receiver) = bounded::<()>(1);
         let mut walk_pos :i32 = sid;
         let mut thread_builder = thread::Builder::new();
@@ -199,16 +203,16 @@ impl EpochProcess {
                         break;
                     }
                     recv(new_block) -> msg => {
-                        self.handle_new_block_event(msg,&walk_pos,state);
+                        self.handle_new_block_event(msg,&walk_pos,state.clone());
                         walk_pos = walk_pos + 1;
                     },
                     recv(new_interval) -> _ => {
-                        self.handle_new_time_interval_event(&walk_pos,state);
+                        self.handle_new_time_interval_event(&walk_pos,state.clone());
                         walk_pos = walk_pos + 1;
                     },
                 }
                 // new epoch 
-                match self.next_epoch(walk_pos,state) {
+                match self.next_epoch(walk_pos,state.clone()) {
                     Err(e) => {
                         println!("start_slot_walk_in_epoch is quit,cause next epoch is err:{:?}",e);
                         return ;
@@ -223,7 +227,7 @@ impl EpochProcess {
             .expect("Start slot_walk failed");  
         stop_epoch_send
     }
-    fn handle_new_block_event(&mut self, msg: Result<Block, RecvError>,sid: &i32,state: &APOS) {
+    fn handle_new_block_event(&mut self, msg: Result<Block, RecvError>,sid: &i32,state: Arc<RwLock<APOS>>) {
         match msg {
             Ok(b) => {
                 self.slot_handle(*sid,state);
@@ -231,7 +235,7 @@ impl EpochProcess {
             Err(e) => println!("insert_block Error: {:?}", e),
         }
     }
-    fn handle_new_time_interval_event(&mut self,sid: &i32,state: &APOS) {
+    fn handle_new_time_interval_event(&mut self,sid: &i32,state: Arc<RwLock<APOS>>) {
         self.slot_handle(*sid,state);
     }
 }
