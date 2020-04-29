@@ -24,6 +24,7 @@ pub use ed25519::H256;
 use hash;
 
 pub const chain_id: u32 = 1;
+
 #[derive(Default, Copy, Clone, Eq, Ord, PartialEq, PartialOrd, Hash)]
 pub struct Hash(pub [u8; 32]);
 

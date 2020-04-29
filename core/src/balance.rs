@@ -15,7 +15,6 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
 use bincode;
 use hash;
@@ -212,6 +211,8 @@ mod tests {
     use std::sync::{Arc, RwLock};
     use env_logger;
     use map_store::{MemoryKV, KVDB};
+    use crate::types::Address;
+    use crate::state::ArchiveDB;
     use super::{Balance, Account};
 
     #[test]

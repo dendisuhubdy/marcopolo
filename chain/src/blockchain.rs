@@ -23,6 +23,7 @@ use map_core;
 use map_core::block::{Block, Header};
 use map_core::types::Hash;
 use map_core::genesis;
+#[allow(unused_imports)]
 use map_core::state::{ArchiveDB, StateDB};
 use map_core::balance::Balance;
 use map_consensus::poa;

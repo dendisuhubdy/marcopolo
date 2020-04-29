@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use bytes::Bytes;
 use jsonrpc_core::Result;
 use jsonrpc_derive::rpc;
+use bincode;
 
 use chain::tx_pool::TxPoolManager;
 use ed25519::{privkey::PrivKey};
-use map_core::transaction::Transaction;
+use map_core::transaction::{Transaction, balance_msg};
 use map_core::types::Address;
 
 /// AccountManager rpc interface.
@@ -69,9 +69,9 @@ impl AccountManager for AccountManagerImpl {
         };
 
         let nonce = self.tx_pool.read().expect("acquiring tx pool read lock").get_nonce(&from);
+        let input: Vec<u8> = bincode::serialize(&balance_msg::Transfer{value: value}).unwrap();
 
-        let b = Bytes::new();
-        let mut tx = Transaction::new(from, to, nonce + 1, 1000, 1000, value, b);
+        let mut tx = Transaction::new(from, to, nonce + 1, 1000, 1000, [0; 4], input);
 
         tx.sign(&priv_key.to_bytes()).expect("sign ok");
         self.tx_pool.write().expect("acquiring tx pool write lock").submit_txs(tx.clone());
