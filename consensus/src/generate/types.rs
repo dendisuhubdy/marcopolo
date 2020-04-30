@@ -18,6 +18,27 @@ use core::types::{Hash,Address};
 use ed25519::{pubkey::Pubkey};
 
 #[derive(Debug, Clone)]
+pub struct P256PK (pub u8,pub [u8;32]);
+
+impl Default for P256PK {
+    fn default() -> Self {
+        Self(0,[0u8;32])
+    }
+}
+impl P256PK {
+    pub fn to_bytes(&self,a: &mut[u8]) {
+        a[0] = self.0;
+        a[1..].copy_from_slice(&self.1[..]);
+    }
+    pub fn from_bytes(c: &[u8]) -> Self {
+        let mut b = [0u8;32];
+        let a = c[0];
+        b[..].copy_from_slice(&c[1..]);
+        Self(a,b)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Stakeholder {
     pub name:   String,
     pub coins:  u128,
@@ -113,6 +134,7 @@ impl ftsResult {
 #[derive(Debug, Clone)]
 pub struct ValidatorItem {
     pub pubkey: [u8;32],
+    pub seedVerifyPk: P256PK,
     pub stakeAmount: u128,
     pub sid:        i32,
 }
@@ -135,6 +157,21 @@ impl From<ValidatorItem> for Stakeholder {
             name:   String::from_utf8_lossy(&v.pubkey[..4]).to_string(),
             coins:  v.stakeAmount,
             index:  -1 as i32,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct LockItem {
+    key1:   [u8;32],        // for sign message
+    key2:   [u8;32],        // for decrypted the seed message
+}
+
+impl Default for LockItem {
+    fn default() -> Self {
+        Self{
+            key1:   [0u8;32],
+            key2:   [0u8;32],
         }
     }
 }

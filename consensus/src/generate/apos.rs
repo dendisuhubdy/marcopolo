@@ -18,15 +18,17 @@ use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 use core::block::{self,Block,BlockProof,VerificationItem};
 use core::balance::{Balance};
 use std::collections::HashMap;
-use super::types::{ValidatorItem};
+use super::types::{ValidatorItem,LockItem,P256PK};
 
 #[derive(Debug, Clone)]
 pub struct EpochItem {
     seed: u64,
     validators: Vec<ValidatorItem>,    
 }
+
 pub struct APOS {
     epochInfos: HashMap<u64,EpochItem>,
+    lInfo:  LockItem,    
     eid: u64,
 }
 
@@ -34,6 +36,7 @@ impl APOS {
     pub fn new() -> Self {
         APOS{
             epochInfos: HashMap::default(),
+            lInfo:      LockItem::default(),
             eid: 0,
         }
     }
@@ -46,6 +49,7 @@ impl APOS {
                 pubkey:         proof.0,
                 stakeAmount:    state.balance(proof.to_address()),
                 sid:            -1 as i32,
+                seedVerifyPk:   P256PK::default(),
             });
         }
         self.epochInfos.insert(0,EpochItem{

@@ -27,7 +27,7 @@ use errors::{Error,ErrorKind};
 
 pub mod poa;
 pub mod traits;
-
+pub mod generate;
 //////////////////////////////////////////////////////////////////
 #[derive(Debug)]
 pub struct ConsensusError {
@@ -40,6 +40,7 @@ pub enum ConsensusErrorKind {
     AnotherPk,
     InvalidProof,
     InvalidKey,
+    NotMatchEpochID,
 }
 
 impl fmt::Display for ConsensusError {

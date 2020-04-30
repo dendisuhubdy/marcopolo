@@ -33,7 +33,9 @@ type TypeNewTimerIntervalEvent = Receiver<()>;
 pub type TypeStopEpoch = Sender<()>;
 
 // block header has the pair of the (sid,height)
-pub struct tmp_blocks {}
+pub struct tmp_blocks {
+    
+}
 impl tmp_blocks {
     pub fn make_new_block(&self,height: u64,h: Hash) -> Option<Block> {
         Some(Block::default())

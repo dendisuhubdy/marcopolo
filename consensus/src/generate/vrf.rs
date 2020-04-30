@@ -290,4 +290,12 @@ pub mod tests {
         let h = make_hash(&data[..]);
         println!("Hash:{:?},len:{}",h,h.0.len());
     }
+    fn all_ones(num: u64) -> bool {
+        num != 0 && num.count_zeros() == num.leading_zeros()
+    }
+    #[test]
+    fn testBits5() {
+        let v: u64 = 55;
+        println!("count_zeros:{:?},leading_zeros:{}",v.count_zeros(),v.leading_zeros());
+    }
 }
