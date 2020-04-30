@@ -1,5 +1,6 @@
 
 extern crate rand;
+extern crate pvss;
 // pub(crate) use self::apos::APOS;
 // pub (crate) use self::vrf;
 use errors::{Error,ErrorKind};

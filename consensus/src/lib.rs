@@ -27,7 +27,9 @@ use errors::{Error,ErrorKind};
 
 pub mod poa;
 pub mod traits;
-pub mod generate;
+// pub mod generate;
+
+const os_seed_share_count: i32 = 10;
 //////////////////////////////////////////////////////////////////
 #[derive(Debug)]
 pub struct ConsensusError {
@@ -41,6 +43,8 @@ pub enum ConsensusErrorKind {
     InvalidProof,
     InvalidKey,
     NotMatchEpochID,
+    NoValidatorsInEpoch,
+    EncryptedShareMsgError,
 }
 
 impl fmt::Display for ConsensusError {

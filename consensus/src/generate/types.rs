@@ -15,10 +15,11 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use core::types::{Hash,Address};
-use ed25519::{pubkey::Pubkey};
+use ed25519::{pubkey::Pubkey,privkey::PrivKey};
 
 #[derive(Debug, Clone)]
 pub struct P256PK (pub u8,pub [u8;32]);
+pub type seed_open = P256PK;
 
 impl Default for P256PK {
     fn default() -> Self {
@@ -26,6 +27,11 @@ impl Default for P256PK {
     }
 }
 impl P256PK {
+    pub fn new(a: u8,b: [u8]) -> Self {
+        let mut c = [0u8;32];
+        c[..].copy_from_slice(&b[..])
+        Self(a,c)
+    }
     pub fn to_bytes(&self,a: &mut[u8]) {
         a[0] = self.0;
         a[1..].copy_from_slice(&self.1[..]);
@@ -145,6 +151,9 @@ impl ValidatorItem {
     pub fn get_sid(&self) -> i32 {
         self.sid
     }
+    pub fn get_seed_puk(&self) -> P256PK {
+        self.seedVerifyPk
+    }
 }
 impl From<ValidatorItem> for Pubkey {
     fn from(v: ValidatorItem) -> Self {
@@ -172,6 +181,29 @@ impl Default for LockItem {
         Self{
             key1:   [0u8;32],
             key2:   [0u8;32],
+        }
+    }
+}
+impl From<LockItem> for PrivKey {
+    fn from(v: LockItem) -> Self {
+        PrivKey::from_bytes(&v.key1)
+    }
+}
+impl From<LockItem> for pvss::crypto::PrivateKey {
+    fn from(v: LockItem) -> Self {
+        pvss::crypto::PrivateKey::from_bytes(&v.key2)
+    }
+}
+
+pub struct seed_info {
+    pub msg:    seed_open,
+    pub shares: Vec<pvss::simple::EncryptedShare>
+}
+impl seed_info {
+    pub fn new(s: seed_open,shs: &Vec<pvss::simple::EncryptedShare>) -> Self {
+        Self{
+            msg:    msg,
+            shares: shs,
         }
     }
 }

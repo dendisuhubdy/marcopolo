@@ -18,7 +18,7 @@ use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 use core::block::{self,Block,BlockProof,VerificationItem};
 use core::balance::{Balance};
 use std::collections::HashMap;
-use super::types::{ValidatorItem,LockItem,P256PK};
+use super::types::{ValidatorItem,LockItem,P256PK,seed_open};
 
 #[derive(Debug, Clone)]
 pub struct EpochItem {
@@ -27,9 +27,10 @@ pub struct EpochItem {
 }
 
 pub struct APOS {
-    epochInfos: HashMap<u64,EpochItem>,
-    lInfo:  LockItem,    
-    eid: u64,
+    epochInfos:     HashMap<u64,EpochItem>,
+    lInfo:          LockItem,    
+    eid:            u64,            // current epoch id
+    be_a_holdler:   bool,
 }
 
 impl APOS {
@@ -38,7 +39,19 @@ impl APOS {
             epochInfos: HashMap::default(),
             lInfo:      LockItem::default(),
             eid: 0,
+            be_a_holdler:   false,
         }
+    }
+    pub fn new2(info: LockItem) ->Self {
+        APOS{
+            epochInfos: HashMap::default(),
+            lInfo:      info,
+            eid: 0,
+            be_a_holdler:   false,
+        }
+    }
+    pub fn be_a_holder(&mut self,b: bool) {
+        self.be_a_holdler = true;
     }
     pub fn from_genesis(&mut self,genesis: &Block,state: &Balance) {
         let proofs = genesis.get_proofs();
@@ -91,6 +104,51 @@ impl APOS {
             items.seed
         } else {
             0
+        }
+    }
+    pub fn get_seed_puk_from_validator(&self) -> Option<Vec<P256PK>> {
+        let mut vv = Vec::new();
+        match self.get_validators(self.eid) {
+            Some(validators)  => {
+                for (i,v) in validators.iter().enumerate() {
+                    vv.push(v.get_seed_puk());
+                }
+                vv
+            },
+            None    => None,
+        }
+    }
+    pub fn make_rand_seed(&self) -> Result<seed_info,Error> {
+        let escrow = pvss::simple::escrow(super::os_seed_share_count);
+        let msg = pvss::crypto::PublicKey{point:escrow.secret}.to_bytes();
+        let mut pubs : Vec<pvss::crypto::PublicKey> = Vec::new();
+        match self.get_seed_puk_from_validator() {
+            Some(vv)  => {
+                for v in vv.iter() { pubs.push(v.into()); }
+                let commitments = pvss::simple::commitments(&escrow);
+                let shares = pvss::simple::create_shares(&escrow, &pubs);
+                // verify shares
+                for share in shares {
+                    let idx = (share.id - 1) as usize;
+                    let verified_encrypted =
+                        share.verify(share.id, &pubs[idx], &escrow.extra_generator, &commitments);
+                    if !verified_encrypted {
+                        println!(
+                            "encrypted share {id}: {verified}",
+                            id = share.id,
+                            verified = verified_encrypted
+                        );
+                        return Err(ConsensusErrorKind::NoValidatorsInEpoch.into());
+                    }
+                    let b = msg.as_slice();
+                    let a: u8 = b[0];
+                    Ok(seed_info::new(
+                        P256PK::new(a,&b[1..]),
+                        &shares
+                    ))
+                }
+            },
+            None    => Err(ConsensusErrorKind::NoValidatorsInEpoch.into()),
         }
     }
 }
