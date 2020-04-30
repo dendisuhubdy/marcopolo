@@ -27,7 +27,7 @@ use bincode;
 
 
 /// Block header
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug,PartialEq)]
 #[derive(Copy, Clone)]
 pub struct Header {
 	pub height: u64,
@@ -59,7 +59,7 @@ impl Header {
 }
 
 #[derive(Serialize, Deserialize)]
-#[derive(Clone,Copy, Default, Debug)]
+#[derive(Clone,Copy, Default, Debug,PartialEq)]
 pub struct VerificationItem {
     pub msg:    Hash,
     pub signs:  SignatureInfo,
@@ -119,7 +119,7 @@ pub fn get_hash_from_signs(signs: Vec<VerificationItem>) -> Hash {
     Hash(hash::blake2b_256(data))
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize,PartialEq)]
 pub struct Block {
     pub header: Header,
     pub signs: Vec<VerificationItem>,

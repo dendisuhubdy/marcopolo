@@ -274,7 +274,7 @@ pub enum P2PError {
     /// Waiting for a request/response timed out, or timer error'd.
     StreamTimeout,
     /// The peer returned a valid RPCErrorResponse but the response was an error.
-    RPCErrorResponse,
+    P2PErrorResponse,
     /// Custom message.
     Custom(String),
 }
@@ -315,7 +315,7 @@ impl std::fmt::Display for P2PError {
             P2PError::ReadError(ref err) => write!(f, "Error while reading from socket: {}", err),
             P2PError::InvalidProtocol(ref err) => write!(f, "Invalid Protocol: {}", err),
             P2PError::IoError(ref err) => write!(f, "IO Error: {}", err),
-            P2PError::RPCErrorResponse => write!(f, "P2P Response Error"),
+            P2PError::P2PErrorResponse => write!(f, "P2P Response Error"),
             P2PError::StreamTimeout => write!(f, "Stream Timeout"),
             P2PError::Custom(ref err) => write!(f, "{}", err),
         }
@@ -329,7 +329,7 @@ impl std::error::Error for P2PError {
             P2PError::InvalidProtocol(_) => None,
             P2PError::IoError(ref err) => Some(err),
             P2PError::StreamTimeout => None,
-            P2PError::RPCErrorResponse => None,
+            P2PError::P2PErrorResponse => None,
             P2PError::Custom(_) => None,
         }
     }

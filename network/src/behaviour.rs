@@ -5,10 +5,10 @@ use std::time::Duration;
 
 use futures::prelude::*;
 use libp2p::{
-    core::identity::Keypair,
+    core::{identity::Keypair,ConnectedPoint},
     gossipsub::{Gossipsub, GossipsubConfig, GossipsubConfigBuilder, GossipsubEvent, GossipsubMessage, MessageId},
     identify::{Identify, IdentifyEvent},
-    kad::{GetClosestPeersError, Kademlia, KademliaConfig, KademliaEvent},
+    kad::{GetClosestPeersError, Kademlia, KademliaConfig, KademliaEvent,kbucket},
     kad::record::store::MemoryStore,
     mdns::{Mdns, MdnsEvent},
     multiaddr::Multiaddr,
@@ -17,12 +17,13 @@ use libp2p::{
     swarm::{NetworkBehaviourAction, NetworkBehaviourEventProcess},
     tokio_io::{AsyncRead, AsyncWrite},
 };
+use lru::LruCache;
+use sha2::{Digest, Sha256};
 use slog::{debug, o};
 
 use crate::{error, NetworkConfig};
 use crate::{GossipTopic, Topic, TopicHash};
-use lru::LruCache;
-use sha2::{Digest, Sha256};
+use crate::p2p::{P2P, P2PEvent, P2PMessage};
 
 const MAX_IDENTIFY_ADDRESSES: usize = 20;
 
@@ -34,6 +35,8 @@ const MAX_IDENTIFY_ADDRESSES: usize = 20;
 pub struct Behaviour<TSubstream: AsyncRead + AsyncWrite> {
     /// The routing pub-sub mechanism for map.
     gossipsub: Gossipsub<TSubstream>,
+    /// The map P2P specified in the wire-0 protocol.
+    p2p: P2P<TSubstream>,
     /// Keep regular connection to peers and disconnect if absent.
     ping: Ping<TSubstream>,
     mdns: Mdns<TSubstream>,
@@ -99,6 +102,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
                 .message_id_fn(gossip_message_id)
                 .heartbeat_interval(Duration::from_secs(20))
                 .build()),
+            p2p: P2P::new(log.clone()),
             ping: Ping::new(ping_config),
             mdns: Mdns::new().expect("Failed to create mDNS service"),
             kademlia,
@@ -143,6 +147,24 @@ for Behaviour<TSubstream>
                 );
             }
             GossipsubEvent::Unsubscribed { .. } => {}
+        }
+    }
+}
+
+impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<P2PMessage>
+for Behaviour<TSubstream>
+{
+    fn inject_event(&mut self, event: P2PMessage) {
+        match event {
+            P2PMessage::PeerDialed(peer_id) => {
+                self.events.push(BehaviourEvent::PeerDialed(peer_id))
+            }
+            P2PMessage::PeerDisconnected(peer_id) => {
+                self.events.push(BehaviourEvent::PeerDisconnected(peer_id))
+            }
+            P2PMessage::P2P(peer_id, rpc_event) => {
+                self.events.push(BehaviourEvent::RPC(peer_id, rpc_event))
+            }
         }
     }
 }
@@ -314,11 +336,27 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
         self.gossipsub
             .propagate_message(&message_id, propagation_source);
     }
+
+    /// Sends an p2p Request/Response via the p2p protocol.
+    pub fn send_rpc(&mut self, peer_id: PeerId, p2p_event: P2PEvent) {
+        self.p2p.send_rpc(peer_id, p2p_event);
+    }
+
+    /// Notify discovery that the peer has been banned.
+    pub fn inject_disconnected(&mut self, id: &PeerId, old_endpoint: ConnectedPoint) {
+        // self.kademlia.inject_disconnected(id,old_endpoint);
+        println!("kademlia.inject_disconnected");
+    }
+
 }
 
 /// The types of events than can be obtained from polling the behaviour.
 pub enum BehaviourEvent {
+    /// A received RPC event and the peer that it was received from.
+    RPC(PeerId, P2PEvent),
+    /// We have completed an initial connection to a new peer.
     PeerDialed(PeerId),
+    /// A peer has disconnected.
     PeerDisconnected(PeerId),
     /// A gossipsub message has been received.
     GossipMessage {

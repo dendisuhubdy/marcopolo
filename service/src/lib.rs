@@ -37,7 +37,7 @@ use core::genesis::{ed_genesis_priv_key, ed_genesis_pub_key};
 use core::types::Hash;
 use errors::Error;
 use executor::Executor;
-use network::{executor as network_executor, Multiaddr, NetworkConfig};
+use network::{manager as network_executor, Multiaddr, NetworkConfig};
 use rpc::http_server;
 
 #[derive(Clone, Debug)]
