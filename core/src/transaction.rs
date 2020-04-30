@@ -26,7 +26,7 @@ pub struct Transaction {
 	/// Gas paid up front for transaction execution.
 	pub gas: u64,
     /// Message function call
-    pub method: [u8; MSGID_LENGTH],
+    pub call: Vec<u8>,
 	/// Transaction message data
 	pub data: Vec<u8>,
 	pub sign_data: ([u8;32],[u8;32],[u8;32]),
@@ -49,7 +49,7 @@ struct tx_hash_type {
 	nonce: u64,
 	gas_price: u64,
 	gas: u64,
-	method: [u8; MSGID_LENGTH],
+	call: Vec<u8>,
 	data: Vec<u8>,
 }
 
@@ -60,7 +60,7 @@ impl tx_hash_type {
 			nonce: tx.nonce,
 			gas_price: tx.gas_price,
 			gas: tx.gas,
-			method: tx.method,
+			call: tx.call.clone(),
 			data: tx.data.clone(),
 		}
 	}
@@ -85,14 +85,14 @@ impl Transaction {
 		SignatureInfo::make(self.sign_data.0,self.sign_data.1,self.sign_data.2)
 	}
 	pub fn new(sender: Address, nonce: u64, gas_price: u64, gas: u64,
-		method: [u8; MSGID_LENGTH], data: Vec<u8>) -> Transaction {
+		method: Vec<u8>, data: Vec<u8>) -> Transaction {
         Transaction {
            sender: sender,
             nonce:nonce,
             gas_price:gas_price,
             gas:gas,
             sign_data: ([0u8;32],[0u8;32],[0u8;32]),
-            method: method,
+            call: method,
             data:data,
         }
     }

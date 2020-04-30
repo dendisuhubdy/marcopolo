@@ -73,7 +73,7 @@ impl AccountManager for AccountManagerImpl {
             receiver: to,
             value: value}).unwrap();
 
-        let mut tx = Transaction::new(from, nonce + 1, 1000, 1000, [0; 4], input);
+        let mut tx = Transaction::new(from, nonce + 1, 1000, 1000, b"balance.transfer".to_vec(), input);
 
         tx.sign(&priv_key.to_bytes()).expect("sign ok");
         self.tx_pool.write().expect("acquiring tx pool write lock").submit_txs(tx.clone());
