@@ -15,20 +15,23 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::path::PathBuf;
-use crate::store::ChainDB;
 use std::sync::{Arc, RwLock};
-use map_store;
-use map_store::mapdb::MapDB;
+
+use errors::Error;
+use map_consensus::poa;
 use map_core;
+use map_core::balance::Balance;
 use map_core::block::{Block, Header};
-use map_core::types::Hash;
 use map_core::genesis;
 #[allow(unused_imports)]
 use map_core::state::{ArchiveDB, StateDB};
-use map_core::balance::Balance;
-use map_consensus::poa;
+use map_core::types::Hash;
+use map_store;
+use map_store::mapdb::MapDB;
+
+use crate::store::ChainDB;
+
 use super::BlockChainErrorKind;
-use errors::Error;
 
 pub struct BlockChain {
     db: ChainDB,
@@ -90,7 +93,7 @@ impl BlockChain {
         Balance::from_state(&self.state_backend, root)
     }
 
-    pub fn genesis_hash(&mut self) -> Hash {
+    pub fn genesis_hash(&self) -> Hash {
         self.genesis.hash()
     }
 
@@ -120,19 +123,24 @@ impl BlockChain {
     }
 
     pub fn insert_block(&mut self, block: Block) -> Result<(), Error> {
+        self.insert_block_ref(&block);
+        Ok(())
+    }
+
+    pub fn insert_block_ref(&mut self, block: &Block) -> Result<(), Error> {
         // Already in chain
         if self.exits_block(block.hash(), block.height()) {
-            return Err(BlockChainErrorKind::KnownBlock.into())
+            return Err(BlockChainErrorKind::KnownBlock.into());
         }
 
         if !self.check_previous(&block.header) {
-            return Err(BlockChainErrorKind::UnknownAncestor.into())
+            return Err(BlockChainErrorKind::UnknownAncestor.into());
         }
 
         let current = self.current_block();
 
         if block.header.parent_hash != current.hash() {
-            return Err(BlockChainErrorKind::UnknownAncestor.into())
+            return Err(BlockChainErrorKind::UnknownAncestor.into());
         }
 
         self.validator.validate_header(self, &block.header)?;
