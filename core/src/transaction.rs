@@ -19,8 +19,6 @@ pub const MSGID_LENGTH: usize = 4;
 pub struct Transaction {
 	/// sender.
 	pub sender: Address,
-	/// recipient.
-	pub recipient: Address,
 	/// Nonce.
 	pub nonce: u64,
 	/// Gas price.
@@ -34,16 +32,13 @@ pub struct Transaction {
 	pub sign_data: ([u8;32],[u8;32],[u8;32]),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Transfer {
-    pub value: u128,
-}
-
 pub mod balance_msg {
     use serde::{Deserialize, Serialize};
+    use crate::types::{Address};
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct Transfer {
+        pub receiver: Address,
         pub value: u128,
     }
 }
@@ -51,7 +46,6 @@ pub mod balance_msg {
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct tx_hash_type {
 	chainid: 	u32,
-	recipient: Address,
 	nonce: u64,
 	gas_price: u64,
 	gas: u64,
@@ -63,7 +57,6 @@ impl tx_hash_type {
 	fn new(tx: &Transaction) -> Self {
 		tx_hash_type{
 			chainid:chain_id,
-			recipient: tx.recipient,
 			nonce: tx.nonce,
 			gas_price: tx.gas_price,
 			gas: tx.gas,
@@ -75,7 +68,8 @@ impl tx_hash_type {
 
 impl Transaction {
 	pub fn get_to_address(&self) -> Address {
-        self.recipient
+        let input: balance_msg::Transfer = bincode::deserialize(&self.data).unwrap();
+        input.receiver
 	}
 	pub fn get_from_address(&self) -> Address {
         self.sender
@@ -90,11 +84,10 @@ impl Transaction {
 	pub fn get_sign_data(&self) -> SignatureInfo {
 		SignatureInfo::make(self.sign_data.0,self.sign_data.1,self.sign_data.2)
 	}
-	pub fn new(sender: Address, recipient: Address, nonce: u64, gas_price: u64, gas: u64,
+	pub fn new(sender: Address, nonce: u64, gas_price: u64, gas: u64,
 		method: [u8; MSGID_LENGTH], data: Vec<u8>) -> Transaction {
         Transaction {
            sender: sender,
-            recipient:recipient,
             nonce:nonce,
             gas_price:gas_price,
             gas:gas,
@@ -133,8 +126,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn unpack_msg() {
-        let msg = balance_msg::Transfer {value: 1};
+    fn unpack_transfer() {
+        let msg = balance_msg::Transfer {
+            receiver: Address::default(),
+            value: 1,
+        };
         let encoded: Vec<u8> = bincode::serialize(&msg).unwrap();
         let tx: balance_msg::Transfer = bincode::deserialize(&encoded).unwrap();
         assert_eq!(tx.value, 1);

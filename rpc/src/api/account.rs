@@ -69,9 +69,11 @@ impl AccountManager for AccountManagerImpl {
         };
 
         let nonce = self.tx_pool.read().expect("acquiring tx pool read lock").get_nonce(&from);
-        let input: Vec<u8> = bincode::serialize(&balance_msg::Transfer{value: value}).unwrap();
+        let input: Vec<u8> = bincode::serialize(&balance_msg::Transfer{
+            receiver: to,
+            value: value}).unwrap();
 
-        let mut tx = Transaction::new(from, to, nonce + 1, 1000, 1000, [0; 4], input);
+        let mut tx = Transaction::new(from, nonce + 1, 1000, 1000, [0; 4], input);
 
         tx.sign(&priv_key.to_bytes()).expect("sign ok");
         self.tx_pool.write().expect("acquiring tx pool write lock").submit_txs(tx.clone());
