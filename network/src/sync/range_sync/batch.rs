@@ -7,7 +7,6 @@ use std::cmp::Ordering;
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
-use std::ops::Sub;
 use map_core::block::Block;
 use map_core::types::Hash as Hash256;
 

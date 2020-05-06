@@ -1,14 +1,14 @@
-use core::{fmt, iter};
+use core::{iter};
 use std::{
     net::Ipv4Addr,
-    path::{Path, PathBuf},
+    path::{PathBuf},
 };
 use std::fs::File;
 use std::io::prelude::*;
 
 use libp2p::{identity::Keypair};
-use libp2p::{multiaddr, multiaddr::Multiaddr, PeerId};
-use slog::{info, warn,debug};
+use libp2p::{multiaddr, multiaddr::Multiaddr};
+use slog::{info};
 
 const NODE_KEY_FILENAME: &str = "nodekey";
 

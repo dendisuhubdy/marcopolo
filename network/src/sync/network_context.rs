@@ -2,7 +2,6 @@
 //! channel and stores a global P2P ID to perform requests.
 
 use std::sync::{Arc, RwLock};
-use std::sync::Weak;
 
 use libp2p::PeerId;
 use slog::{debug, trace, warn};

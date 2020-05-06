@@ -1,14 +1,13 @@
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::num::NonZeroU32;
 use std::time::Duration;
 
 use futures::prelude::*;
 use libp2p::{
     core::{identity::Keypair,ConnectedPoint},
-    gossipsub::{Gossipsub, GossipsubConfig, GossipsubConfigBuilder, GossipsubEvent, GossipsubMessage, MessageId},
+    gossipsub::{Gossipsub, GossipsubConfigBuilder, GossipsubEvent, GossipsubMessage, MessageId},
     identify::{Identify, IdentifyEvent},
-    kad::{GetClosestPeersError, Kademlia, KademliaConfig, KademliaEvent,kbucket},
+    kad::{GetClosestPeersError, Kademlia, KademliaConfig, KademliaEvent},
     kad::record::store::MemoryStore,
     mdns::{Mdns, MdnsEvent},
     multiaddr::Multiaddr,

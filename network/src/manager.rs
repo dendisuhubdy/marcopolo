@@ -1,27 +1,26 @@
-use std::{error::Error, task::{Context, Poll}, thread};
+use std::{thread};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
-use futures::{future, Future, Stream};
+use futures::{Future, Stream};
 use futures::prelude::*;
 use libp2p::{
-    gossipsub::{MessageId, Topic, TopicHash},
+    gossipsub::{MessageId, Topic},
     Swarm,
     multiaddr::Multiaddr,
 
 };
 use parking_lot::Mutex;
 use slog::{debug, Drain, info, o, warn,trace};
-use tokio::runtime::{Builder as RuntimeBuilder, Runtime, TaskExecutor};
+use tokio::runtime::{Builder as RuntimeBuilder, TaskExecutor};
 use tokio::sync::{mpsc, oneshot};
 use tokio::timer::Delay;
 
 use chain::blockchain::BlockChain;
 use map_core::block::Block;
-use map_core::types::Hash;
 
 use crate::{
-    {behaviour::{Behaviour, BehaviourEvent, PubsubMessage}
+    {behaviour::{PubsubMessage}
     },
     GossipTopic,
     NetworkConfig,

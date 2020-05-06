@@ -3,7 +3,7 @@ use std::sync::{Arc, RwLock};
 use std::sync::Weak;
 
 use libp2p::PeerId;
-use slog::{debug, error, trace, warn};
+use slog::{debug};
 use tokio::sync::mpsc;
 
 use chain::blockchain::BlockChain;
@@ -16,7 +16,7 @@ use crate::sync::manager::SyncMessage;
 use crate::sync::network_context::SyncNetworkContext;
 
 use super::BatchId;
-use super::chain::{ChainSyncingState, SyncingChain};
+use super::chain::{SyncingChain};
 use super::chain::ProcessingResult;
 use map_core::block::Block;
 
@@ -33,9 +33,6 @@ pub struct RangeSync {
     /// finalized chain(s) complete, these peer's get STATUS'ed to update their head slot before
     /// the head chains are formed and downloaded.
     awaiting_head_peers: HashSet<PeerId>,
-    /// The sync manager channel, allowing the batch processor thread to callback the sync task
-    /// once complete.
-    sync_send: mpsc::UnboundedSender<SyncMessage>,
     /// The syncing logger.
     log: slog::Logger,
 }
@@ -52,7 +49,6 @@ impl RangeSync {
             chain: block_chain.clone(),
             chains: SyncingChain::new(current, 0, h, sync_send.clone(), block_chain, log.clone()),
             awaiting_head_peers: HashSet::new(),
-            sync_send,
             log,
         }
     }

@@ -1,4 +1,3 @@
-use crate::p2p::methods::*;
 use crate::p2p::{
     codec::base::OutboundCodec,
     protocol::{
@@ -7,8 +6,6 @@ use crate::p2p::{
 };
 use crate::p2p::{ErrorMessage, P2PErrorResponse, P2PRequest, P2PResponse};
 use libp2p::bytes::{BufMut, Bytes, BytesMut};
-use bincode;
-use serde::{Serialize, Deserialize};
 use tokio::codec::{Decoder, Encoder};
 use unsigned_varint::codec::UviBytes;
 

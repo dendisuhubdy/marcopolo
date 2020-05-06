@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 use std::sync::{Arc, RwLock};
-use std::sync::Weak;
 
 use libp2p::PeerId;
 use rand::prelude::*;

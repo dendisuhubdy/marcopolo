@@ -13,7 +13,7 @@ use chain::blockchain::BlockChain;
 use crate::{behaviour::PubsubMessage, manager::NetworkMessage};
 use crate::error;
 use crate::MessageProcessor;
-use crate::p2p::{methods::*, P2PError, P2PErrorResponse, P2PEvent, P2PRequest, P2PResponse, RequestId, ResponseTermination};
+use crate::p2p::{P2PError, P2PErrorResponse, P2PEvent, P2PRequest, P2PResponse, RequestId, ResponseTermination};
 
 /// Handles messages received from the network and client and organises syncing. This
 /// functionality of this struct is to validate an decode messages from the network before

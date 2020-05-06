@@ -1,10 +1,9 @@
 use std::io::{Error, ErrorKind};
-use std::io::prelude::*;
 use std::time::Duration;
 
 use futures::prelude::*;
 use futures::Stream;
-use libp2p::{gossipsub::{GossipsubMessage, MessageId, Topic, TopicHash}, multiaddr::Protocol, PeerId, Swarm};
+use libp2p::{gossipsub::{MessageId, Topic, TopicHash}, multiaddr::Protocol, PeerId, Swarm};
 use libp2p::core::{
     ConnectedPoint,
     multiaddr::Multiaddr,
@@ -12,12 +11,10 @@ use libp2p::core::{
     nodes::Substream,
     transport::boxed::Boxed,
 };
-use slog::{debug, error, info, trace, warn};
+use slog::{debug, error, info, warn};
 use tokio::timer::DelayQueue;
 
-use map_core::{block::Block, transaction::Transaction};
-
-use crate::{behaviour::{Behaviour, BehaviourEvent, PubsubMessage}, config, GossipTopic, manager::NetworkMessage, NetworkConfig, transport};
+use crate::{behaviour::{Behaviour, BehaviourEvent, PubsubMessage}, config, GossipTopic, NetworkConfig, transport};
 use crate::error;
 use crate::p2p::P2PEvent;
 

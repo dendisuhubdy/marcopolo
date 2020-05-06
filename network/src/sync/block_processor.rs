@@ -1,12 +1,10 @@
 use std::sync::{Arc, RwLock};
 
-use libp2p::PeerId;
-use slog::{debug, error, trace, warn};
+use slog::{debug};
 use tokio::sync::mpsc;
 
 use chain::blockchain::BlockChain;
 
-use crate::handler_processor::FUTURE_SLOT_TOLERANCE;
 use crate::sync::manager::SyncMessage;
 use crate::sync::range_sync::BatchId;
 use map_core::block::Block;
