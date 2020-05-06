@@ -14,15 +14,28 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
-#[macro_use]
-extern crate log;
-pub mod types;
-pub mod block;
-pub mod genesis;
-pub mod transaction;
-pub mod balance;
-// pub mod staking;
-// pub mod storage;
-pub mod trie;
-pub mod state;
-pub mod traits;
+use std::marker::PhantomData;
+
+use crate::types::{Hash, Address};
+// use crate::state::StateDB;
+
+pub struct ListEntry<T> {
+    pub pre: Option<Hash>,
+    pub next: Option<Hash>,
+    pub payload: T,
+}
+
+pub struct List<T> {
+    pub head_key: Hash,
+    // pub state: &StateDB,
+    phantom: PhantomData<T>
+}
+
+impl<T> List<T> {
+    pub fn new(head: Hash) -> Self {
+        List {
+            head_key: head,
+            phantom: PhantomData,
+        }
+    }
+}
