@@ -20,7 +20,7 @@ use rand::{Rng, SeedableRng};
 use std::sync::Arc;
 use std::cmp::Ordering;
 use rand::distributions::Uniform;
-use super::types::{ftsResult,Stakeholder,ProofEntry,ValidatorItem};
+use super::types::{ftsResult,Stakeholder,ProofEntry,HolderItem};
 use errors::Error;
 
 pub fn make_hash(data: &[u8]) -> Hash {
@@ -193,7 +193,7 @@ pub fn verify_fts(merkleRootHash: Hash, res: Box<ftsResult>,rnd: &mut StdRng) ->
     }
 }
 
-pub fn assign_valditator_to_slot(vals: &mut Vec<ValidatorItem>,seed: u64) -> Result<(),Error> {
+pub fn assign_valditator_to_slot(vals: &mut Vec<HolderItem>,seed: u64) -> Result<(),Error> {
     let mut rng: StdRng = SeedableRng::seed_from_u64(seed); 
     let mut stakeholders: Vec<Stakeholder> = Vec::new();
     for (i,v) in vals.iter().enumerate() {

@@ -29,7 +29,7 @@ impl Default for P256PK {
 impl P256PK {
     pub fn new(a: u8,b: [u8]) -> Self {
         let mut c = [0u8;32];
-        c[..].copy_from_slice(&b[..])
+        c[..].copy_from_slice(&b[..]);
         Self(a,c)
     }
     pub fn to_bytes(&self,a: &mut[u8]) {
@@ -138,13 +138,15 @@ impl ftsResult {
 }
 
 #[derive(Debug, Clone)]
-pub struct ValidatorItem {
+pub struct HolderItem {
     pub pubkey: [u8;32],
     pub seedVerifyPk: P256PK,
+    pub seedPk:       Option<P256PK>,
     pub stakeAmount: u128,
     pub sid:        i32,
+    pub validator:  bool,
 }
-impl ValidatorItem {
+impl HolderItem {
     pub fn set_sid(&mut self,i: i32) {
         self.sid = i;
     }
@@ -154,14 +156,17 @@ impl ValidatorItem {
     pub fn get_seed_puk(&self) -> P256PK {
         self.seedVerifyPk
     }
+    pub fn is_validator(&self) -> bool {
+        self.validator
+    }
 }
-impl From<ValidatorItem> for Pubkey {
-    fn from(v: ValidatorItem) -> Self {
+impl From<HolderItem> for Pubkey {
+    fn from(v: HolderItem) -> Self {
         Pubkey::from_bytes(&v.pubkey)
     }
 }
-impl From<ValidatorItem> for Stakeholder {
-    fn from(v: ValidatorItem) -> Self {
+impl From<HolderItem> for Stakeholder {
+    fn from(v: HolderItem) -> Self {
         Stakeholder{
             name:   String::from_utf8_lossy(&v.pubkey[..4]).to_string(),
             coins:  v.stakeAmount,

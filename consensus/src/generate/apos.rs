@@ -18,12 +18,12 @@ use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 use core::block::{self,Block,BlockProof,VerificationItem};
 use core::balance::{Balance};
 use std::collections::HashMap;
-use super::types::{ValidatorItem,LockItem,P256PK,seed_open};
+use super::types::{HolderItem,LockItem,P256PK,seed_open};
 
 #[derive(Debug, Clone)]
 pub struct EpochItem {
     seed: u64,
-    validators: Vec<ValidatorItem>,    
+    validators: Vec<HolderItem>,    
 }
 
 pub struct APOS {
@@ -55,14 +55,16 @@ impl APOS {
     }
     pub fn from_genesis(&mut self,genesis: &Block,state: &Balance) {
         let proofs = genesis.get_proofs();
-        let mut vals: Vec<ValidatorItem> = Vec::new();
+        let mut vals: Vec<HolderItem> = Vec::new();
         let seed: u64 = 0;
         for proof in proofs {
-            vals.push(ValidatorItem{
+            vals.push(HolderItem{
                 pubkey:         proof.0,
                 stakeAmount:    state.balance(proof.to_address()),
                 sid:            -1 as i32,
                 seedVerifyPk:   P256PK::default(),
+                seedPk:         None,
+                validator:      true,
             });
         }
         self.epochInfos.insert(0,EpochItem{
@@ -79,7 +81,7 @@ impl APOS {
             None => None,
         }
     }
-    pub fn get_validator(&self, index: i32,eid: u64) -> Option<ValidatorItem> {
+    pub fn get_validator(&self, index: i32,eid: u64) -> Option<HolderItem> {
         match self.get_epoch_info(eid) {
             Some(items)  =>{
                 if items.validators.len() > index as usize{
@@ -91,10 +93,20 @@ impl APOS {
             None => None,
         } 
     }
-    pub fn get_validators(&self, eid: u64) -> Option<Vec<ValidatorItem>> {
+    pub fn get_validators(&self, eid: u64) -> Option<Vec<HolderItem>> {
         match self.get_epoch_info(eid) {
             Some(items) => {
-                Some(items.validators)
+                let mut vv: Vec<HolderItem> = Vec::new();
+                for v in items.validators.iter() {
+                    if v.is_validator() {
+                        vv.push(v.clone());
+                    }
+                }
+                if vv.len() > 0 {
+                    Some(vv)
+                } else {
+                    None
+                }
             },
             None => None,
         }
@@ -150,5 +162,11 @@ impl APOS {
             },
             None    => Err(ConsensusErrorKind::NoValidatorsInEpoch.into()),
         }
+    }
+    pub fn recover_seed_from_shared_msg(si: &seed_info) {
+        
+    }
+    pub fn make_seed_on_epoch() -> bool {
+        false
     }
 }
