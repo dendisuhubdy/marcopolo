@@ -181,6 +181,20 @@ pub struct LockItem {
     key2:   [u8;32],        // for decrypted the seed message
 }
 
+impl LockItem {
+    pub fn equal_pk(&self,pk: &[u8]) -> bool {
+        let l_priv: PrivKey = self.into();
+        match l_priv.to_pubkey(){
+            Ok(l_pk) => {
+                return l_pk.equal(Pubkey::from_bytes(&pk))
+            },
+            Err(e) => {
+                println!("to_pubkey(in eqaul pk function) failed, Error: {:?}", e);
+                false
+            },
+        }
+    }
+}
 impl Default for LockItem {
     fn default() -> Self {
         Self{
@@ -201,14 +215,25 @@ impl From<LockItem> for pvss::crypto::PrivateKey {
 }
 
 pub struct seed_info {
+    pub index:  i32,
     pub msg:    seed_open,
     pub shares: Vec<pvss::simple::EncryptedShare>
 }
 impl seed_info {
-    pub fn new(s: seed_open,shs: &Vec<pvss::simple::EncryptedShare>) -> Self {
+    pub fn new(i: i32,s: seed_open,shs: &Vec<pvss::simple::EncryptedShare>) -> Self {
         Self{
+            index:  i,
             msg:    msg,
             shares: shs,
         }
+    }
+    pub fn get_commit_phase_msg(&self) -> (Hash,Vec<pvss::simple::EncryptedShare>) {
+        let mut data: [u8;33] = [0u8;33];
+        self.msg.to_bytes(&mut data);
+        let h = Hash::make_hash(&data);
+        (h,self.shares.clone())
+    }
+    pub fn get_Revel_phase_msg(&self) -> seed_open {
+        self.msg.clone()
     }
 }

@@ -31,6 +31,7 @@ pub struct APOS {
     lInfo:          LockItem,    
     eid:            u64,            // current epoch id
     be_a_holdler:   bool,
+    lindex:         i32,            // current index in holder list on the epoch id
 }
 
 impl APOS {
@@ -40,6 +41,7 @@ impl APOS {
             lInfo:      LockItem::default(),
             eid: 0,
             be_a_holdler:   false,
+            lindex:         0,
         }
     }
     pub fn new2(info: LockItem) ->Self {
@@ -48,6 +50,7 @@ impl APOS {
             lInfo:      info,
             eid: 0,
             be_a_holdler:   false,
+            lindex:     0,
         }
     }
     pub fn be_a_holder(&mut self,b: bool) {
@@ -57,7 +60,10 @@ impl APOS {
         let proofs = genesis.get_proofs();
         let mut vals: Vec<HolderItem> = Vec::new();
         let seed: u64 = 0;
-        for proof in proofs {
+        for (i,proof) in proofs.iter().enumerate() {
+            if self.lInfo.equal_pk(&proof.0[..]) {
+                self.lindex = i as i32;
+            }
             vals.push(HolderItem{
                 pubkey:         proof.0,
                 stakeAmount:    state.balance(proof.to_address()),
