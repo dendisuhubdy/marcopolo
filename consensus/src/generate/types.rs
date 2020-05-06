@@ -182,7 +182,7 @@ pub struct LockItem {
 }
 
 impl LockItem {
-    pub fn equal_pk(&self,pk: &[u8]) -> bool {
+    pub fn equal_pk_by_slice(&self,pk: &[u8]) -> bool {
         let l_priv: PrivKey = self.into();
         match l_priv.to_pubkey(){
             Ok(l_pk) => {
@@ -193,6 +193,15 @@ impl LockItem {
                 false
             },
         }
+    }
+    pub fn equal_pk(&self,pk: &Pubkey) -> bool {
+        let data = pk.to_bytes();
+        return self.equal_pk_by_slice(&data);
+    }
+    pub fn get_pk2(&self) -> pvss::crypto::PublicKey {
+        let ss: pvss::crypto::PrivateKey = self.into();
+        let p = Point::from_scalar(&ss.scalar);
+        return pvss::crypto::PublicKey { point: p };
     }
 }
 impl Default for LockItem {
@@ -217,14 +226,17 @@ impl From<LockItem> for pvss::crypto::PrivateKey {
 pub struct seed_info {
     pub index:  i32,
     pub msg:    seed_open,
-    pub shares: Vec<pvss::simple::EncryptedShare>
+    pub shares: Vec<pvss::simple::EncryptedShare>,
+    pub decrypted:     Vec<pvss::simple::DecryptedShare>,
 }
 impl seed_info {
-    pub fn new(i: i32,s: seed_open,shs: &Vec<pvss::simple::EncryptedShare>) -> Self {
+    pub fn new(i: i32,s: seed_open,shs: &Vec<pvss::simple::EncryptedShare>,
+    de: &Vec<pvss::simple::DecryptedShare>) -> Self {
         Self{
             index:  i,
             msg:    msg,
             shares: shs,
+            decrypted: de,
         }
     }
     pub fn get_commit_phase_msg(&self) -> (Hash,Vec<pvss::simple::EncryptedShare>) {

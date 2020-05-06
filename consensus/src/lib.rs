@@ -45,6 +45,10 @@ pub enum ConsensusErrorKind {
     NotMatchEpochID,
     NoValidatorsInEpoch,
     EncryptedShareMsgError,
+    DecryptShareMsgError,
+    NotMatchLocalHolders,
+    RecoverSharesError,
+    NotEnoughShares,
 }
 
 impl fmt::Display for ConsensusError {
