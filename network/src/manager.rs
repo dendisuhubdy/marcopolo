@@ -12,7 +12,7 @@ use libp2p::{
 };
 use parking_lot::Mutex;
 use slog::{debug, Drain, info, o, warn,trace};
-use tokio::runtime::{Builder as RuntimeBuilder, TaskExecutor};
+use tokio::runtime::{Builder as RuntimeBuilder, Runtime, TaskExecutor};
 use tokio::sync::{mpsc, oneshot};
 use tokio::timer::Delay;
 
@@ -39,6 +39,7 @@ pub struct NetworkExecutor {
     pub exit_signal: oneshot::Sender<i32>,
     network_send: mpsc::UnboundedSender<NetworkMessage>,
     log: slog::Logger,
+    pub runtime: Runtime,
 }
 
 impl NetworkExecutor {
@@ -86,6 +87,7 @@ impl NetworkExecutor {
             exit_signal,
             network_send,
             log,
+            runtime,
         };
 
         Ok(network_service)

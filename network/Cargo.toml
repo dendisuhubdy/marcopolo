@@ -17,7 +17,7 @@ serde = { version = "1.0.102", features = ["derive"] }
 slog = { version = "^2.4.1" , features = ["max_level_trace"] }
 slog-term = "^2.4.0"
 slog-async = "^2.3.0"
-tokio = "0.1.16"
+tokio = "0.1.22"
 tokio-io-timeout = "0.3.1"
 futures = "0.1.25"
 dirs = "2.0.1"

@@ -39,6 +39,7 @@ use errors::Error;
 use executor::Executor;
 use network::{manager as network_executor, Multiaddr, NetworkConfig};
 use rpc::http_server;
+use futures::{Future};
 
 #[derive(Clone, Debug)]
 pub struct NodeConfig {
@@ -123,7 +124,13 @@ impl Service {
                 };
                 thread::sleep(Duration::from_millis(POA::get_interval()));
                 if rx.try_recv().is_ok() {
-                    network.exit_signal.send(1).expect("network exit error");
+                    if !network.exit_signal.is_closed() {
+                        network.exit_signal.send(1).expect("network exit error");
+                    }
+                    network.runtime
+                        .shutdown_on_idle()
+                        .wait()
+                        .map_err(|e| format!("Tokio runtime shutdown returned an error: {:?}", e)).unwrap();
                     rpc.close();
                     break;
                 }
