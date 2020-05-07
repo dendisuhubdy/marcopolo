@@ -52,6 +52,7 @@ pub struct NodeConfig {
     /// List of p2p nodes to initially connect to.
     pub dial_addrs: Vec<Multiaddr>,
     pub p2p_port: u16,
+    pub seal_block: bool,
 }
 
 impl Default for NodeConfig {
@@ -65,6 +66,7 @@ impl Default for NodeConfig {
             poa_privkey: "".into(),
             dial_addrs: vec![],
             p2p_port: 40313,
+            seal_block:false,
         }
     }
 }
@@ -92,6 +94,7 @@ impl Service {
     pub fn start(mut self,cfg: NodeConfig) -> (mpsc::Sender<i32>,JoinHandle<()>) {
         self.get_write_blockchain().load();
         let network_block_chain = self.block_chain.clone();
+        let threadCfg = cfg.clone();
 
         let mut config = NetworkConfig::new();
         config.update_network_cfg(cfg.data_dir, cfg.dial_addrs, cfg.p2p_port).unwrap();
@@ -108,21 +111,23 @@ impl Service {
 
         let builder = thread::spawn(move || {
             loop {
-                let res2 = self.generate_block();
-                match res2 {
-                    Ok(b) => {
-                        if let Err(e) = shared_block_chain
-                            .write()
-                            .expect("acquiring shared_block_chain write lock")
-                            .insert_block(b.clone()) {
+                if threadCfg.seal_block {
+                    let res2 = self.generate_block();
+                    match res2 {
+                        Ok(b) => {
+                            if let Err(e) = shared_block_chain
+                                .write()
+                                .expect("acquiring shared_block_chain write lock")
+                                .insert_block(b.clone()) {
                                 error!("insert_block Error: {:?}", e);
                             } else {
-                            network.gossip(b);
-                        }
-                    },
-                    Err(e) => error!("generate_block,Error: {:?}", e),
-                };
-                thread::sleep(Duration::from_millis(POA::get_interval()));
+                                network.gossip(b);
+                            }
+                        },
+                        Err(e) => error!("generate_block,Error: {:?}", e),
+                    };
+                    thread::sleep(Duration::from_millis(POA::get_interval()));
+                }
                 if rx.try_recv().is_ok() {
                     if !network.exit_signal.is_closed() {
                         network.exit_signal.send(1).expect("network exit error");

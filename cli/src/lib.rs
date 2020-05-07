@@ -74,6 +74,10 @@ pub fn run() {
                 .default_value("40313")
                 .help("Customize p2p listening port"),
         )
+        .arg(Arg::with_name("seal_block")
+            .long("seal")
+            .takes_value(true)
+            .help("Auto generate block"))
         .subcommand(SubCommand::with_name("clean")
             .about("Remove the whole chain data"))
         .get_matches();
@@ -140,6 +144,12 @@ pub fn run() {
                 })
                 .collect::<Result<Vec<Multiaddr>, _>>().unwrap();
         }
+    }
+
+    if let Some(seal_block) = matches.value_of("seal_block") {
+        let auto = seal_block.parse::<bool>()
+            .map_err(|_| format!("Invalid seal block flag: {}", seal_block)).unwrap();
+        config.seal_block = auto;
     }
 
     if matches.is_present("single") {
