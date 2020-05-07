@@ -22,7 +22,7 @@ use super::batch::{Batch, BatchId, PendingBatches};
 /// downvote peers with poor bandwidth. This can be set arbitrarily high, in which case the
 /// responder will fill the response up to the max request size, assuming they have the bandwidth
 /// to do so.
-pub const BLOCKS_PER_BATCH: u64 = 50;
+pub const BLOCKS_PER_BATCH: u64 = 5;
 
 /// The number of times to retry a batch before the chain is considered failed and removed.
 const MAX_BATCH_RETRIES: u8 = 5;
@@ -132,6 +132,7 @@ impl SyncingChain {
 
     /// Returns the latest slot number that has been processed.
     fn current_processed_slot(&self) -> u64 {
+        println!("current_processed_slot {:?}",self.to_be_processed_id);
         self.start_numer
             .saturating_add(self.to_be_processed_id.saturating_sub(1u64) * BLOCKS_PER_BATCH)
     }
@@ -338,6 +339,7 @@ impl SyncingChain {
                     }
                 }
 
+                println!("on_batch_process_result {:?}",batch.end_number);
                 // Add the current batch to processed batches to be verified in the future. We are
                 // only uncertain about this batch, if it has not returned all blocks.
                 if batch.downloaded_blocks.last().map(|block| block.height())
@@ -402,6 +404,29 @@ impl SyncingChain {
         }
 
         // find the next batch and request it from any peers if we need to
+        self.request_batches(network);
+    }
+
+    pub fn start_syncing(&mut self, network: &mut SyncNetworkContext, local_finalized_number: u64) {
+        if local_finalized_number > self.current_processed_slot() {
+            debug!(self.log, "Updating chain's progress";
+                "prev_completed_slot" => self.current_processed_slot(),
+                "new_completed_slot" => local_finalized_number);
+            // Re-index batches
+            *self.to_be_downloaded_id = 1;
+            *self.to_be_processed_id = 1;
+
+            // remove any completed or processed batches
+            self.completed_batches.clear();
+            self.processed_batches.clear();
+        }
+
+        self.state = ChainSyncingState::Syncing;
+
+        // start processing batches if needed
+        self.process_completed_batches();
+
+        // begin requesting blocks from the peer pool, until all peers are exhausted.
         self.request_batches(network);
     }
 
@@ -470,6 +495,7 @@ impl SyncingChain {
             return None;
         }
 
+        println!("get_next_batch {:?}",self.to_be_downloaded_id);
         // don't request batches beyond the target head slot
         let batch_start_numer =
             self.start_numer + self.to_be_downloaded_id.saturating_sub(1) * BLOCKS_PER_BATCH;

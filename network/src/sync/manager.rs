@@ -196,21 +196,7 @@ impl SyncManager {
             "peer_finalized_number" => remote.finalized_number,
             "local_finalized_number" => local.finalized_number,
             );
-            self.add_full_peer(peer_id);
-            return;
-        }
-
-        // Check if the peer is significantly behind us. If within `SLOT_IMPORT_TOLERANCE`
-        // treat them as a fully synced peer. If not, ignore them in the sync process
-        if local.finalized_number.sub(remote.finalized_number) < SLOT_IMPORT_TOLERANCE {
             self.add_full_peer(peer_id.clone());
-        } else {
-            debug!(
-                self.log,
-                "Out of sync peer connected";
-                "peer" => format!("{:?}", peer_id),
-            );
-            return;
         }
 
         // Add the peer to our RangeSync

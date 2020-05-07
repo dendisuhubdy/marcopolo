@@ -331,7 +331,7 @@ impl MessageProcessor {
         peer_id: PeerId,
         block: Block,
     ) -> bool {
-        debug!(self.log, "Gossip message received: {:?}", block);
+        debug!(self.log, "Gossip message received: {:?} {:?}", block.height(),block.hash());
         let broadcast = match self.chain.write().expect("").insert_block(block) {
             Ok(_) => {
                 true

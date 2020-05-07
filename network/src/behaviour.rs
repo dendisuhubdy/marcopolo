@@ -177,17 +177,11 @@ for Behaviour<TSubstream>
                 peer,
                 result: Result::Ok(PingSuccess::Ping { rtt }),
             } => {
-                println!(
-                    "ping: rtt to {} is {} ms",
-                    peer.to_base58(),
-                    rtt.as_millis()
-                );
             }
             PingEvent {
                 peer,
                 result: Result::Ok(PingSuccess::Pong),
             } => {
-                println!("ping: pong from {}", peer.to_base58());
             }
             PingEvent {
                 peer,
