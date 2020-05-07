@@ -16,9 +16,11 @@
 
 use std::marker::PhantomData;
 
+use serde::{Serialize, Deserialize};
 use crate::types::{Hash, Address};
 // use crate::state::StateDB;
 
+#[derive(Serialize, Deserialize)]
 pub struct ListEntry<T> {
     pub pre: Option<Hash>,
     pub next: Option<Hash>,

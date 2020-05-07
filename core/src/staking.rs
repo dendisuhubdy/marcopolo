@@ -16,8 +16,11 @@
 
 use std::marker::PhantomData;
 
+use serde::{Serialize, Deserialize};
+use bincode;
+use hash;
 use crate::types::{Hash, Address};
-use crate::storage::List;
+use crate::storage::{List, ListEntry};
 use crate::state::{ArchiveDB, StateDB};
 
 
@@ -27,11 +30,24 @@ enum StatePrefix {
     Validator = 2,
 }
 
+#[derive(Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct Validator {
     pub address: Address,
     pub pubkey: Vec<u8>,
     pub balance: u64,
     pub activate_height: u64,
+}
+
+impl Validator {
+    pub fn map_key(&self) -> Hash {
+        let mut raw = vec![];
+        raw.extend_from_slice(Hash::from_bytes(self.address.as_slice()).as_bytes());
+        let position = Hash::from_bytes(&(StatePrefix::Validator as u64).to_be_bytes()[..]);
+        raw.extend_from_slice(position.as_bytes());
+
+        Hash(hash::blake2b_256(&raw))
+    }
 }
 
 pub struct Staking {
@@ -47,6 +63,19 @@ impl Staking {
             state_db: StateDB::from_existing(backend, root),
         }
     }
+
+    pub fn insert(&mut self, item: &Validator) {
+        let head = self.state_db.get_storage(&self.validators.head_key);
+        if head.is_none() {
+            let entry = ListEntry {
+                pre: None,
+                next: None,
+                payload: item,
+            };
+            let encoded: Vec<u8> = bincode::serialize(&item).unwrap();
+            self.state_db.set_storage(item.map_key(), &encoded);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -56,11 +85,23 @@ mod tests {
     use map_store::{MemoryKV, KVDB};
     use crate::types::Address;
     use crate::state::ArchiveDB;
+    use crate::trie::NULL_ROOT;
+    use super::{Validator, Staking};
 
     #[test]
     fn validator_insert() {
         env_logger::init();
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let db = ArchiveDB::new(Arc::clone(&backend));
+
+        let validator = Validator {
+            address: Address::default(),
+            pubkey: Vec::new(),
+            balance: 1,
+            activate_height: 1,
+        };
+
+        let mut stake = Staking::from_state(&db, NULL_ROOT);
+        stake.insert(&validator);
     }
 }
