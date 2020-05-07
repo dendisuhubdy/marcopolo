@@ -94,7 +94,7 @@ impl Service {
     pub fn start(mut self,cfg: NodeConfig) -> (mpsc::Sender<i32>,JoinHandle<()>) {
         self.get_write_blockchain().load();
         let network_block_chain = self.block_chain.clone();
-        let threadCfg = cfg.clone();
+        let thread_cfg = cfg.clone();
 
         let mut config = NetworkConfig::new();
         config.update_network_cfg(cfg.data_dir, cfg.dial_addrs, cfg.p2p_port).unwrap();
@@ -111,7 +111,7 @@ impl Service {
 
         let builder = thread::spawn(move || {
             loop {
-                if threadCfg.seal_block {
+                if !thread_cfg.seal_block {
                     let res2 = self.generate_block();
                     match res2 {
                         Ok(b) => {

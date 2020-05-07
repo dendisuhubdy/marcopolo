@@ -76,7 +76,6 @@ pub fn run() {
         )
         .arg(Arg::with_name("seal_block")
             .long("seal")
-            .takes_value(true)
             .help("Auto generate block"))
         .subcommand(SubCommand::with_name("clean")
             .about("Remove the whole chain data"))
@@ -146,10 +145,8 @@ pub fn run() {
         }
     }
 
-    if let Some(seal_block) = matches.value_of("seal_block") {
-        let auto = seal_block.parse::<bool>()
-            .map_err(|_| format!("Invalid seal block flag: {}", seal_block)).unwrap();
-        config.seal_block = auto;
+    if matches.is_present("seal_block") {
+        config.seal_block = true;
     }
 
     if matches.is_present("single") {

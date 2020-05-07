@@ -123,8 +123,7 @@ impl BlockChain {
     }
 
     pub fn insert_block(&mut self, block: Block) -> Result<(), Error> {
-        self.insert_block_ref(&block);
-        Ok(())
+        self.insert_block_ref(&block)
     }
 
     pub fn insert_block_ref(&mut self, block: &Block) -> Result<(), Error> {
