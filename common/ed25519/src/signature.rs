@@ -28,7 +28,7 @@ use faster_hex::hex_string;
 use std::str::FromStr;
 
 #[derive(Serialize, Deserialize)]
-#[derive(Debug, Default,Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Default,Copy, Clone, Eq, Ord, PartialEq, PartialOrd, Hash)]
 pub struct SignatureInfo([u8; 32], [u8;32],[u8;32]);
 
 impl SignatureInfo {

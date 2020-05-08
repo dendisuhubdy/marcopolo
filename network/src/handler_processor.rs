@@ -11,6 +11,7 @@ use map_core::types::Hash;
 use crate::manager::NetworkMessage;
 use crate::p2p::{methods::*, P2PEvent, P2PRequest, P2PResponse, RequestId};
 use crate::sync::SyncMessage;
+use priority_queue::PriorityQueue;
 
 /// If a block is more than `FUTURE_SLOT_TOLERANCE` slots ahead of our slot clock, we drop it.
 /// Otherwise we queue it.
@@ -18,6 +19,7 @@ pub(crate) const FUTURE_SLOT_TOLERANCE: u64 = 1;
 
 const SHOULD_FORWARD_GOSSIP_BLOCK: bool = true;
 const SHOULD_NOT_FORWARD_GOSSIP_BLOCK: bool = false;
+const QUEUE_GOSSIP_BLOCK: usize = 512;
 
 /// Keeps track of syncing information for known connected peers.
 #[derive(Clone, Copy, Debug)]
@@ -68,6 +70,7 @@ pub struct MessageProcessor {
     network: HandlerNetworkContext,
     /// The `RPCHandler` logger.
     log: slog::Logger,
+    pub queue :PriorityQueue<Block,i64>,
 }
 
 impl MessageProcessor {
@@ -94,6 +97,7 @@ impl MessageProcessor {
             _sync_exit,
             network: HandlerNetworkContext::new(network_send, log.clone()),
             log: log.clone(),
+            queue:PriorityQueue::with_capacity(QUEUE_GOSSIP_BLOCK),
         }
     }
 
@@ -262,7 +266,7 @@ impl MessageProcessor {
         let current_block = block_chain.current_block();
         let mut start = req.start_slot;
         loop {
-            if current_block.height() > start && blocks.len() > req.count as usize {
+            if current_block.height() > start && blocks.len() == req.count as usize {
                 break;
             }
             let block = block_chain.get_block_by_number(start);
@@ -308,12 +312,6 @@ impl MessageProcessor {
         beacon_block: Option<Block>,
     ) {
         let beacon_block = beacon_block.map(Box::new);
-        trace!(
-            self.log,
-            "Received BlocksByRange Response";
-            "peer" => format!("{:?}", peer_id),
-        );
-
         self.send_to_sync(SyncMessage::BlocksByRangeResponse {
             peer_id,
             request_id,
@@ -331,17 +329,43 @@ impl MessageProcessor {
         peer_id: PeerId,
         block: Block,
     ) -> bool {
+        let current_block = self.chain.read().unwrap().current_block();
         debug!(self.log, "Gossip message received: {:?} {:?}", block.height(),block.hash());
-        let broadcast = match self.chain.write().expect("").insert_block(block) {
-            Ok(_) => {
-                true
+
+        if !self.queue.is_empty() {
+            let (block_low,height_low_negative) = self.queue.peek().unwrap();
+            let height_low_ref = *height_low_negative;
+            let height_low = (-height_low_ref) as u64;
+            if  height_low > current_block.height() + 1 {
+                self.queue.push(block_low.clone(),height_low_ref);
+            } else if height_low == current_block.height() + 1 {
+                let broadcast = match self.chain.write().expect("").insert_block_ref(&block) {
+                    Ok(_) => {
+                        true
+                    }
+                    Err(e) => {
+                        println!("network insert_block,Error: {:?}", e);
+                        false
+                    }
+                };
+                return broadcast
             }
-            Err(e) => {
-                println!("network insert_block,Error: {:?}", e);
-                false
-            }
-        };
-        broadcast
+        } else if block.height() == current_block.height() + 1 {
+            let broadcast = match self.chain.write().expect("").insert_block_ref(&block) {
+                Ok(_) => {
+                    true
+                }
+                Err(e) => {
+                    println!("network insert_block,Error: {:?}", e);
+                    false
+                }
+            };
+            return broadcast
+        } else if block.height() > current_block.height() + 1 {
+            self.queue.push(block.clone(),-(block.height() as i64));
+        }
+
+        false
     }
 }
 
