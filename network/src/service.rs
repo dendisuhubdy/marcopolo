@@ -151,6 +151,21 @@ impl Stream for Service {
                     BehaviourEvent::PeerDisconnected(peer_id) => {
                         return Ok(Async::Ready(Some(Libp2pEvent::PeerDisconnected(peer_id))));
                     }
+                    BehaviourEvent::FindPeers { peer_id, addrs } => {
+                        // attempt to connect to cli p2p nodes
+                    //     for addr in addrs.into_vec() {
+                    //         println!("dial {}", addr);
+                    //         if addr.to_string().contains("127.0.0.1") {
+                    //             continue
+                    //         }
+                    //         match Swarm::dial_addr(&mut self.swarm, addr.clone()) {
+                    //             Ok(()) => debug!(self.log, "Dialing p2p peer"; "address" => format!("{}", addr)),
+                    //             Err(err) =>
+                    //                 debug!(self.log,
+                    // "Could not connect to peer"; "address" => format!("{}", addr), "Error" => format!("{:?}", err)),
+                    //         };
+                    //     };
+                    }
                 },
                 Ok(Async::Ready(None)) => unreachable!("Swarm stream shouldn't end"),
                 Ok(Async::NotReady) => {

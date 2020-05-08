@@ -1,13 +1,13 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::num::NonZeroU32;
 use std::time::Duration;
 
 use futures::prelude::*;
 use libp2p::{
-    core::{identity::Keypair,ConnectedPoint},
+    core::{ConnectedPoint, identity::Keypair},
     gossipsub::{Gossipsub, GossipsubConfigBuilder, GossipsubEvent, GossipsubMessage, MessageId},
     identify::{Identify, IdentifyEvent},
-    kad::{GetClosestPeersError, Kademlia, KademliaConfig, KademliaEvent},
+    kad::{Addresses, GetClosestPeersError, Kademlia, KademliaConfig, KademliaEvent},
     kad::record::store::MemoryStore,
     mdns::{Mdns, MdnsEvent},
     multiaddr::Multiaddr,
@@ -49,7 +49,7 @@ pub struct Behaviour<TSubstream: AsyncRead + AsyncWrite> {
     #[behaviour(ignore)]
     log: slog::Logger,
     #[behaviour(ignore)]
-    pub peers: HashMap<PeerId, Multiaddr>,
+    pub peers: HashSet<PeerId>,
     /// A cache of recently seen gossip messages. This is used to filter out any possible
     /// duplicates that may still be seen over gossipsub.
     #[behaviour(ignore)]
@@ -108,7 +108,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
             identify,
             events: Vec::new(),
             log: behaviour_log,
-            peers: Default::default(),
+            peers: HashSet::new(),
             seen_gossip_messages: LruCache::new(100_000),
         })
     }
@@ -156,9 +156,11 @@ for Behaviour<TSubstream>
     fn inject_event(&mut self, event: P2PMessage) {
         match event {
             P2PMessage::PeerDialed(peer_id) => {
+                self.peers.insert(peer_id.clone());
                 self.events.push(BehaviourEvent::PeerDialed(peer_id))
             }
             P2PMessage::PeerDisconnected(peer_id) => {
+                self.peers.remove(&peer_id);
                 self.events.push(BehaviourEvent::PeerDisconnected(peer_id))
             }
             P2PMessage::P2P(peer_id, rpc_event) => {
@@ -176,13 +178,11 @@ for Behaviour<TSubstream>
             PingEvent {
                 peer,
                 result: Result::Ok(PingSuccess::Ping { rtt }),
-            } => {
-            }
+            } => {}
             PingEvent {
                 peer,
                 result: Result::Ok(PingSuccess::Pong),
-            } => {
-            }
+            } => {}
             PingEvent {
                 peer,
                 result: Result::Err(PingFailure::Timeout),
@@ -246,6 +246,14 @@ for Behaviour<TSubstream>
                             println!("Query timed out with no closest peers.");
                         }
                     }
+                }
+            }
+            KademliaEvent::RoutingUpdated{peer, addresses, ..} => {
+                if !self.peers.contains(&peer) {
+                    self.events.push(BehaviourEvent::FindPeers {
+                        peer_id: peer,
+                        addrs: addresses,
+                    });
                 }
             }
             _ => {
@@ -339,7 +347,6 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
         // self.kademlia.inject_disconnected(id,old_endpoint);
         println!("kademlia.inject_disconnected");
     }
-
 }
 
 /// The types of events than can be obtained from polling the behaviour.
@@ -360,6 +367,10 @@ pub enum BehaviourEvent {
         topics: Vec<TopicHash>,
         /// The message itself.
         message: PubsubMessage,
+    },
+    FindPeers {
+        peer_id: PeerId,
+        addrs: Addresses,
     },
 }
 

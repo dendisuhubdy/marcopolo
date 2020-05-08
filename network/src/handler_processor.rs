@@ -81,14 +81,13 @@ impl MessageProcessor {
         network_send: mpsc::UnboundedSender<NetworkMessage>,
         log: &slog::Logger,
     ) -> Self {
-        let sync_logger = log.new(o!("service"=> "sync"));
 
         // spawn the sync thread
         let (sync_send, _sync_exit) = crate::sync::manager::spawn(
             executor,
             block_chain.clone(),
             network_send.clone(),
-            sync_logger,
+            log.clone(),
         );
 
         MessageProcessor {

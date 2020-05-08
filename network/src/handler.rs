@@ -51,8 +51,7 @@ impl MessageHandler {
         executor: &tokio::runtime::TaskExecutor,
         log: slog::Logger,
     ) -> error::Result<mpsc::UnboundedSender<HandlerMessage>> {
-        let message_handler_log = log.new(o!("service"=> "msg_handler"));
-        trace!(message_handler_log, "Service starting");
+        trace!(log, "MessageHandler service starting");
 
         let (handler_send, handler_recv) = mpsc::unbounded_channel();
 
@@ -64,7 +63,7 @@ impl MessageHandler {
         let mut handler = MessageHandler {
             network_send,
             message_processor,
-            log: message_handler_log,
+            log:log.clone(),
         };
 
         // spawn handler task and move the message handler instance into the spawned thread
