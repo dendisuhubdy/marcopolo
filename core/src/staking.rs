@@ -162,6 +162,8 @@ mod tests {
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let db = ArchiveDB::new(Arc::clone(&backend));
         let addr = Address::default();
+        let first_addr = Address::from_hex("0x0000000000000000000000000000000000000001").unwrap();
+
 
         let validator = Validator {
             address: addr,
@@ -173,7 +175,16 @@ mod tests {
         let mut stake = Staking::from_state(&db, NULL_ROOT);
         stake.insert(&validator);
 
-        let item = stake.get_validator(&addr).unwrap();
-        assert_eq!(item, validator);
+        let first = Validator {
+            address: first_addr,
+            pubkey: Vec::new(),
+            balance: 1,
+            activate_height: 1,
+        };
+
+        stake.insert(&first);
+
+        let item = stake.get_validator(&first_addr).unwrap();
+        assert_eq!(item, first);
     }
 }
