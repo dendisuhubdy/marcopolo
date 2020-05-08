@@ -75,13 +75,15 @@ fn process_blocks<
     downloaded_blocks: I,
     log: &slog::Logger,
 ) -> Result<(), String> {
+    let current = chain.read().unwrap().current_block().height();
     for block in downloaded_blocks {
+        println!("block processor {:?} {}",block.height(),current);
         match chain.write().expect("block processor").insert_block_ref(block) {
             Ok(_) => {
                 true
             }
             Err(e) => {
-                println!("network process_blocks,Error: {:?}", e);
+                println!("network process_blocks,Error");
                 break
             }
         };

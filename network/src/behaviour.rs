@@ -206,7 +206,6 @@ for Behaviour<TSubstream>
         match event {
             MdnsEvent::Discovered(list) => {
                 for (peer_id, multiaddr) in list {
-                    println!("inject_event Discovered {:?} {:?}", peer_id, multiaddr);
                     self.kademlia.add_address(&peer_id, multiaddr);
                 }
             }

@@ -77,6 +77,8 @@ impl RangeSync {
         debug!(self.log, "New peer added for sync"; "head_root" => format!("{}",remote.head_root), "head_slot" => remote.finalized_number, "peer_id" => format!("{:?}", peer_id));
 
         // add the peer to the head's pool
+        self.chains.target_head_slot = remote.finalized_number;
+        self.chains.target_head_root = remote.finalized_root;
         self.chains.add_peer(network, peer_id);
         let local = self.chain.read().unwrap().current_block().height();
         self.chains.start_syncing(network, local);

@@ -498,7 +498,7 @@ impl SyncingChain {
         println!("get_next_batch {:?}",self.to_be_downloaded_id);
         // don't request batches beyond the target head slot
         let batch_start_numer =
-            self.start_numer + self.to_be_downloaded_id.saturating_sub(1) * BLOCKS_PER_BATCH;
+            self.start_numer + self.to_be_downloaded_id.saturating_sub(1) * BLOCKS_PER_BATCH + 1;
         if batch_start_numer > self.target_head_slot {
             return None;
         }
