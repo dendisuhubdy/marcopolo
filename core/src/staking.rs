@@ -81,11 +81,55 @@ impl Staking {
                 next: None,
                 payload: item,
             };
-            let encoded: Vec<u8> = bincode::serialize(&item).unwrap();
+            let encoded: Vec<u8> = bincode::serialize(&entry).unwrap();
             self.state_db.set_storage(item.map_key(), &encoded);
+        } else {
+            let head_ref = Hash::from_bytes(&head.unwrap()[..]);
+
+            let entry = ListEntry {
+                pre: None,
+                next: Some(head_ref),
+                payload: item,
+            };
+            self.state_db.set_storage(item.map_key(), &bincode::serialize(&entry).unwrap());
+            {
+                // replace next entry of inserted item
+                let encoded = self.state_db.get_storage(&head_ref).unwrap();
+                let mut next: ListEntry<Validator> = bincode::deserialize(&encoded).unwrap();
+                next.pre = Some(item.map_key());
+                let serialized: Vec<u8> = bincode::serialize(&next).unwrap();
+                self.state_db.set_storage(next.payload.map_key(), &serialized);
+            }
+            // place reference of first item at head
+            self.state_db.set_storage(self.validators.head_key, item.map_key().as_bytes());
         }
     }
 
+    pub fn delete(&mut self, addr: &Address) {
+        let encoded = match self.state_db.get_storage(&Validator::key_index(addr)) {
+            Some(i) => i,
+            None => return,
+        };
+
+        let item: ListEntry<Validator> = bincode::deserialize(&encoded).unwrap();
+        if item.pre.is_some() {
+            let encoded = self.state_db.get_storage(&item.pre.unwrap()).unwrap();
+            let mut pre_node: ListEntry<Validator> = bincode::deserialize(&encoded).unwrap();
+            pre_node.next = item.next;
+            self.state_db.set_storage(item.pre.unwrap(), &bincode::serialize(&pre_node).unwrap());
+        } else {
+            self.state_db.set_storage(self.validators.head_key, item.next.unwrap().as_bytes());
+        }
+
+        if item.next.is_some() {
+            let encoded = self.state_db.get_storage(&item.next.unwrap()).unwrap();
+            let mut next_node: ListEntry<Validator> = bincode::deserialize(&encoded).unwrap();
+            next_node.pre = item.pre;
+            self.state_db.set_storage(item.next.unwrap(), &bincode::serialize(&next_node).unwrap());
+        }
+
+        // delete target from trie db
+    }
     pub fn get_validator(&mut self, addr: &Address) -> Option<Validator> {
         // let head = self.state_db.get_storage(&self.validators.head_key);
         // if head.is_none() {
@@ -96,8 +140,8 @@ impl Staking {
             None => return None,
         };
 
-        let obj: Validator = bincode::deserialize(&encoded).unwrap();
-        Some(obj)
+        let obj: ListEntry<Validator> = bincode::deserialize(&encoded).unwrap();
+        Some(obj.payload)
     }
 
 }
