@@ -17,7 +17,7 @@
 use std::marker::PhantomData;
 
 use serde::{Serialize, Deserialize};
-use crate::types::{Hash, Address};
+use crate::types::Hash;
 // use crate::state::StateDB;
 
 #[derive(Serialize, Deserialize)]

@@ -399,7 +399,7 @@ mod tests {
             state_root = state.root();
         }
         {
-            let mut state = StateDB::from_existing(&db, state_root);
+            let state = StateDB::from_existing(&db, state_root);
             assert_eq!(state.get_storage(&key_null).unwrap(), b"foo");
         }
     }

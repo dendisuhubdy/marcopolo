@@ -31,7 +31,7 @@ enum StatePrefix {
 }
 
 #[derive(Serialize, Deserialize)]
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Validator {
     pub address: Address,
     pub pubkey: Vec<u8>,
@@ -43,6 +43,15 @@ impl Validator {
     pub fn map_key(&self) -> Hash {
         let mut raw = vec![];
         raw.extend_from_slice(Hash::from_bytes(self.address.as_slice()).as_bytes());
+        let position = Hash::from_bytes(&(StatePrefix::Validator as u64).to_be_bytes()[..]);
+        raw.extend_from_slice(position.as_bytes());
+
+        Hash(hash::blake2b_256(&raw))
+    }
+
+    pub fn key_index(addr: &Address) -> Hash {
+        let mut raw = vec![];
+        raw.extend_from_slice(Hash::from_bytes(addr.as_slice()).as_bytes());
         let position = Hash::from_bytes(&(StatePrefix::Validator as u64).to_be_bytes()[..]);
         raw.extend_from_slice(position.as_bytes());
 
@@ -76,6 +85,21 @@ impl Staking {
             self.state_db.set_storage(item.map_key(), &encoded);
         }
     }
+
+    pub fn get_validator(&mut self, addr: &Address) -> Option<Validator> {
+        // let head = self.state_db.get_storage(&self.validators.head_key);
+        // if head.is_none() {
+        //     return
+        // }
+        let encoded = match self.state_db.get_storage(&Validator::key_index(addr)) {
+            Some(i) => i,
+            None => return None,
+        };
+
+        let obj: Validator = bincode::deserialize(&encoded).unwrap();
+        Some(obj)
+    }
+
 }
 
 #[cfg(test)]
@@ -93,9 +117,10 @@ mod tests {
         env_logger::init();
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let db = ArchiveDB::new(Arc::clone(&backend));
+        let addr = Address::default();
 
         let validator = Validator {
-            address: Address::default(),
+            address: addr,
             pubkey: Vec::new(),
             balance: 1,
             activate_height: 1,
@@ -103,5 +128,8 @@ mod tests {
 
         let mut stake = Staking::from_state(&db, NULL_ROOT);
         stake.insert(&validator);
+
+        let item = stake.get_validator(&addr).unwrap();
+        assert_eq!(item, validator);
     }
 }
