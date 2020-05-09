@@ -138,8 +138,9 @@ impl Staking {
             next_node.pre = item.pre;
             self.state_db.set_storage(item.next.unwrap(), &bincode::serialize(&next_node).unwrap());
         }
-
         // delete target from trie db
+        self.state_db.remove_storage(Validator::key_index(addr));
+
     }
     pub fn get_validator(&mut self, addr: &Address) -> Option<Validator> {
         // let head = self.state_db.get_storage(&self.validators.head_key);

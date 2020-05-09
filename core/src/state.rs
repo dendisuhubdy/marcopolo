@@ -284,11 +284,19 @@ impl StateDB {
         t.get(key.as_bytes()).expect("state get key")
     }
 
+    pub fn remove_storage(&mut self, key: Hash) {
+        self.local_changes.insert(key, Vec::new());
+    }
+
     pub fn commit(&mut self) {
         {
             let mut t = TrieDBMut::from_existing(&mut self.db, &mut self.state_root).expect("open trie error");
             for (key, data) in self.local_changes.iter() {
-                t.insert(key.as_bytes(), &data).unwrap();
+                if (data.len() > 0) {
+                    t.insert(key.as_bytes(), &data).unwrap();
+                } else {
+                    t.remove(key.as_bytes());
+                }
             }
 
         }
