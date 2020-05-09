@@ -105,6 +105,17 @@ impl Staking {
         }
     }
 
+    pub fn set_item(&mut self, item: &Validator) {
+        let encoded = self.state_db.get_storage(&item.map_key());
+        if encoded.is_none() {
+            self.insert(item);
+        } else {
+            let mut entry: ListEntry<Validator> = bincode::deserialize(&encoded.unwrap()).unwrap();
+            entry.payload = item.clone();
+            self.state_db.set_storage(item.map_key(), &bincode::serialize(&entry).unwrap());
+        }
+    }
+
     pub fn delete(&mut self, addr: &Address) {
         let encoded = match self.state_db.get_storage(&Validator::key_index(addr)) {
             Some(i) => i,
@@ -143,7 +154,6 @@ impl Staking {
         let obj: ListEntry<Validator> = bincode::deserialize(&encoded).unwrap();
         Some(obj.payload)
     }
-
 }
 
 #[cfg(test)]
