@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
 use std::time::Duration;
 
@@ -37,6 +38,7 @@ pub struct Service {
 
     /// A list of timeouts after which peers become unbanned.
     peer_ban_timeout: DelayQueue<PeerId>,
+    pub peers: HashSet<PeerId>,
     pub log: slog::Logger,
 }
 
@@ -101,10 +103,11 @@ impl Service {
         }
 
         Ok(Service {
-            local_peer_id: local_peer_id,
+            local_peer_id,
             swarm,
             peers_to_ban: DelayQueue::new(),
             peer_ban_timeout: DelayQueue::new(),
+            peers: HashSet::new(),
             log,
         })
     }
@@ -117,6 +120,21 @@ impl Service {
             Duration::from_millis(BAN_PEER_WAIT_TIMEOUT),
         );
         self.peer_ban_timeout.insert(peer_id, timeout);
+    }
+
+    pub fn dial_peer(&mut self, addr: Multiaddr) -> bool {
+        let result = match Swarm::dial_addr(&mut self.swarm, addr.clone()) {
+            Ok(()) => {
+                debug!(self.log, "Dialing p2p peer"; "address" => format!("{}", addr));
+                true
+            }
+            Err(err) => {
+                debug!(self.log,
+                            "Could not connect to peer"; "address" => format!("{}", addr), "Error" => format!("{:?}", err));
+                false
+            }
+        };
+        result
     }
 }
 
@@ -146,25 +164,24 @@ impl Stream for Service {
                         return Ok(Async::Ready(Some(Libp2pEvent::RPC(peer_id, event))));
                     }
                     BehaviourEvent::PeerDialed(peer_id) => {
+                        self.peers.insert(peer_id.clone());
                         return Ok(Async::Ready(Some(Libp2pEvent::PeerDialed(peer_id))));
                     }
                     BehaviourEvent::PeerDisconnected(peer_id) => {
+                        self.peers.remove(&peer_id);
                         return Ok(Async::Ready(Some(Libp2pEvent::PeerDisconnected(peer_id))));
                     }
                     BehaviourEvent::FindPeers { peer_id, addrs } => {
-                        // attempt to connect to cli p2p nodes
-                    //     for addr in addrs.into_vec() {
-                    //         println!("dial {}", addr);
-                    //         if addr.to_string().contains("127.0.0.1") {
-                    //             continue
-                    //         }
-                    //         match Swarm::dial_addr(&mut self.swarm, addr.clone()) {
-                    //             Ok(()) => debug!(self.log, "Dialing p2p peer"; "address" => format!("{}", addr)),
-                    //             Err(err) =>
-                    //                 debug!(self.log,
-                    // "Could not connect to peer"; "address" => format!("{}", addr), "Error" => format!("{:?}", err)),
-                    //         };
-                    //     };
+                        if !self.peers.contains(&peer_id) {
+                            // attempt to connect to cli p2p nodes
+                            for addr in addrs.into_vec() {
+                                let addr_str = addr.to_string();
+                                if addr_str.contains("127.0.0.1") || !addr_str.contains("ip4") {
+                                    continue;
+                                }
+                                self.dial_peer(addr);
+                            };
+                        }
                     }
                 },
                 Ok(Async::Ready(None)) => unreachable!("Swarm stream shouldn't end"),

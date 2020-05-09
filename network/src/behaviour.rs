@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::num::NonZeroU32;
 use std::time::Duration;
 
@@ -48,8 +47,6 @@ pub struct Behaviour<TSubstream: AsyncRead + AsyncWrite> {
     /// Logger for behaviour actions.
     #[behaviour(ignore)]
     log: slog::Logger,
-    #[behaviour(ignore)]
-    pub peers: HashSet<PeerId>,
     /// A cache of recently seen gossip messages. This is used to filter out any possible
     /// duplicates that may still be seen over gossipsub.
     #[behaviour(ignore)]
@@ -108,7 +105,6 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
             identify,
             events: Vec::new(),
             log: behaviour_log,
-            peers: HashSet::new(),
             seen_gossip_messages: LruCache::new(100_000),
         })
     }
@@ -119,6 +115,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<GossipsubE
 for Behaviour<TSubstream>
 {
     fn inject_event(&mut self, event: GossipsubEvent) {
+        println!("inject_event gossipsub:  {:?}", event);
         match event {
             GossipsubEvent::Message(propagation_source, id, gs_msg) => {
                 let msg = PubsubMessage::from_topics(&gs_msg.topics, gs_msg.data);
@@ -154,13 +151,12 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<P2PMessage
 for Behaviour<TSubstream>
 {
     fn inject_event(&mut self, event: P2PMessage) {
+        println!("inject_event P2PMessage:  {:?}", event);
         match event {
             P2PMessage::PeerDialed(peer_id) => {
-                self.peers.insert(peer_id.clone());
                 self.events.push(BehaviourEvent::PeerDialed(peer_id))
             }
             P2PMessage::PeerDisconnected(peer_id) => {
-                self.peers.remove(&peer_id);
                 self.events.push(BehaviourEvent::PeerDisconnected(peer_id))
             }
             P2PMessage::P2P(peer_id, rpc_event) => {
@@ -248,13 +244,11 @@ for Behaviour<TSubstream>
                     }
                 }
             }
-            KademliaEvent::RoutingUpdated{peer, addresses, ..} => {
-                if !self.peers.contains(&peer) {
-                    self.events.push(BehaviourEvent::FindPeers {
-                        peer_id: peer,
-                        addrs: addresses,
-                    });
-                }
+            KademliaEvent::RoutingUpdated { peer, addresses, .. } => {
+                self.events.push(BehaviourEvent::FindPeers {
+                    peer_id: peer,
+                    addrs: addresses,
+                });
             }
             _ => {
                 println!("KademliaEvent inject_event else ");
@@ -280,6 +274,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<IdentifyEv
 for Behaviour<TSubstream>
 {
     fn inject_event(&mut self, event: IdentifyEvent) {
+        println!("inject_event IdentifyEvent:  {:?}", event);
         match event {
             IdentifyEvent::Received {
                 peer_id,

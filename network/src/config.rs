@@ -38,7 +38,7 @@ impl Config {
         // If a `datadir` has been specified, set the network dir to be inside it.
         self.network_dir = data_dir.join("network");
         self.dial_addrs = dial_addrs;
-        self.listen_address = iter::once(multiaddr::Protocol::Ip4(Ipv4Addr::new(127, 0, 0, 1)))
+        self.listen_address = iter::once(multiaddr::Protocol::Ip4(Ipv4Addr::new(0, 0, 0, 0)))
             .chain(iter::once(multiaddr::Protocol::Tcp(p2p_port))).collect();
         Ok(())
     }
@@ -49,7 +49,7 @@ impl Default for Config {
     fn default() -> Self {
         let mut network_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
         network_dir.push(".map");
-        let listen_address = iter::once(multiaddr::Protocol::Ip4(Ipv4Addr::new(127, 0, 0, 1)))
+        let listen_address = iter::once(multiaddr::Protocol::Ip4(Ipv4Addr::new(0, 0, 0, 0)))
             .chain(iter::once(multiaddr::Protocol::Tcp(40313)))
             .collect();
         Config {

@@ -159,6 +159,7 @@ impl<TSubstream> NetworkBehaviour for P2P<TSubstream>
 }
 
 /// Messages sent to the user from the P2P protocol.
+#[derive(Debug)]
 pub enum P2PMessage {
     P2P(PeerId, P2PEvent),
     PeerDialed(PeerId),
