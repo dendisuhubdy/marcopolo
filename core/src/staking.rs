@@ -32,11 +32,20 @@ enum StatePrefix {
 
 #[derive(Serialize, Deserialize)]
 #[derive(Clone, Debug, PartialEq)]
+pub struct LockingBalance {
+    pub amount: u128,
+    pub height: u64,
+}
+
+#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Validator {
     pub address: Address,
     pub pubkey: Vec<u8>,
-    pub balance: u64,
+    pub balance: u128,
+    pub effective_balance: u128,
     pub activate_height: u64,
+    pub unlocked_queue: Vec<LockingBalance>,
 }
 
 impl Validator {
@@ -180,7 +189,9 @@ mod tests {
             address: addr,
             pubkey: Vec::new(),
             balance: 1,
+            effective_balance: 0,
             activate_height: 1,
+            unlocked_queue: Vec::new(),
         };
 
         let mut stake = Staking::from_state(&db, NULL_ROOT);
@@ -190,7 +201,9 @@ mod tests {
             address: first_addr,
             pubkey: Vec::new(),
             balance: 1,
+            effective_balance: 0,
             activate_height: 1,
+            unlocked_queue: Vec::new(),
         };
 
         stake.insert(&first);
