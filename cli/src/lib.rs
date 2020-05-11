@@ -30,7 +30,7 @@ use network::{Multiaddr};
 pub fn run() {
     let matches = App::new("map")
         .version("0.0.1")
-        .about("MarcoPolo Protocol - A new P2P e-cash system")
+        .about("MarcoPolo Protocol - Chain-to-Chain Interoperation Protocol")
         .arg(Arg::with_name("data_dir")
             .long("datadir")
             .short("d")
