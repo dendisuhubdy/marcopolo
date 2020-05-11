@@ -92,6 +92,7 @@ impl Staking {
             };
             let encoded: Vec<u8> = bincode::serialize(&entry).unwrap();
             self.state_db.set_storage(item.map_key(), &encoded);
+            self.state_db.set_storage(self.validators.head_key, item.map_key().as_bytes());
         } else {
             let head_ref = Hash::from_bytes(&head.unwrap()[..]);
 
@@ -237,7 +238,6 @@ mod tests {
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let db = ArchiveDB::new(Arc::clone(&backend));
         let addr = Address::default();
-        let first_addr = Address::from_hex("0x0000000000000000000000000000000000000001").unwrap();
 
         let validator = Validator {
             address: addr,
@@ -253,5 +253,6 @@ mod tests {
 
         let items = stake.validator_items();
         assert_eq!(items.len(), 1);
+        assert_eq!(stake.get_validator(&addr).unwrap(), validator);
     }
 }
