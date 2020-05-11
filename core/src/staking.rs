@@ -151,6 +151,26 @@ impl Staking {
         self.state_db.remove_storage(Validator::key_index(addr));
 
     }
+
+    pub fn validator_items(&self) -> Vec<Validator> {
+        let mut items = Vec::new();
+
+        let head_ref = match self.state_db.get_storage(&self.validators.head_key) {
+            Some(i) => i,
+            None => return items,
+        };
+
+        // iterate list items
+        let mut next_ref = Some(Hash::from_bytes(&head_ref));
+        while next_ref.is_some() {
+            let encoded = self.state_db.get_storage(&next_ref.unwrap()).unwrap();
+            let item: ListEntry<Validator> = bincode::deserialize(&encoded).unwrap();
+            items.push(item.payload);
+            next_ref = item.next;
+        }
+        items
+    }
+
     pub fn get_validator(&mut self, addr: &Address) -> Option<Validator> {
         // let head = self.state_db.get_storage(&self.validators.head_key);
         // if head.is_none() {
@@ -184,7 +204,6 @@ mod tests {
         let addr = Address::default();
         let first_addr = Address::from_hex("0x0000000000000000000000000000000000000001").unwrap();
 
-
         let validator = Validator {
             address: addr,
             pubkey: Vec::new(),
@@ -210,5 +229,29 @@ mod tests {
 
         let item = stake.get_validator(&first_addr).unwrap();
         assert_eq!(item, first);
+    }
+
+    #[test]
+    fn validator_iter() {
+        env_logger::init();
+        let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
+        let db = ArchiveDB::new(Arc::clone(&backend));
+        let addr = Address::default();
+        let first_addr = Address::from_hex("0x0000000000000000000000000000000000000001").unwrap();
+
+        let validator = Validator {
+            address: addr,
+            pubkey: Vec::new(),
+            balance: 1,
+            effective_balance: 0,
+            activate_height: 1,
+            unlocked_queue: Vec::new(),
+        };
+
+        let mut stake = Staking::from_state(&db, NULL_ROOT);
+        stake.insert(&validator);
+
+        let items = stake.validator_items();
+        assert_eq!(items.len(), 1);
     }
 }
