@@ -245,7 +245,7 @@ pub struct StateDB {
     // db: HashDB<Blake2Hasher, DBValue>,
     db: ArchiveDB,
     state_root: Hash,
-    local_changes: HashMap<Hash, Vec<u8>>,
+    local_changes: HashMap<Hash, Option<Vec<u8>>>,
 }
 
 impl StateDB {
@@ -270,12 +270,12 @@ impl StateDB {
     }
 
     pub fn set_storage(&mut self, key: Hash, value: &[u8]) {
-        self.local_changes.insert(key, value.to_vec());
+        self.local_changes.insert(key, Some(value.to_vec()));
     }
 
     pub fn get_storage(&self, key: &Hash) -> Option<Vec<u8>> {
         if let Some(data) = self.local_changes.get(key) {
-            return Some(data.clone());
+            return data.as_ref().map(|d| d.clone());
         }
         let t = match TrieDB::new(&self.db, &self.state_root) {
             Ok(trie) => trie,
@@ -285,17 +285,18 @@ impl StateDB {
     }
 
     pub fn remove_storage(&mut self, key: Hash) {
-        self.local_changes.insert(key, Vec::new());
+        self.local_changes.insert(key, None);
     }
 
     pub fn commit(&mut self) {
         {
             let mut t = TrieDBMut::from_existing(&mut self.db, &mut self.state_root).expect("open trie error");
             for (key, data) in self.local_changes.iter() {
-                if (data.len() > 0) {
-                    t.insert(key.as_bytes(), &data).unwrap();
+                // delete keys with None value
+                if let Some(d) = data {
+                    t.insert(key.as_bytes(), &d).unwrap();
                 } else {
-                    t.remove(key.as_bytes());
+                    t.remove(key.as_bytes()).unwrap();
                 }
             }
 

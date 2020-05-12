@@ -139,7 +139,13 @@ impl Staking {
             pre_node.next = item.next;
             self.state_db.set_storage(item.pre.unwrap(), &bincode::serialize(&pre_node).unwrap());
         } else {
-            self.state_db.set_storage(self.validators.head_key, item.next.unwrap().as_bytes());
+            if let Some(next) = item.next {
+                // set head to next item
+                self.state_db.set_storage(self.validators.head_key, next.as_bytes());
+            } else {
+                // EMPTY list, remove head ref
+                self.state_db.remove_storage(self.validators.head_key);
+            }
         }
 
         if item.next.is_some() {
@@ -181,7 +187,6 @@ impl Staking {
             Some(i) => i,
             None => return None,
         };
-
         let obj: ListEntry<Validator> = bincode::deserialize(&encoded).unwrap();
         Some(obj.payload)
     }
@@ -254,5 +259,46 @@ mod tests {
         let items = stake.validator_items();
         assert_eq!(items.len(), 1);
         assert_eq!(stake.get_validator(&addr).unwrap(), validator);
+    }
+
+    #[test]
+    fn validator_delete() {
+        env_logger::init();
+        let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
+        let db = ArchiveDB::new(Arc::clone(&backend));
+        let addr = Address::default();
+        let addr_1 = Address::from_hex("0x0000000000000000000000000000000000000001").unwrap();
+
+        let validator = Validator {
+            address: addr,
+            pubkey: Vec::new(),
+            balance: 1,
+            effective_balance: 0,
+            activate_height: 1,
+            unlocked_queue: Vec::new(),
+        };
+
+        let validator_1 = Validator {
+            address: addr_1,
+            pubkey: Vec::new(),
+            balance: 1,
+            effective_balance: 0,
+            activate_height: 1,
+            unlocked_queue: Vec::new(),
+        };
+
+        let mut stake = Staking::from_state(&db, NULL_ROOT);
+        stake.insert(&validator);
+        stake.insert(&validator_1);
+
+        stake.delete(&addr);
+        let item = stake.get_validator(&addr);
+
+        stake.delete(&addr_1);
+        let item = stake.get_validator(&addr_1);
+
+        assert_eq!(stake.validator_items().len(), 0);
+        assert_eq!(stake.get_validator(&addr), None);
+        assert_eq!(stake.get_validator(&addr_1), None);
     }
 }
