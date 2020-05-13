@@ -46,6 +46,7 @@ pub struct Validator {
     pub effective_balance: u128,
     pub activate_height: u64,
     pub exit_height: u64,
+    pub deposit_queue: Vec<LockingBalance>,
     pub unlocked_queue: Vec<LockingBalance>,
 }
 
@@ -157,7 +158,6 @@ impl Staking {
         }
         // delete target from trie db
         self.state_db.remove_storage(Validator::key_index(addr));
-
     }
 
     pub fn validator_items(&self) -> Vec<Validator> {
@@ -205,8 +205,9 @@ impl Staking {
             pubkey: pubkey,
             balance: amount,
             effective_balance: amount,
-            activate_height: activate,
+            activate_height: 0,
             exit_height: 0,
+            deposit_queue: Vec::new(),
             unlocked_queue: Vec::new(),
         };
 
@@ -218,7 +219,26 @@ impl Staking {
             Some(i) => i,
             None => return,
         };
+        validator.deposit_queue.push(LockingBalance{amount: amount, height: 0});
         validator.balance += amount;
+        self.set_item(&validator);
+    }
+
+    pub fn activate_deposit(&mut self, addr: &Address) {
+        let mut validator = match self.get_validator(&addr) {
+            Some(i) => i,
+            None => return,
+        };
+        // available deposit take queue util active epoch
+        let epoch: u64 = 0;
+        let offset: usize = 0;
+        while offset < validator.deposit_queue.len() {
+            if validator.deposit_queue[offset].height > epoch {
+                break;
+            }
+            validator.effective_balance += validator.deposit_queue[offset].amount;
+        }
+        validator.deposit_queue = validator.deposit_queue[..offset].to_vec();
         self.set_item(&validator);
     }
 
@@ -259,6 +279,7 @@ mod tests {
             effective_balance: 0,
             activate_height: 1,
             exit_height: 0,
+            deposit_queue: Vec::new(),
             unlocked_queue: Vec::new(),
         };
 
@@ -272,6 +293,7 @@ mod tests {
             effective_balance: 0,
             activate_height: 1,
             exit_height: 0,
+            deposit_queue: Vec::new(),
             unlocked_queue: Vec::new(),
         };
 
@@ -295,6 +317,7 @@ mod tests {
             effective_balance: 0,
             exit_height: 0,
             activate_height: 1,
+            deposit_queue: Vec::new(),
             unlocked_queue: Vec::new(),
         };
 
@@ -321,6 +344,7 @@ mod tests {
             effective_balance: 0,
             activate_height: 1,
             exit_height: 0,
+            deposit_queue: Vec::new(),
             unlocked_queue: Vec::new(),
         };
 
@@ -331,6 +355,7 @@ mod tests {
             effective_balance: 0,
             activate_height: 1,
             exit_height: 0,
+            deposit_queue: Vec::new(),
             unlocked_queue: Vec::new(),
         };
 
