@@ -28,10 +28,12 @@ const NONCE_POS: u64 = 2;
 #[derive(Serialize, Deserialize)]
 #[derive(Default, Copy, Clone, Debug, PartialEq)]
 pub struct Account {
-    // Available balance of eth account
+    // Available balance of the account
     balance: u128,
     // Nonce of the account transaction count
     nonce: u64,
+    // Balance which is reserved by other modules
+    locked_balance: u128,
 }
 
 impl Account {
@@ -85,6 +87,15 @@ impl Balance {
         account.nonce
     }
 
+    pub fn locked(&self, addr: Address) -> u128 {
+        let addr_hash = Self::address_key(addr);
+        let account = match self.cache.get(&addr_hash) {
+            Some(v) => v.clone(),
+            None => self.load_account(addr),
+        };
+        account.locked_balance
+    }
+
     pub fn get_account(&self, addr: Address) -> Account {
         let addr_hash = Self::address_key(addr);
         let account = match self.cache.get(&addr_hash) {
@@ -121,6 +132,38 @@ impl Balance {
             None => self.load_account(addr),
         };
         account.balance -= value;
+        self.cache.insert(addr_hash, account);
+    }
+
+    pub fn slash(&mut self, addr: Address, value: u128) {
+        let addr_hash = Self::address_key(addr);
+        let mut account = match self.cache.get(&addr_hash) {
+            Some(v) => v.clone(),
+            None => self.load_account(addr),
+        };
+        account.locked_balance -= value;
+        self.cache.insert(addr_hash, account);
+    }
+
+    pub fn lock_balance(&mut self, addr: Address, value: u128) {
+        let addr_hash = Self::address_key(addr);
+        let mut account = match self.cache.get(&addr_hash) {
+            Some(v) => v.clone(),
+            None => self.load_account(addr),
+        };
+        account.balance -= value;
+        account.locked_balance += value;
+        self.cache.insert(addr_hash, account);
+    }
+
+    pub fn unlock_balance(&mut self, addr: Address, value: u128) {
+        let addr_hash = Self::address_key(addr);
+        let mut account = match self.cache.get(&addr_hash) {
+            Some(v) => v.clone(),
+            None => self.load_account(addr),
+        };
+        account.balance += value;
+        account.locked_balance -= value;
         self.cache.insert(addr_hash, account);
     }
 
@@ -216,7 +259,7 @@ mod tests {
     use super::{Balance, Account};
 
     #[test]
-    fn set_account() {
+    fn account_set() {
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let db = ArchiveDB::new(Arc::clone(&backend));
         let mut state = Balance::new(&db);
@@ -227,7 +270,8 @@ mod tests {
 
         let v1 = Account {
             balance: 1,
-            nonce: 1
+            nonce: 1,
+            locked_balance: 0,
         };
         state.set_account(addr, &v1);
         account = state.load_account(addr);
@@ -235,27 +279,7 @@ mod tests {
     }
 
     #[test]
-    fn change_accounts() {
-        let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
-        let db = ArchiveDB::new(Arc::clone(&backend));
-        let mut state = Balance::new(&db);
-
-        let from = Address([0; 20]);
-        let to = Address([1; 20]);
-        state.set_account(from, &Account {
-            balance: 1,
-            nonce: 1,
-        });
-        state.set_account(to, &Account {
-            balance: 2,
-            nonce: 1,
-        });
-        let account = state.load_account(from);
-        assert_eq!(account.balance, 1);
-    }
-
-    #[test]
-    fn transfer() {
+    fn account_transfer() {
         env_logger::init();
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let db = ArchiveDB::new(Arc::clone(&backend));
@@ -265,12 +289,14 @@ mod tests {
         state.set_account(addr, &Account {
             balance: 1,
             nonce: 1,
+            locked_balance: 0,
         });
 
         let receiver = Address([1; 20]);
         state.set_account(receiver, &Account {
             balance: 0,
             nonce: 0,
+            locked_balance: 0,
         });
 
         state.transfer(addr, receiver, 1);
@@ -283,5 +309,25 @@ mod tests {
             assert_eq!(account.balance, 1);
             assert_eq!(state.balance(receiver), 1);
         }
+    }
+
+    #[test]
+    fn account_lock() {
+        let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
+        let db = ArchiveDB::new(Arc::clone(&backend));
+        let mut state = Balance::new(&db);
+        let addr = Address::default();
+        let lock_1: u128 = 1;
+
+        let v1 = Account {
+            balance: 1,
+            nonce: 1,
+            locked_balance: 0,
+        };
+        state.set_account(addr, &v1);
+        state.lock_balance(addr, lock_1);
+        state.commit();
+
+        assert_eq!(state.locked(addr), lock_1);
     }
 }

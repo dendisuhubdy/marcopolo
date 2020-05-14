@@ -160,7 +160,7 @@ impl Staking {
         self.state_db.remove_storage(Validator::key_index(addr));
     }
 
-    pub fn validator_items(&self) -> Vec<Validator> {
+    pub fn validator_set(&self) -> Vec<Validator> {
         let mut items = Vec::new();
 
         let head_ref = match self.state_db.get_storage(&self.validators.head_key) {
@@ -324,7 +324,7 @@ mod tests {
         let mut stake = Staking::from_state(&db, NULL_ROOT);
         stake.insert(&validator);
 
-        let items = stake.validator_items();
+        let items = stake.validator_set();
         assert_eq!(items.len(), 1);
         assert_eq!(stake.get_validator(&addr).unwrap(), validator);
     }
@@ -369,7 +369,7 @@ mod tests {
         stake.delete(&addr_1);
         let item = stake.get_validator(&addr_1);
 
-        assert_eq!(stake.validator_items().len(), 0);
+        assert_eq!(stake.validator_set().len(), 0);
         assert_eq!(stake.get_validator(&addr), None);
         assert_eq!(stake.get_validator(&addr_1), None);
     }
