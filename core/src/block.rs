@@ -189,9 +189,6 @@ impl  Block {
     pub fn get_txs(&self) -> &Vec<Transaction> {
         &self.txs
     }
-    pub fn height(&self) -> u64 {
-        self.header.height
-    }
 }
 
 pub fn is_equal_hash(hash1: Option<Hash>,hash2: Option<Hash>) -> bool {

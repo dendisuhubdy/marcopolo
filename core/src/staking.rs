@@ -15,6 +15,7 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::marker::PhantomData;
+use std::cell::RefCell;
 
 use serde::{Serialize, Deserialize};
 use bincode;
@@ -22,7 +23,6 @@ use hash;
 use crate::types::{Hash, Address};
 use crate::storage::{List, ListEntry};
 use crate::state::{ArchiveDB, StateDB};
-
 
 #[derive(Copy, Clone)]
 enum StatePrefix {
@@ -85,20 +85,20 @@ impl Validator {
 
 pub struct Staking {
     pub validators: List<Validator>,
-    pub state_db: StateDB,
+    pub state_db: RefCell<StateDB>,
 }
 
 impl Staking {
-    pub fn from_state(backend: &ArchiveDB, root: Hash) -> Self {
+    pub fn from_state(backend: RefCell<StateDB>) -> Self {
         let head_key = Hash::from_bytes(&(StatePrefix::Validator as u64).to_be_bytes()[..]);
         Staking {
             validators: List::new(head_key),
-            state_db: StateDB::from_existing(backend, root),
+            state_db: backend,
         }
     }
 
     pub fn insert(&mut self, item: &Validator) {
-        let head = self.state_db.get_storage(&self.validators.head_key);
+        let head = self.state_db.get_mut().get_storage(&self.validators.head_key);
         if head.is_none() {
             let entry = ListEntry {
                 pre: None,
@@ -106,8 +106,8 @@ impl Staking {
                 payload: item,
             };
             let encoded: Vec<u8> = bincode::serialize(&entry).unwrap();
-            self.state_db.set_storage(item.map_key(), &encoded);
-            self.state_db.set_storage(self.validators.head_key, item.map_key().as_bytes());
+            self.state_db.get_mut().set_storage(item.map_key(), &encoded);
+            self.state_db.get_mut().set_storage(self.validators.head_key, item.map_key().as_bytes());
         } else {
             let head_ref = Hash::from_bytes(&head.unwrap()[..]);
 
@@ -116,67 +116,67 @@ impl Staking {
                 next: Some(head_ref),
                 payload: item,
             };
-            self.state_db.set_storage(item.map_key(), &bincode::serialize(&entry).unwrap());
+            self.state_db.get_mut().set_storage(item.map_key(), &bincode::serialize(&entry).unwrap());
             {
                 // replace next entry of inserted item
-                let encoded = self.state_db.get_storage(&head_ref).unwrap();
+                let encoded = self.state_db.borrow().get_storage(&head_ref).unwrap();
                 let mut next: ListEntry<Validator> = bincode::deserialize(&encoded).unwrap();
                 next.pre = Some(item.map_key());
                 let serialized: Vec<u8> = bincode::serialize(&next).unwrap();
-                self.state_db.set_storage(next.payload.map_key(), &serialized);
+                self.state_db.get_mut().set_storage(next.payload.map_key(), &serialized);
             }
             // place reference of first item at head
-            self.state_db.set_storage(self.validators.head_key, item.map_key().as_bytes());
+            self.state_db.get_mut().set_storage(self.validators.head_key, item.map_key().as_bytes());
         }
     }
 
     pub fn set_item(&mut self, item: &Validator) {
-        let encoded = self.state_db.get_storage(&item.map_key());
+        let encoded = self.state_db.borrow().get_storage(&item.map_key());
         if encoded.is_none() {
             self.insert(item);
         } else {
             let mut entry: ListEntry<Validator> = bincode::deserialize(&encoded.unwrap()).unwrap();
             entry.payload = item.clone();
-            self.state_db.set_storage(item.map_key(), &bincode::serialize(&entry).unwrap());
+            self.state_db.get_mut().set_storage(item.map_key(), &bincode::serialize(&entry).unwrap());
         }
     }
 
     pub fn delete(&mut self, addr: &Address) {
-        let encoded = match self.state_db.get_storage(&Validator::key_index(addr)) {
+        let encoded = match self.state_db.borrow().get_storage(&Validator::key_index(addr)) {
             Some(i) => i,
             None => return,
         };
 
         let item: ListEntry<Validator> = bincode::deserialize(&encoded).unwrap();
         if item.pre.is_some() {
-            let encoded = self.state_db.get_storage(&item.pre.unwrap()).unwrap();
+            let encoded = self.state_db.borrow().get_storage(&item.pre.unwrap()).unwrap();
             let mut pre_node: ListEntry<Validator> = bincode::deserialize(&encoded).unwrap();
             pre_node.next = item.next;
-            self.state_db.set_storage(item.pre.unwrap(), &bincode::serialize(&pre_node).unwrap());
+            self.state_db.get_mut().set_storage(item.pre.unwrap(), &bincode::serialize(&pre_node).unwrap());
         } else {
             if let Some(next) = item.next {
                 // set head to next item
-                self.state_db.set_storage(self.validators.head_key, next.as_bytes());
+                self.state_db.get_mut().set_storage(self.validators.head_key, next.as_bytes());
             } else {
                 // EMPTY list, remove head ref
-                self.state_db.remove_storage(self.validators.head_key);
+                self.state_db.get_mut().remove_storage(self.validators.head_key);
             }
         }
 
         if item.next.is_some() {
-            let encoded = self.state_db.get_storage(&item.next.unwrap()).unwrap();
+            let encoded = self.state_db.borrow().get_storage(&item.next.unwrap()).unwrap();
             let mut next_node: ListEntry<Validator> = bincode::deserialize(&encoded).unwrap();
             next_node.pre = item.pre;
-            self.state_db.set_storage(item.next.unwrap(), &bincode::serialize(&next_node).unwrap());
+            self.state_db.get_mut().set_storage(item.next.unwrap(), &bincode::serialize(&next_node).unwrap());
         }
         // delete target from trie db
-        self.state_db.remove_storage(Validator::key_index(addr));
+        self.state_db.get_mut().remove_storage(Validator::key_index(addr));
     }
 
     pub fn validator_set(&self) -> Vec<Validator> {
         let mut items = Vec::new();
 
-        let head_ref = match self.state_db.get_storage(&self.validators.head_key) {
+        let head_ref = match self.state_db.borrow().get_storage(&self.validators.head_key) {
             Some(i) => i,
             None => return items,
         };
@@ -184,7 +184,7 @@ impl Staking {
         // iterate list items
         let mut next_ref = Some(Hash::from_bytes(&head_ref));
         while next_ref.is_some() {
-            let encoded = self.state_db.get_storage(&next_ref.unwrap()).unwrap();
+            let encoded = self.state_db.borrow().get_storage(&next_ref.unwrap()).unwrap();
             let item: ListEntry<Validator> = bincode::deserialize(&encoded).unwrap();
             items.push(item.payload);
             next_ref = item.next;
@@ -193,11 +193,11 @@ impl Staking {
     }
 
     pub fn get_validator(&self, addr: &Address) -> Option<Validator> {
-        // let head = self.state_db.get_storage(&self.validators.head_key);
+        // let head = self.state().get_storage(&self.validators.head_key);
         // if head.is_none() {
         //     return
         // }
-        let encoded = match self.state_db.get_storage(&Validator::key_index(addr)) {
+        let encoded = match self.state_db.borrow().get_storage(&Validator::key_index(addr)) {
             Some(i) => i,
             None => return None,
         };
@@ -270,10 +270,11 @@ impl Staking {
 #[cfg(test)]
 mod tests {
     use std::sync::{Arc, RwLock};
+    use std::cell::RefCell;
     use env_logger;
     use map_store::{MemoryKV, KVDB};
+    use crate::state::{ArchiveDB, StateDB};
     use crate::types::Address;
-    use crate::state::ArchiveDB;
     use crate::trie::NULL_ROOT;
     use super::{Validator, Staking};
 
@@ -282,6 +283,7 @@ mod tests {
         env_logger::init();
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let db = ArchiveDB::new(Arc::clone(&backend));
+        let state_db = RefCell::new(StateDB::from_existing(&db, NULL_ROOT));
         let addr = Address::default();
         let first_addr = Address::from_hex("0x0000000000000000000000000000000000000001").unwrap();
 
@@ -296,7 +298,7 @@ mod tests {
             unlocked_queue: Vec::new(),
         };
 
-        let mut stake = Staking::from_state(&db, NULL_ROOT);
+        let mut stake = Staking::from_state(state_db);
         stake.insert(&validator);
 
         let first = Validator {
@@ -321,6 +323,7 @@ mod tests {
         env_logger::init();
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let db = ArchiveDB::new(Arc::clone(&backend));
+        let state_db = RefCell::new(StateDB::from_existing(&db, NULL_ROOT));
         let addr = Address::default();
 
         let validator = Validator {
@@ -334,7 +337,7 @@ mod tests {
             unlocked_queue: Vec::new(),
         };
 
-        let mut stake = Staking::from_state(&db, NULL_ROOT);
+        let mut stake = Staking::from_state(state_db);
         stake.insert(&validator);
 
         let items = stake.validator_set();
@@ -347,6 +350,7 @@ mod tests {
         env_logger::init();
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let db = ArchiveDB::new(Arc::clone(&backend));
+        let state_db = RefCell::new(StateDB::from_existing(&db, NULL_ROOT));
         let addr = Address::default();
         let addr_1 = Address::from_hex("0x0000000000000000000000000000000000000001").unwrap();
 
@@ -372,7 +376,7 @@ mod tests {
             unlocked_queue: Vec::new(),
         };
 
-        let mut stake = Staking::from_state(&db, NULL_ROOT);
+        let mut stake = Staking::from_state(state_db);
         stake.insert(&validator);
         stake.insert(&validator_1);
 
