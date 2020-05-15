@@ -33,6 +33,7 @@ pub struct APOS {
     eid:            u64,            // current epoch id
     be_a_holdler:   bool,
     lindex:         i32,            // current index in holder list on the epoch id
+    my_seed:        Option<seed_info>,
 }
 
 impl APOS {
@@ -43,6 +44,7 @@ impl APOS {
             eid: 0,
             be_a_holdler:   false,
             lindex:         0,
+            my_seed:           None,
         }
     }
     pub fn new2(info: LockItem) ->Self {
@@ -52,6 +54,7 @@ impl APOS {
             eid: 0,
             be_a_holdler:   false,
             lindex:     0,
+            my_seed:       None,
         }
     }
     pub fn be_a_holder(&mut self,b: bool) {
@@ -137,6 +140,9 @@ impl APOS {
             None    => None,
         }
     }
+    pub fn get_my_pos(&self) -> i32 {
+        self.lindex
+    }
     pub fn is_validator(&self) -> bool {
         match self.get_validators(self.eid) {
             Some(vv) => {
@@ -149,6 +155,12 @@ impl APOS {
             },
             None => false,
         }
+    }
+    pub fn set_self_seed(&mut self,s: Option<seed_info>) {
+        self.my_seed = s
+    }
+    pub fn get_self_seed(&self) -> Option<seed_info> {
+        self.my_seed
     }
     pub fn make_rand_seed(&self) -> Result<seed_info,Error> {
         let escrow = pvss::simple::escrow(super::os_seed_share_count);
@@ -175,7 +187,11 @@ impl APOS {
                     }
                     let b = msg.as_slice();
                     let a: u8 = b[0];
+                    
                     Ok(seed_info::new(
+                        self.get_my_pos(),
+                        self.eid,
+                        self.lInfo.get_my_id(),
                         P256PK::new(a,&b[1..]),
                         &shares,
                         &de

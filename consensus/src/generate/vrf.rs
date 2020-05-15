@@ -234,8 +234,8 @@ pub mod tests {
         let mut bx_new = &bx;
         let mut bx_new_clone = bx_new.clone();
         *bx_new_clone = 8;
-        // println!("bx <value> address  : {:p}", &*bx);//box中5_f32的地址
-        // println!("bx address          : {:p}", &bx);//指针的指针
+        // println!("bx <value> address  : {:p}", &*bx);
+        // println!("bx address          : {:p}", &bx);
         // println!("bx_new address      : {:p}", &bx_new);
         // println!("bx_new_clone address: {:p}", &*bx_new_clone);
         println!("bx:{}",bx);

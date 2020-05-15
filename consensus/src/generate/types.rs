@@ -16,6 +16,7 @@
 
 use core::types::{Hash,Address};
 use ed25519::{pubkey::Pubkey,privkey::PrivKey};
+use bincode;
 
 #[derive(Debug, Clone)]
 pub struct P256PK (pub u8,pub [u8;32]);
@@ -203,6 +204,9 @@ impl LockItem {
         let p = Point::from_scalar(&ss.scalar);
         return pvss::crypto::PublicKey { point: p };
     }
+    pub fn get_my_id(&self) -> Hash {
+        Hash::make_hash(&self.key1)
+    }
 }
 impl Default for LockItem {
     fn default() -> Self {
@@ -225,27 +229,72 @@ impl From<LockItem> for pvss::crypto::PrivateKey {
 
 pub struct seed_info {
     pub index:  i32,
+    pub my_pk:  Hash,
+    pub eid:    u64,
     pub msg:    seed_open,
     pub shares: Vec<pvss::simple::EncryptedShare>,
     pub decrypted:     Vec<pvss::simple::DecryptedShare>,
 }
 impl seed_info {
-    pub fn new(i: i32,s: seed_open,shs: &Vec<pvss::simple::EncryptedShare>,
+    pub fn new(i: i32,e: u64,my: Hash,s: seed_open,shs: &Vec<pvss::simple::EncryptedShare>,
     de: &Vec<pvss::simple::DecryptedShare>) -> Self {
         Self{
             index:  i,
-            msg:    msg,
+            msg:    s,
+            eid:    e,
+            my_pk:  my,
             shares: shs,
             decrypted: de,
         }
     }
-    pub fn get_commit_phase_msg(&self) -> (Hash,Vec<pvss::simple::EncryptedShare>) {
+    pub fn get_msg_hash(&self) -> Hash {
         let mut data: [u8;33] = [0u8;33];
         self.msg.to_bytes(&mut data);
-        let h = Hash::make_hash(&data);
-        (h,self.shares.clone())
+        Hash::make_hash(&data)
+    }
+    pub fn get_commit_phase_msg(&self,pk: Hash,i: i32,eid: u64) -> send_seed_info {
+        let h = self.get_msg_hash();
+        send_seed_info::new(pk,i,eid,h,self.shares.clone())
     }
     pub fn get_Revel_phase_msg(&self) -> seed_open {
         self.msg.clone()
+    }
+}
+
+impl From<seed_info> for send_seed_info {
+    fn from(v: seed_info) -> Self {
+        let h = 
+        send_seed_info::new(v.my_pk,v.index,v.eid,
+            v.get_msg_hash(),v.shares.clone())
+    }
+}
+
+
+#[derive(Debug, Clone)]
+pub struct send_seed_info {
+    pub pk_hash:    Hash,
+    pub index:      i32,
+    pub eid:        u64,
+    pub msg_hash:   Hash,
+    pub shares:     Vec<pvss::simple::EncryptedShare>,
+}
+
+impl {
+    pub fn new(pk: Hash,i: i32,eid: u64,msg: Hash,s: Vec<pvss::simple::EncryptedShare>) -> Self {
+        Self{
+            pk_hash:    pk,
+            index:      i,
+            eid:        eid,
+            msg_hash:   msg,
+            shares:     s,
+        }
+    }
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let encoded: Vec<u8> = bincode::serialize(&self).unwrap();
+        return encoded;
+    }
+    pub fn from_bytes(data: Vec<u8>) -> send_seed_info {
+        let obj: send_seed_info = bincode::deserialize(&data.as_slice()).unwrap();
+        obj
     }
 }

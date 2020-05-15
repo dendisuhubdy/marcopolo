@@ -21,7 +21,7 @@ use std::thread;
 use core::block::{self,Block,BlockProof,VerificationItem};
 use crossbeam_channel::{bounded, select, Receiver, RecvError, Sender};
 use core::types::{Hash};
-use super::apos::APOS;
+use super::{apos::APOS,vrf,types};
 use super::vrf;
 use super::ConsensusErrorKind;
 use errors::{Error,ErrorKind};
@@ -103,7 +103,8 @@ pub struct EpochProcess {
     cur_eid:        u64,
     cur_seed:       u64,
     slots:          Vec<slot>,
-    block_chain:    Arc<RwLock<tmp_blocks>>
+    block_chain:    Arc<RwLock<tmp_blocks>>,
+    received_seed_info: Vec<seed_info>,
 }
 
 impl EpochProcess {
@@ -113,6 +114,7 @@ impl EpochProcess {
             cur_eid:        eid,
             cur_seed:       seed,
             slots:          Vec::new(),
+            received_seed_info: Vec::new(),
             block_chain:    b.clone(),
         }
     }
@@ -172,9 +174,8 @@ impl EpochProcess {
                 );
             }
             Ok(())
-        } else {
-            Err(ConsensusErrorKind::NotMatchEpochID.into())
         } 
+        Err(ConsensusErrorKind::NotMatchEpochID.into())
     }
     pub fn slot_handle(&mut self,sid: i32,state: Arc<RwLock<APOS>>) {
         if self.is_my_produce(sid,state) {
@@ -239,6 +240,48 @@ impl EpochProcess {
     }
     fn handle_new_time_interval_event(&mut self,sid: &i32,state: Arc<RwLock<APOS>>) {
         self.slot_handle(*sid,state);
+    }
+    // if it want to be a validator and then make the local secret and broadcast it
+    fn commitment_phase(&self,state: Arc<RwLock<APOS>>) -> Result<(),Error> {
+        let seed = state.read()
+                    .expect("acquiring apos read lock")
+                    .make_rand_seed()?;
+        // update seed 
+        state
+        .write()
+        .expect("acquiring apos write lock")
+        .set_self_seed(Some(seed.clone()));
+        // broadcast the seed
+        let s: types::send_seed_info = seed.into();
+        // send(s.to_bytes())
+        Ok(())
+    }
+    // broadcast the open info to the validators in the epoch
+    fn revel_phase(&self,state: Arc<RwLock<APOS>>) -> Result<(),Error> {
+        if let Some(seed) = state.read()
+                    .expect("acquiring apos read lock")
+                    .get_self_seed() {
+            let open = seed.get_Revel_phase_msg();
+            // broadcast the open 
+
+        }
+        Err(ConsensusErrorKind::NotFoundSeedInfo.into())
+    }
+    fn receive_shares(&mut self,data: Vec<u8>,state: Arc<RwLock<APOS>>) -> Result<(),Error> {
+        let obj = types::send_seed_info::from_bytes(data);
+        state.read()
+            .expect("acquiring apos read lock")
+            .recove_the_share(&mut obj) {
+            Ok(info) => {
+                // remove repeat
+                self.received_seed_info.push(info),
+                Ok(())
+            },
+            Err(e) => Err(e),
+        }
+    }
+    fn recovery_phase(&self,state: Arc<RwLock<APOS>>) {
+        
     }
 }
 
