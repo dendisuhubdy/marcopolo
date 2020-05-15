@@ -51,6 +51,19 @@ pub struct Validator {
 }
 
 impl Validator {
+    pub fn create(addr: Address) -> Self {
+        Validator {
+            address: addr,
+            pubkey: Vec::new(),
+            balance: 0,
+            effective_balance: 0,
+            activate_height: 0,
+            exit_height: 0,
+            deposit_queue: Vec::new(),
+            unlocked_queue: Vec::new(),
+        }
+    }
+
     pub fn map_key(&self) -> Hash {
         let mut raw = vec![];
         raw.extend_from_slice(Hash::from_bytes(self.address.as_slice()).as_bytes());
