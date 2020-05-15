@@ -16,10 +16,13 @@
 
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
+use std::rc::Rc;
+use std::cell::RefCell;
 
 use errors::Error;
 use map_consensus::poa;
 use map_core;
+use map_core::trie::NULL_ROOT;
 use map_core::balance::Balance;
 use map_core::block::{Block, Header};
 use map_core::genesis;
@@ -64,7 +67,8 @@ impl BlockChain {
     }
 
     pub fn setup_genesis(&mut self) -> Hash {
-        let mut state = Balance::new(&self.state_backend);
+        let state_db = Rc::new(RefCell::new(StateDB::from_existing(&self.state_backend, NULL_ROOT)));
+        let mut state = Balance::from_state(state_db.clone());
         let root = genesis::setup_allocation(&mut state);
         self.genesis.set_state_root(root);
         self.db.write_block(&self.genesis).expect("can not write block");
@@ -90,7 +94,8 @@ impl BlockChain {
     }
 
     pub fn state_at(&self, root: Hash) -> Balance {
-        Balance::from_state(&self.state_backend, root)
+        let state_db = Rc::new(RefCell::new(StateDB::from_existing(&self.state_backend, root)));
+        Balance::from_state(state_db.clone())
     }
 
     pub fn genesis_hash(&self) -> Hash {

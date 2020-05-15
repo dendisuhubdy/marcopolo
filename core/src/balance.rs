@@ -15,6 +15,8 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::collections::HashMap;
+use std::cell::RefCell;
+use std::rc::Rc;
 use serde::{Serialize, Deserialize};
 use bincode;
 use hash;
@@ -47,25 +49,16 @@ impl Account {
 
 pub struct Balance {
     cache: HashMap<Hash, Account>,
-    treedb: StateDB,
+    treedb: Rc<RefCell<StateDB>>,
     root_hash: Hash,
 }
 
 impl Balance {
-
-    pub fn new(backend: &ArchiveDB) -> Self {
+    pub fn from_state(backend: Rc<RefCell<StateDB>>) -> Self {
         Balance {
             cache: HashMap::new(),
-            treedb: StateDB::new(backend),
+            treedb: backend,
             root_hash: NULL_ROOT,
-        }
-    }
-
-    pub fn from_state(backend: &ArchiveDB, root: Hash) -> Self {
-        Balance {
-            cache: HashMap::new(),
-            treedb: StateDB::from_existing(backend, root),
-            root_hash: root,
         }
     }
 
@@ -183,11 +176,11 @@ impl Balance {
     pub fn commit(&mut self) -> Hash {
         for (addr_hash, account) in self.cache.iter() {
             let encoded: Vec<u8> = bincode::serialize(&account).unwrap();
-            self.treedb.set_storage(*addr_hash, &encoded);
+            self.treedb.borrow_mut().set_storage(*addr_hash, &encoded);
         }
-        self.treedb.commit();
+        self.treedb.borrow_mut().commit();
         self.cache.clear();
-        self.root_hash = self.treedb.root();
+        self.root_hash = self.treedb.borrow().root();
         self.root_hash
     }
 
@@ -196,7 +189,7 @@ impl Balance {
         //     Some(s) => s,
         //     None => return Account::default(),
         // };
-        let serialized = match self.treedb.get_storage(&Self::address_key(addr)) {
+        let serialized = match self.treedb.borrow().get_storage(&Self::address_key(addr)) {
             Some(s) => s,
             None => return Account::default(),
         };
@@ -207,7 +200,7 @@ impl Balance {
 
     pub fn set_account(&mut self, addr: Address, account: &Account) {
         let encoded: Vec<u8> = bincode::serialize(account).unwrap();
-        self.treedb.set_storage(Self::address_key(addr), &encoded);
+        self.treedb.borrow_mut().set_storage(Self::address_key(addr), &encoded);
     }
 
     pub fn load_root(&mut self, root: Hash) {
@@ -252,17 +245,21 @@ impl Balance {
 #[cfg(test)]
 mod tests {
     use std::sync::{Arc, RwLock};
+    use std::cell::RefCell;
+    use std::rc::Rc;
     use env_logger;
     use map_store::{MemoryKV, KVDB};
+    use crate::state::{ArchiveDB, StateDB};
     use crate::types::Address;
-    use crate::state::ArchiveDB;
+    use crate::trie::NULL_ROOT;
     use super::{Balance, Account};
 
     #[test]
     fn account_set() {
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let db = ArchiveDB::new(Arc::clone(&backend));
-        let mut state = Balance::new(&db);
+        let state_db = Rc::new(RefCell::new(StateDB::from_existing(&db, NULL_ROOT)));
+        let mut state = Balance::from_state(state_db.clone());
 
         let addr = Address::default();
         let mut account = state.load_account(addr);
@@ -283,7 +280,8 @@ mod tests {
         env_logger::init();
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let db = ArchiveDB::new(Arc::clone(&backend));
-        let mut state = Balance::new(&db);
+        let state_db = Rc::new(RefCell::new(StateDB::from_existing(&db, NULL_ROOT)));
+        let mut state = Balance::from_state(state_db.clone());
 
         let addr = Address::default();
         state.set_account(addr, &Account {
@@ -304,7 +302,7 @@ mod tests {
 
         {
             // Reload statedb
-            let state = Balance::from_state(&db, state_root);
+            let state = Balance::from_state(state_db.clone());
             let account = state.load_account(receiver);
             assert_eq!(account.balance, 1);
             assert_eq!(state.balance(receiver), 1);
@@ -315,7 +313,8 @@ mod tests {
     fn account_lock() {
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let db = ArchiveDB::new(Arc::clone(&backend));
-        let mut state = Balance::new(&db);
+        let state_db = Rc::new(RefCell::new(StateDB::from_existing(&db, NULL_ROOT)));
+        let mut state = Balance::from_state(state_db);
         let addr = Address::default();
         let lock_1: u128 = 1;
 
