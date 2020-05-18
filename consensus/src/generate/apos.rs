@@ -234,6 +234,26 @@ impl APOS {
         }
         return Err(Err(ConsensusErrorKind::NoValidatorsInEpoch.into()))
     }
+    pub fn recover_share_from_seed_info(&self,si: &send_seed_info) -> Result<pvss::simple::DecryptedShare,Error> {
+        for share in si.shares {
+            if self.lindex == (share.id - 1) as i32 {
+                let pk = self.lInfo.get_pk2();
+                let d = pvss::simple::decrypt_share(&self.lInfo.into(), &pk, &share);
+                let verified_decrypted = d.verify(&pk, &share);
+                println!(
+                    "decrypted share {id}: {verified}",
+                    id = share.id,
+                    verified = verified_decrypted
+                );
+                if verified_decrypted {
+                    return Ok(d);
+                } else {
+                    return Err(Err(ConsensusErrorKind::DecryptShareMsgError.into()))
+                }
+            }
+        }
+        return Err(Err(ConsensusErrorKind::NoValidatorsInEpoch.into()))
+    }
     pub fn make_seed_on_epoch() -> bool {
         false
     }

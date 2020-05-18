@@ -21,8 +21,8 @@ use std::thread;
 use core::block::{self,Block,BlockProof,VerificationItem};
 use crossbeam_channel::{bounded, select, Receiver, RecvError, Sender};
 use core::types::{Hash};
-use super::{apos::APOS,vrf,types};
-use super::vrf;
+use super::{apos::APOS,fts,types};
+use super::fts;
 use super::ConsensusErrorKind;
 use errors::{Error,ErrorKind};
 
@@ -167,7 +167,7 @@ impl EpochProcess {
             self.slots.clear();
             let mut validators = vals;
             let seed = self.cur_seed;
-            vrf::assign_valditator_to_slot(&mut validators, seed)?;
+            fts::assign_valditator_to_slot(&mut validators, seed)?;
             for (i,v) in validators.iter().enumerate() {
                 self.slots.push(
                     slot::new(v.get_sid(),i as u32)
@@ -269,15 +269,26 @@ impl EpochProcess {
     }
     fn receive_shares(&mut self,data: Vec<u8>,state: Arc<RwLock<APOS>>) -> Result<(),Error> {
         let obj = types::send_seed_info::from_bytes(data);
-        state.read()
+        let mut find = false;
+        for elem in self.received_seed_info.iter() {
+            if elem.same_person(obj) {
+                find = true;
+                break;
+            }
+        }
+        if obj.eid == self.cur_eid && !find {
+            let mut seed_item = seed_info::from_send_seed_info(obj); 
+            match state.read()
             .expect("acquiring apos read lock")
-            .recove_the_share(&mut obj) {
-            Ok(info) => {
-                // remove repeat
-                self.received_seed_info.push(info),
-                Ok(())
-            },
-            Err(e) => Err(e),
+            .recove_the_share(obj) {
+                Ok(()) => {
+                    self.received_seed_info.push(seed_item);
+                    return Ok(());
+                },
+                Err(e) => return Err(e),
+            }
+        } else {
+            return Err(ConsensusErrorKind::NotMatchEpochID.into())
         }
     }
     fn recovery_phase(&self,state: Arc<RwLock<APOS>>) {

@@ -247,6 +247,22 @@ impl seed_info {
             decrypted: de,
         }
     }
+    pub fn same_person(&self, si: &send_seed_info) -> bool {
+        if self.index == si.index && self.my_pk == si.pk_hash && self.eid == si.eid {
+            return true;
+        }
+        return false;
+    }
+    pub from_send_seed_info(info: &send_seed_info) -> Self {
+        Self{
+            index:  info.index,
+            msg:    P256PK::new(0,&[0u8;32]),
+            eid:    info.eid,
+            my_pk:  info.pk_hash,
+            shares: info.clone(),
+            decrypted: Vec::new(),
+        }
+    }
     pub fn get_msg_hash(&self) -> Hash {
         let mut data: [u8;33] = [0u8;33];
         self.msg.to_bytes(&mut data);
