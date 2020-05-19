@@ -1641,6 +1641,7 @@ dependencies = [
 name = "map-consensus"
 version = "0.1.0"
 dependencies = [
+ "bincode 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "crossbeam-channel 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "enum-display-derive 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",

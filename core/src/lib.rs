@@ -25,4 +25,5 @@ pub mod staking;
 pub mod storage;
 pub mod trie;
 pub mod state;
+pub mod runtime;
 pub mod traits;

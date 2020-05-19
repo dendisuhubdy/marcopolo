@@ -51,6 +51,13 @@ pub struct Validator {
     pub unlocked_queue: Vec<LockingBalance>,
 }
 
+#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
+pub struct MsgValidatorCreate {
+    pub pubkey: Vec<u8>,
+    pub amount: u128,
+}
+
 impl Validator {
     pub fn create(addr: Address) -> Self {
         Validator {
@@ -265,6 +272,26 @@ impl Staking {
         // mark the epoch in which validator exit make block
         validator.exit_height = 0;
         self.set_item(&validator);
+    }
+
+    pub fn exec_validate(&mut self, addr: &Address, input: Vec<u8>) {
+        let msg: MsgValidatorCreate = match bincode::deserialize(&input) {
+            Ok(m) => m,
+            Err(_) => return,
+        };
+        self.validate(addr, msg.pubkey, msg.amount);
+    }
+
+    pub fn exec_deposit(&mut self, addr: &Address, input: Vec<u8>) {
+        let msg: u128 = match bincode::deserialize(&input) {
+            Ok(m) => m,
+            Err(_) => return,
+        };
+        self.deposit(addr, msg);
+    }
+
+    pub fn exec_exit(&mut self, addr: &Address, input: Vec<u8>) {
+        self.exit(addr);
     }
 }
 
