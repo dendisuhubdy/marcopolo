@@ -291,8 +291,25 @@ impl EpochProcess {
             return Err(ConsensusErrorKind::NotMatchEpochID.into())
         }
     }
-    fn recovery_phase(&self,state: Arc<RwLock<APOS>>) {
-        
+    // recover seed for all holder
+    fn recovery_phase(&mut self,state: Arc<RwLock<APOS>>) {
+
+        for seed_item in self.received_seed_info.iter_mut() {
+            if !seed_item.is_recover() {
+                match state.write()
+                .expect("acquiring apos write lock")
+                .recover_seed_from_shared_msg(&seed_item) {
+                    Ok(data) => {
+                        let a = data[0];
+                        let s = data.as_slice();
+                        let mut b = [0u8;32];
+                        b[..].copy_from_slice(s[1..]);
+                        seed_item.set_open_msg(a,&b);
+                    },
+                    Err(e) => {println!("recover share failed,share:{},error:{:?}",seed_item,e);},
+                }
+            }
+        }
     }
 }
 

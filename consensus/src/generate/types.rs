@@ -253,6 +253,17 @@ impl seed_info {
         }
         return false;
     }
+    pub fn is_recover(&self) -> bool {
+        if self.msg.0 == 0 as u8 && self.msg.1 == [0u8;32] {
+            return false
+        }
+        return true
+    }
+    pub fn set_open_msg(&mut self,a: u8,pk: &[u8]) {
+        let mut b = [0u8;32];
+        b.copy_from_slice(&pk);
+        self.msg = P256PK::new(a,&b];
+    }
     pub from_send_seed_info(info: &send_seed_info) -> Self {
         Self{
             index:  info.index,
@@ -274,6 +285,20 @@ impl seed_info {
     }
     pub fn get_Revel_phase_msg(&self) -> seed_open {
         self.msg.clone()
+    }
+}
+impl fmt::Debug for seed_info {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "index:{},eid:{},pk_hash:{},msg:{:?},shares_count:{},decrypted_count:{}", 
+        self.index,self.eid,self.my_pk,self.msg,self.shares.len(),self.decrypted.len())?;
+        Ok(())
+    }
+}
+
+impl fmt::Display for seed_info {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "index:{},eid:{},pk_hash:{}", self.index,self.eid,self.my_pk)?;
+        Ok(())
     }
 }
 
