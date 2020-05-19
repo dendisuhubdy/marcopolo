@@ -20,7 +20,7 @@ use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::thread;
 use core::block::{self,Block,BlockProof,VerificationItem};
 use crossbeam_channel::{bounded, select, Receiver, RecvError, Sender};
-use core::types::{Hash};
+use core::types::{Hash,seed_open};
 use super::{apos::APOS,fts,types};
 use super::fts;
 use super::ConsensusErrorKind;
@@ -139,7 +139,7 @@ impl EpochProcess {
     pub fn is_my_produce(&self,sid: i32,state: Arc<RwLock<APOS>>) -> bool {
         if let Some(item) = state.read()
         .expect("acquiring apos read lock")
-        .get_validator(sid,self.cur_eid) {
+        .get_staking_holder(sid,self.cur_eid) {
             self.myid.equal(&item.into())
         } else {
             false
@@ -163,7 +163,7 @@ impl EpochProcess {
     pub fn assign_validator(&mut self,state: Arc<RwLock<APOS>>) -> Result<(),Error> {
         if let Some(vals) = state.read()
         .expect("acquiring apos read lock")
-        .get_validators(self.cur_eid){
+        .get_staking_holders(self.cur_eid){
             self.slots.clear();
             let mut validators = vals;
             let seed = self.cur_seed;
@@ -300,8 +300,8 @@ impl EpochProcess {
                 .expect("acquiring apos write lock")
                 .recover_seed_from_shared_msg(&seed_item) {
                     Ok(data) => {
-                        let a = data[0];
                         let s = data.as_slice();
+                        let a = s[0];
                         let mut b = [0u8;32];
                         b[..].copy_from_slice(s[1..]);
                         seed_item.set_open_msg(a,&b);
@@ -310,6 +310,40 @@ impl EpochProcess {
                 }
             }
         }
+    }
+    fn get_seed_info_by_holder(&self, holder: &HolderItem) -> Option<seed_info> {
+        for info in self.received_seed_info {
+            if info.get_id() == holder.get_my_id() {
+                return Some(info.clone())
+            }
+        }
+        None
+    }
+    fn recover_seed_for_next_epoch(&self,state: Arc<RwLock<APOS>>) -> Result<u64,Error> {
+        let mut datas: Vec<u8> = Vec::new();
+
+        if let Some(holders) = state.read()
+        .expect("acquiring apos read lock")
+        .get_staking_holders(self.cur_eid){
+            for h in holders.iter() {
+                match self.get_seed_info_by_holder(h) {
+                    Some(info) => {
+                        if info.is_recover() {
+                            let msg = info.get_open_msg().to_vec();
+                            datas.extend(msg);
+                        }
+                    },
+                    None => {},
+                }
+            }
+            if datas.len() > 0 {
+                let h = Hash::make_hash(datas.to_slice());
+                let seed = u64::from_be_bytes(&h.0[..8]);
+                return Ok(seed);
+            }
+            return Err(ConsensusErrorKind::NotFetchAnyShares.into());
+        } 
+        Err(ConsensusErrorKind::NotMatchEpochID.into())   
     }
 }
 

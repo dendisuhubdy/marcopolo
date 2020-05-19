@@ -34,6 +34,7 @@ pub struct APOS {
     be_a_holdler:   bool,
     lindex:         i32,            // current index in holder list on the epoch id
     my_seed:        Option<seed_info>,
+    seed_next_epoch: u64,
 }
 
 impl APOS {
@@ -45,6 +46,7 @@ impl APOS {
             be_a_holdler:   false,
             lindex:         0,
             my_seed:           None,
+            seed_next_epoch: 0,
         }
     }
     pub fn new2(info: LockItem) ->Self {
@@ -55,6 +57,7 @@ impl APOS {
             be_a_holdler:   false,
             lindex:     0,
             my_seed:       None,
+            seed_next_epoch: 0,
         }
     }
     pub fn be_a_holder(&mut self,b: bool) {
@@ -91,7 +94,7 @@ impl APOS {
             None => None,
         }
     }
-    pub fn get_validator(&self, index: i32,eid: u64) -> Option<HolderItem> {
+    pub fn get_staking_holder(&self, index: i32,eid: u64) -> Option<HolderItem> {
         match self.get_epoch_info(eid) {
             Some(items)  =>{
                 if items.validators.len() > index as usize{
@@ -103,7 +106,7 @@ impl APOS {
             None => None,
         } 
     }
-    pub fn get_validators(&self, eid: u64) -> Option<Vec<HolderItem>> {
+    pub fn get_staking_holders(&self, eid: u64) -> Option<Vec<HolderItem>> {
         match self.get_epoch_info(eid) {
             Some(items) => {
                 let mut vv: Vec<HolderItem> = Vec::new();
@@ -130,7 +133,7 @@ impl APOS {
     }
     pub fn get_seed_puk_from_validator(&self) -> Option<Vec<P256PK>> {
         let mut vv = Vec::new();
-        match self.get_validators(self.eid) {
+        match self.get_staking_holders(self.eid) {
             Some(validators)  => {
                 for (i,v) in validators.iter().enumerate() {
                     vv.push(v.get_seed_puk());
@@ -144,7 +147,7 @@ impl APOS {
         self.lindex
     }
     pub fn is_validator(&self) -> bool {
-        match self.get_validators(self.eid) {
+        match self.get_staking_holders(self.eid) {
             Some(vv) => {
                 match vv.get(self.lindex) {
                     Some(v) => {
@@ -161,6 +164,12 @@ impl APOS {
     }
     pub fn get_self_seed(&self) -> Option<seed_info> {
         self.my_seed
+    }
+    pub fn set_seed_next_epoch(&mut self,seed: u64) {
+        self.seed_next_epoch = seed
+    }
+    pub fn get_seed_next_epoch(&self) -> u64 {
+        self.seed_next_epoch
     }
     pub fn make_rand_seed(&self) -> Result<seed_info,Error> {
         let escrow = pvss::simple::escrow(super::os_seed_share_count);

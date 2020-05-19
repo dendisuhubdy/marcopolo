@@ -37,6 +37,12 @@ impl P256PK {
         a[0] = self.0;
         a[1..].copy_from_slice(&self.1[..]);
     }
+    pub fn to_vec(&self) -> Vec<u8> {
+        let mut data = [0u8;33];
+        data[0] = self.0;
+        data[1..].copy_from_slice(&self.1[..]);
+        data.to_vec()
+    }
     pub fn from_bytes(c: &[u8]) -> Self {
         let mut b = [0u8;32];
         let a = c[0];
@@ -160,6 +166,9 @@ impl HolderItem {
     pub fn is_validator(&self) -> bool {
         self.validator
     }
+    pub fn get_my_id(&self) -> Hash {
+        Hash::make_hash(&self.pubkey[..])
+    }
 }
 impl From<HolderItem> for Pubkey {
     fn from(v: HolderItem) -> Self {
@@ -259,10 +268,16 @@ impl seed_info {
         }
         return true
     }
+    pub fn get_id(&self) -> Hash {
+        self.my_pk
+    }
     pub fn set_open_msg(&mut self,a: u8,pk: &[u8]) {
         let mut b = [0u8;32];
         b.copy_from_slice(&pk);
         self.msg = P256PK::new(a,&b];
+    }
+    pub fn get_open_msg(&self) -> seed_open {
+        self.msg
     }
     pub from_send_seed_info(info: &send_seed_info) -> Self {
         Self{

@@ -50,6 +50,7 @@ pub enum ConsensusErrorKind {
     RecoverSharesError,
     NotEnoughShares,
     NotFoundSeedInfo,
+    NotFetchAnyShares,
 }
 
 impl fmt::Display for ConsensusError {
