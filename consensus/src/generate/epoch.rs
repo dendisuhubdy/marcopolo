@@ -132,10 +132,6 @@ impl EpochProcess {
             Err(e) => Err(e),
         }
     }
-    pub fn make_next_seed() -> u64 {
-        // make next seed from blockchain
-        0
-    }
     pub fn is_my_produce(&self,sid: i32,state: Arc<RwLock<APOS>>) -> bool {
         if let Some(item) = state.read()
         .expect("acquiring apos read lock")
@@ -234,6 +230,7 @@ impl EpochProcess {
         match msg {
             Ok(b) => {
                 self.slot_handle(*sid,state);
+                self.epoch_step(state,b.height());
             },
             Err(e) => println!("insert_block Error: {:?}", e),
         }
@@ -356,10 +353,9 @@ impl EpochProcess {
     pub fn get_current_height(&self) -> u64 {
         return self.block_chain.read().expect("acquiring blockchian read lock").get_current_Height();
     }
-    pub fn epoch_step(&mut self,state: Arc<RwLock<APOS>>) {
+    pub fn epoch_step(&mut self,state: Arc<RwLock<APOS>>,height: u64) {
         // get the height event from blockchain
         // 4k,4k,2k for commit phase,revel phase,recovery
-        let height = self.get_current_height();
         let k = (epoch_length / 10) as u64;
         let m = (height % epoch_length) as u64;
         if m <= 4 * k {

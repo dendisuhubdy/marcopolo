@@ -283,7 +283,7 @@ impl seed_info {
     pub fn set_open_msg(&mut self,a: u8,pk: &[u8]) {
         let mut b = [0u8;32];
         b.copy_from_slice(&pk);
-        self.msg = P256PK::new(a,&b];
+        self.msg = P256PK::new(a,&b);
     }
     pub fn get_open_msg(&self) -> seed_open {
         self.msg
@@ -330,7 +330,7 @@ impl From<seed_info> for send_seed_info {
     fn from(v: seed_info) -> Self {
         let h = 
         send_seed_info::new(v.my_pk,v.index,v.eid,
-            v.get_msg_hash(),v.shares.clone())
+            v.get_msg_hash(),v.shares.clone());
     }
 }
 
