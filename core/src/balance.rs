@@ -50,7 +50,7 @@ impl Account {
 }
 
 pub struct Balance {
-    cache: HashMap<Hash, Account>,
+    // cache: HashMap<Hash, Account>,
     treedb: Rc<RefCell<StateDB>>,
     interpreter: Interpreter,
     root_hash: Hash,
@@ -59,7 +59,7 @@ pub struct Balance {
 impl Balance {
     pub fn new(runner: Interpreter) -> Self {
         Balance {
-            cache: HashMap::new(),
+            // cache: HashMap::new(),
             treedb: runner.statedb(),
             interpreter: runner,
             root_hash: NULL_ROOT,
@@ -68,7 +68,7 @@ impl Balance {
 
     pub fn from_state(runner: Interpreter) -> Self {
         Balance {
-            cache: HashMap::new(),
+            // cache: HashMap::new(),
             treedb: runner.statedb(),
             interpreter: runner,
             root_hash: NULL_ROOT,
@@ -76,106 +76,122 @@ impl Balance {
     }
 
     pub fn balance(&self, addr: Address) -> u128 {
-        let addr_hash = Self::address_key(addr);
-        let account = match self.cache.get(&addr_hash) {
-            Some(v) => v.clone(),
-            None => self.load_account(addr),
-        };
+        // let addr_hash = Self::address_key(addr);
+        // let account = match self.cache.get(&addr_hash) {
+        //     Some(v) => v.clone(),
+        //     None => self.load_account(addr),
+        // };
+        let account = self.load_account(addr);
         account.balance
     }
 
     pub fn nonce(&self, addr: Address) -> u64 {
-        let addr_hash = Self::address_key(addr);
-        let account = match self.cache.get(&addr_hash) {
-            Some(v) => v.clone(),
-            None => self.load_account(addr),
-        };
+        // let addr_hash = Self::address_key(addr);
+        // let account = match self.cache.get(&addr_hash) {
+        //     Some(v) => v.clone(),
+        //     None => self.load_account(addr),
+        // };
+        let account = self.load_account(addr);
         account.nonce
     }
 
     pub fn locked(&self, addr: Address) -> u128 {
-        let addr_hash = Self::address_key(addr);
-        let account = match self.cache.get(&addr_hash) {
-            Some(v) => v.clone(),
-            None => self.load_account(addr),
-        };
+        // let addr_hash = Self::address_key(addr);
+        // let account = match self.cache.get(&addr_hash) {
+        //     Some(v) => v.clone(),
+        //     None => self.load_account(addr),
+        // };
+        let account = self.load_account(addr);
         account.locked_balance
     }
 
     pub fn get_account(&self, addr: Address) -> Account {
-        let addr_hash = Self::address_key(addr);
-        let account = match self.cache.get(&addr_hash) {
-            Some(v) => v.clone(),
-            None => self.load_account(addr),
-        };
+        // let addr_hash = Self::address_key(addr);
+        // let account = match self.cache.get(&addr_hash) {
+        //     Some(v) => v.clone(),
+        //     None => self.load_account(addr),
+        // };
+        let account = self.load_account(addr);
         account
     }
 
     pub fn inc_nonce(&mut self, addr: Address) {
-        let addr_hash = Self::address_key(addr);
-        let mut account = match self.cache.get(&addr_hash) {
-            Some(v) => v.clone(),
-            None => self.load_account(addr),
-        };
+        // let addr_hash = Self::address_key(addr);
+        // let mut account = match self.cache.get(&addr_hash) {
+        //     Some(v) => v.clone(),
+        //     None => self.load_account(addr),
+        // };
+        let mut account = self.load_account(addr);
         account.nonce += 1;
-        self.cache.insert(addr_hash, account);
+        self.set_account(addr, &account);
+        // self.cache.insert(addr_hash, account);
     }
 
     pub fn add_balance(&mut self, addr: Address, value: u128) {
-        let addr_hash = Self::address_key(addr);
-        let mut account = match self.cache.get(&addr_hash) {
-            Some(v) => v.clone(),
-            None => self.load_account(addr),
-        };
+        // let addr_hash = Self::address_key(addr);
+        // let mut account = match self.cache.get(&addr_hash) {
+        //     Some(v) => v.clone(),
+        //     None => self.load_account(addr),
+        // };
+        let mut account = self.load_account(addr);
         account.balance += value;
-        self.cache.insert(addr_hash, account);
+        self.set_account(addr, &account);
+        // self.cache.insert(addr_hash, account);
     }
 
     pub fn sub_balance(&mut self, addr: Address, value: u128) {
-        let addr_hash = Self::address_key(addr);
-        let mut account = match self.cache.get(&addr_hash) {
-            Some(v) => v.clone(),
-            None => self.load_account(addr),
-        };
+        // let addr_hash = Self::address_key(addr);
+        // let mut account = match self.cache.get(&addr_hash) {
+        //     Some(v) => v.clone(),
+        //     None => self.load_account(addr),
+        // };
+        let mut account = self.load_account(addr);
         account.balance -= value;
-        self.cache.insert(addr_hash, account);
+        self.set_account(addr, &account);
+        // self.cache.insert(addr_hash, account);
     }
 
     pub fn slash(&mut self, addr: Address, value: u128) {
-        let addr_hash = Self::address_key(addr);
-        let mut account = match self.cache.get(&addr_hash) {
-            Some(v) => v.clone(),
-            None => self.load_account(addr),
-        };
+        // let addr_hash = Self::address_key(addr);
+        // let mut account = match self.cache.get(&addr_hash) {
+        //     Some(v) => v.clone(),
+        //     None => self.load_account(addr),
+        // };
+        let mut account = self.load_account(addr);
         account.locked_balance -= value;
-        self.cache.insert(addr_hash, account);
+        self.set_account(addr, &account);
+        // self.cache.insert(addr_hash, account);
     }
 
     pub fn lock_balance(&mut self, addr: Address, value: u128) {
-        let addr_hash = Self::address_key(addr);
-        let mut account = match self.cache.get(&addr_hash) {
-            Some(v) => v.clone(),
-            None => self.load_account(addr),
-        };
+        // let addr_hash = Self::address_key(addr);
+        // let mut account = match self.cache.get(&addr_hash) {
+        //     Some(v) => v.clone(),
+        //     None => self.load_account(addr),
+        // };
+        let mut account = self.load_account(addr);
         account.balance -= value;
         account.locked_balance += value;
-        self.cache.insert(addr_hash, account);
+        self.set_account(addr, &account);
+        // self.cache.insert(addr_hash, account);
     }
 
     pub fn unlock_balance(&mut self, addr: Address, value: u128) {
-        let addr_hash = Self::address_key(addr);
-        let mut account = match self.cache.get(&addr_hash) {
-            Some(v) => v.clone(),
-            None => self.load_account(addr),
-        };
+        // let addr_hash = Self::address_key(addr);
+        // let mut account = match self.cache.get(&addr_hash) {
+        //     Some(v) => v.clone(),
+        //     None => self.load_account(addr),
+        // };
+        let mut account = self.load_account(addr);
         account.balance += value;
         account.locked_balance -= value;
-        self.cache.insert(addr_hash, account);
+        self.set_account(addr, &account);
+        // self.cache.insert(addr_hash, account);
     }
 
-    pub fn reset(&mut self) {
-        self.cache.clear();
-    }
+    // pub fn reset(&mut self) {
+    //     self.cache.clear();
+    // }
 
     pub fn transfer(&mut self, from_addr: Address, to_addr: Address, amount: u128) {
         if self.balance(from_addr) >= amount {
@@ -187,12 +203,12 @@ impl Balance {
     }
 
     pub fn commit(&mut self) -> Hash {
-        for (addr_hash, account) in self.cache.iter() {
-            let encoded: Vec<u8> = bincode::serialize(&account).unwrap();
-            self.treedb.borrow_mut().set_storage(*addr_hash, &encoded);
-        }
+        // for (addr_hash, account) in self.cache.iter() {
+        //     let encoded: Vec<u8> = bincode::serialize(&account).unwrap();
+        //     self.treedb.borrow_mut().set_storage(*addr_hash, &encoded);
+        // }
         self.treedb.borrow_mut().commit();
-        self.cache.clear();
+        // self.cache.clear();
         self.root_hash = self.treedb.borrow().root();
         self.root_hash
     }
@@ -339,7 +355,7 @@ mod tests {
         };
         state.set_account(addr, &v1);
         state.lock_balance(addr, lock_1);
-        state.commit();
+        // state.commit();
 
         assert_eq!(state.locked(addr), lock_1);
     }
