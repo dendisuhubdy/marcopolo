@@ -18,6 +18,7 @@ use core::types::{Hash,Address};
 use ed25519::{pubkey::Pubkey,privkey::PrivKey};
 use bincode;
 
+const max_seed_send_count: i32 = 5;
 #[derive(Debug, Clone)]
 pub struct P256PK (pub u8,pub [u8;32]);
 pub type seed_open = P256PK;
@@ -241,6 +242,7 @@ pub struct seed_info {
     pub my_pk:  Hash,
     pub eid:    u64,
     pub msg:    seed_open,
+    pub count:  i32,
     pub shares: Vec<pvss::simple::EncryptedShare>,
     pub decrypted:     Vec<pvss::simple::DecryptedShare>,
 }
@@ -252,9 +254,16 @@ impl seed_info {
             msg:    s,
             eid:    e,
             my_pk:  my,
+            count:  0,
             shares: shs,
             decrypted: de,
         }
+    }
+    pub fn can_send(&self) -> bool {
+        return  self.count > max_seed_send_count;
+    }
+    pub fn update_send_count(&mut self) {
+        return self.count +=1;
     }
     pub fn same_person(&self, si: &send_seed_info) -> bool {
         if self.index == si.index && self.my_pk == si.pk_hash && self.eid == si.eid {
@@ -279,7 +288,7 @@ impl seed_info {
     pub fn get_open_msg(&self) -> seed_open {
         self.msg
     }
-    pub from_send_seed_info(info: &send_seed_info) -> Self {
+    pub fn from_send_seed_info(info: &send_seed_info) -> Self {
         Self{
             index:  info.index,
             msg:    P256PK::new(0,&[0u8;32]),
@@ -335,7 +344,7 @@ pub struct send_seed_info {
     pub shares:     Vec<pvss::simple::EncryptedShare>,
 }
 
-impl {
+impl send_seed_info {
     pub fn new(pk: Hash,i: i32,eid: u64,msg: Hash,s: Vec<pvss::simple::EncryptedShare>) -> Self {
         Self{
             pk_hash:    pk,

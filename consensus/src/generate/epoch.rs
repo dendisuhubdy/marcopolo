@@ -17,7 +17,6 @@
 
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use std::thread;
 use core::block::{self,Block,BlockProof,VerificationItem};
 use crossbeam_channel::{bounded, select, Receiver, RecvError, Sender};
 use core::types::{Hash,seed_open};
@@ -25,6 +24,7 @@ use super::{apos::APOS,fts,types};
 use super::fts;
 use super::ConsensusErrorKind;
 use errors::{Error,ErrorKind};
+use std::{thread,time::Duration};
 
 
 const epoch_length: i32 = 100;
@@ -243,17 +243,27 @@ impl EpochProcess {
     }
     // if it want to be a validator and then make the local secret and broadcast it
     fn commitment_phase(&self,state: Arc<RwLock<APOS>>) -> Result<(),Error> {
-        let seed = state.read()
-                    .expect("acquiring apos read lock")
-                    .make_rand_seed()?;
+        let seed = match state.read()
+                              .expect("acquiring apos read lock")
+                              .get_self_seed() {
+                                Some(seed) => seed,
+                                None => {
+                                    state.read()
+                                    .expect("acquiring apos read lock")
+                                    .make_rand_seed()?;
+                                },  
+                    };
         // update seed 
-        state
-        .write()
-        .expect("acquiring apos write lock")
-        .set_self_seed(Some(seed.clone()));
-        // broadcast the seed
-        let s: types::send_seed_info = seed.into();
-        // send(s.to_bytes())
+        seed.update_send_count();
+        if seed.can_send() {
+            state
+            .write()
+            .expect("acquiring apos write lock")
+            .set_self_seed(Some(seed.clone()));
+            // broadcast the seed
+            let s: types::send_seed_info = seed.into();
+            // send(s.to_bytes())
+        }
         Ok(())
     }
     // broadcast the open info to the validators in the epoch
@@ -319,6 +329,7 @@ impl EpochProcess {
         }
         None
     }
+    
     fn recover_seed_for_next_epoch(&self,state: Arc<RwLock<APOS>>) -> Result<u64,Error> {
         let mut datas: Vec<u8> = Vec::new();
 
@@ -326,14 +337,11 @@ impl EpochProcess {
         .expect("acquiring apos read lock")
         .get_staking_holders(self.cur_eid){
             for h in holders.iter() {
-                match self.get_seed_info_by_holder(h) {
-                    Some(info) => {
-                        if info.is_recover() {
-                            let msg = info.get_open_msg().to_vec();
-                            datas.extend(msg);
-                        }
-                    },
-                    None => {},
+                if let Some(info) = self.get_seed_info_by_holder(h) {
+                    if info.is_recover() {
+                        let msg = info.get_open_msg().to_vec();
+                        datas.extend(msg);
+                    }
                 }
             }
             if datas.len() > 0 {
@@ -344,6 +352,32 @@ impl EpochProcess {
             return Err(ConsensusErrorKind::NotFetchAnyShares.into());
         } 
         Err(ConsensusErrorKind::NotMatchEpochID.into())   
+    }
+    pub fn get_current_height(&self) -> u64 {
+        return self.block_chain.read().expect("acquiring blockchian read lock").get_current_Height();
+    }
+    pub fn epoch_step(&mut self,state: Arc<RwLock<APOS>>) {
+        // get the height event from blockchain
+        // 4k,4k,2k for commit phase,revel phase,recovery
+        let height = self.get_current_height();
+        let k = (epoch_length / 10) as u64;
+        let m = (height % epoch_length) as u64;
+        if m <= 4 * k {
+            // commit phase only once send 
+            self.commitment_phase(state);
+        } else if m <= 8*k {
+            // revel phase 
+            self.revel_phase(state);
+        } else {
+            // recover phase try to recover the seed from shares
+            self.recovery_phase(state);
+        }
+        if 0 as u64 == (height + 1) % epoch_length {
+            if Ok(seed) = self.recover_seed_for_next_epoch(state) {
+                state.write().expect("acquiring state write lock").set_seed_next_epoch(seed);
+            }
+        }
+        // thread::sleep(Duration::from_millis(2000));
     }
 }
 
