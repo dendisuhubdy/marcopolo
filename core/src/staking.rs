@@ -23,7 +23,9 @@ use bincode;
 use hash;
 use crate::types::{Hash, Address};
 use crate::storage::{List, ListEntry};
-use crate::state::{ArchiveDB, StateDB};
+use crate::state::StateDB;
+use crate::runtime::{Interpreter, Contract};
+use crate::balance;
 
 #[derive(Copy, Clone)]
 enum StatePrefix {
@@ -94,14 +96,25 @@ impl Validator {
 pub struct Staking {
     pub validators: List<Validator>,
     pub state_db: Rc<RefCell<StateDB>>,
+    pub interpreter: Interpreter,
 }
 
 impl Staking {
-    pub fn from_state(backend: Rc<RefCell<StateDB>>) -> Self {
+    pub fn new(runner: Interpreter) -> Self {
         let head_key = Hash::from_bytes(&(StatePrefix::Validator as u64).to_be_bytes()[..]);
         Staking {
             validators: List::new(head_key),
-            state_db: backend,
+            state_db: runner.statedb(),
+            interpreter: runner,
+        }
+    }
+
+    pub fn from_state(runner: Interpreter) -> Self {
+        let head_key = Hash::from_bytes(&(StatePrefix::Validator as u64).to_be_bytes()[..]);
+        Staking {
+            validators: List::new(head_key),
+            state_db: runner.statedb(),
+            interpreter: runner,
         }
     }
 
@@ -213,6 +226,7 @@ impl Staking {
         Some(obj.payload)
     }
 
+    #[allow(unused_variables)]
     pub fn validate(&mut self, addr: &Address, pubkey: Vec<u8>, amount: u128) {
         if self.get_validator(addr).is_some() {
             // the address already joined the validator
@@ -231,8 +245,9 @@ impl Staking {
             deposit_queue: Vec::new(),
             unlocked_queue: Vec::new(),
         };
-
         self.insert(&validator);
+
+        self.interpreter.lock_balance(*addr, amount);
     }
 
     pub fn deposit(&mut self, addr: &Address, amount: u128) {
@@ -243,6 +258,8 @@ impl Staking {
         validator.deposit_queue.push(LockingBalance{amount: amount, height: 0});
         validator.balance += amount;
         self.set_item(&validator);
+
+        self.interpreter.lock_balance(*addr, amount);
     }
 
     pub fn activate_deposit(&mut self, addr: &Address) {
@@ -290,6 +307,7 @@ impl Staking {
         self.deposit(addr, msg);
     }
 
+    #[allow(unused_variables)]
     pub fn exec_exit(&mut self, addr: &Address, input: Vec<u8>) {
         self.exit(addr);
     }
@@ -302,6 +320,7 @@ mod tests {
     use std::cell::RefCell;
     use env_logger;
     use map_store::{MemoryKV, KVDB};
+    use crate::runtime::Interpreter;
     use crate::state::{ArchiveDB, StateDB};
     use crate::types::Address;
     use crate::trie::NULL_ROOT;
@@ -327,7 +346,7 @@ mod tests {
             unlocked_queue: Vec::new(),
         };
 
-        let mut stake = Staking::from_state(state_db);
+        let mut stake = Staking::new(Interpreter::new(state_db.clone()));
         stake.insert(&validator);
 
         let first = Validator {
@@ -366,7 +385,7 @@ mod tests {
             unlocked_queue: Vec::new(),
         };
 
-        let mut stake = Staking::from_state(state_db);
+        let mut stake = Staking::new(Interpreter::new(state_db.clone()));
         stake.insert(&validator);
 
         let items = stake.validator_set();
@@ -405,7 +424,7 @@ mod tests {
             unlocked_queue: Vec::new(),
         };
 
-        let mut stake = Staking::from_state(state_db.clone());
+        let mut stake = Staking::new(Interpreter::new(state_db.clone()));
         stake.insert(&validator);
         stake.insert(&validator_1);
 

@@ -5,6 +5,7 @@ use map_core::balance::Balance;
 use map_core::block::Block;
 use map_core::transaction::Transaction;
 use map_core::types::{Address, Hash};
+use map_core::runtime::Interpreter;
 use crate::blockchain::BlockChain;
 
 #[derive(Clone)]
@@ -42,7 +43,9 @@ impl TxPoolManager {
 
     fn validate_tx(&self, tx: &Transaction) -> Result<(), String> {
         let chain = self.blockchain.read().unwrap();
-        let account = chain.state_at(chain.current_block().state_root()).get_account(tx.sender);
+        let state = chain.state_at(chain.current_block().state_root());
+        let runtime = Balance::new(Interpreter::new(state));
+        let account = runtime.get_account(tx.sender);
 
         if account.get_balance() < tx.get_value() {
             return Err(format!("not sufficient funds {}, tx value {}", account.get_balance(), tx.get_value()));
@@ -56,7 +59,10 @@ impl TxPoolManager {
 
     pub fn get_nonce(&self, addr: &Address) -> u64 {
         let chain = self.blockchain.read().unwrap();
-        let account = chain.state_at(chain.current_block().state_root()).get_account(addr.clone());
+        let state = chain.state_at(chain.current_block().state_root());
+        let runtime = Balance::new(Interpreter::new(state));
+        let account = runtime.get_account(addr.clone());
+
         account.get_nonce()
     }
 }

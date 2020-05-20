@@ -29,6 +29,7 @@ use map_core::genesis;
 #[allow(unused_imports)]
 use map_core::state::{ArchiveDB, StateDB};
 use map_core::types::Hash;
+use map_core::runtime::Interpreter;
 use map_store;
 use map_store::mapdb::MapDB;
 
@@ -68,9 +69,10 @@ impl BlockChain {
 
     pub fn setup_genesis(&mut self) -> Hash {
         let state_db = Rc::new(RefCell::new(StateDB::from_existing(&self.state_backend, NULL_ROOT)));
-        let mut state = Balance::from_state(state_db.clone());
+        let mut state = Balance::new(Interpreter::new(state_db.clone()));
         let root = genesis::setup_allocation(&mut state);
         self.genesis.set_state_root(root);
+
         self.db.write_block(&self.genesis).expect("can not write block");
         self.db.write_head_hash(self.genesis.hash()).expect("can not wirte head");
         info!("setup genesis hash={}", self.genesis.hash());
@@ -93,9 +95,8 @@ impl BlockChain {
         &self.state_backend
     }
 
-    pub fn state_at(&self, root: Hash) -> Balance {
-        let state_db = Rc::new(RefCell::new(StateDB::from_existing(&self.state_backend, root)));
-        Balance::from_state(state_db.clone())
+    pub fn state_at(&self, root: Hash) -> Rc<RefCell<StateDB>> {
+        Rc::new(RefCell::new(StateDB::from_existing(&self.state_backend, root)))
     }
 
     pub fn genesis_hash(&self) -> Hash {

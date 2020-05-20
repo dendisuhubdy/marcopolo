@@ -23,6 +23,8 @@ use hash;
 use crate::types::{Hash, Address};
 use crate::state::{ArchiveDB, StateDB};
 use crate::trie::NULL_ROOT;
+use crate::runtime::Interpreter;
+use crate::staking;
 
 const BALANCE_POS: u64 = 1;
 const NONCE_POS: u64 = 2;
@@ -50,14 +52,25 @@ impl Account {
 pub struct Balance {
     cache: HashMap<Hash, Account>,
     treedb: Rc<RefCell<StateDB>>,
+    interpreter: Interpreter,
     root_hash: Hash,
 }
 
 impl Balance {
-    pub fn from_state(backend: Rc<RefCell<StateDB>>) -> Self {
+    pub fn new(runner: Interpreter) -> Self {
         Balance {
             cache: HashMap::new(),
-            treedb: backend,
+            treedb: runner.statedb(),
+            interpreter: runner,
+            root_hash: NULL_ROOT,
+        }
+    }
+
+    pub fn from_state(runner: Interpreter) -> Self {
+        Balance {
+            cache: HashMap::new(),
+            treedb: runner.statedb(),
+            interpreter: runner,
             root_hash: NULL_ROOT,
         }
     }
@@ -251,6 +264,7 @@ mod tests {
     use map_store::{MemoryKV, KVDB};
     use crate::state::{ArchiveDB, StateDB};
     use crate::types::Address;
+    use crate::runtime::Interpreter;
     use crate::trie::NULL_ROOT;
     use super::{Balance, Account};
 
@@ -259,7 +273,7 @@ mod tests {
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let db = ArchiveDB::new(Arc::clone(&backend));
         let state_db = Rc::new(RefCell::new(StateDB::from_existing(&db, NULL_ROOT)));
-        let mut state = Balance::from_state(state_db.clone());
+        let mut state = Balance::new(Interpreter::new(state_db.clone()));
 
         let addr = Address::default();
         let mut account = state.load_account(addr);
@@ -281,7 +295,7 @@ mod tests {
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let db = ArchiveDB::new(Arc::clone(&backend));
         let state_db = Rc::new(RefCell::new(StateDB::from_existing(&db, NULL_ROOT)));
-        let mut state = Balance::from_state(state_db.clone());
+        let mut state = Balance::new(Interpreter::new(state_db.clone()));
 
         let addr = Address::default();
         state.set_account(addr, &Account {
@@ -298,11 +312,11 @@ mod tests {
         });
 
         state.transfer(addr, receiver, 1);
-        let state_root = state.commit();
+        state.commit();
 
         {
             // Reload statedb
-            let state = Balance::from_state(state_db.clone());
+            let state = Balance::new(Interpreter::new(state_db.clone()));
             let account = state.load_account(receiver);
             assert_eq!(account.balance, 1);
             assert_eq!(state.balance(receiver), 1);
@@ -314,7 +328,7 @@ mod tests {
         let backend: Arc<RwLock<dyn KVDB>> = Arc::new(RwLock::new(MemoryKV::new()));
         let db = ArchiveDB::new(Arc::clone(&backend));
         let state_db = Rc::new(RefCell::new(StateDB::from_existing(&db, NULL_ROOT)));
-        let mut state = Balance::from_state(state_db);
+        let mut state = Balance::new(Interpreter::new(state_db.clone()));
         let addr = Address::default();
         let lock_1: u128 = 1;
 

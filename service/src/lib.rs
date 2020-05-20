@@ -35,6 +35,7 @@ use core::balance::Balance;
 use core::block::{self, Block, Header};
 use core::genesis::{ed_genesis_priv_key, ed_genesis_pub_key};
 use core::types::Hash;
+use core::runtime::Interpreter;
 use errors::Error;
 use executor::Executor;
 use network::{manager as network_executor, Multiaddr, NetworkConfig};
@@ -165,8 +166,9 @@ impl Service {
         let b = Block::new(header,txs,Vec::new(),Vec::new());
         let finalize = self.get_POA();
         let chain = self.block_chain.read().unwrap();
-        let mut statedb = chain.state_at(cur_block.state_root());
-        let h = Executor::exc_txs_in_block(&b, &mut statedb, &POA::get_default_miner())?;
+        let statedb = chain.state_at(cur_block.state_root());
+
+        let h = Executor::exc_txs_in_block(&b, &mut Balance::new(Interpreter::new(statedb)), &POA::get_default_miner())?;
         tx_pool.write().expect("acquiring tx_pool write lock").notify_block(&b);
         finalize.finalize_block(b,h)
     }

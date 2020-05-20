@@ -19,9 +19,16 @@ use std::rc::Rc;
 
 use crate::state::{StateDB};
 use crate::staking::{Staking, Validator};
-use crate::balance::{Balance, Account};
+use crate::balance::Balance;
 use crate::types::Address;
 
+pub trait Contract: {
+    fn lock_balance(&mut self, addr: Address, value: u128);
+
+    fn unlock_balance(&mut self, addr: Address, amount: u128);
+}
+
+#[derive(Clone)]
 pub struct Interpreter {
     state_db: Rc<RefCell<StateDB>>,
 }
@@ -31,6 +38,10 @@ impl Interpreter {
         Interpreter {
             state_db: backend.clone(),
         }
+    }
+
+    pub fn statedb(&self) -> Rc<RefCell<StateDB>> {
+        self.state_db.clone()
     }
 
     pub fn call(&mut self, caller: &Address, msg: Vec<u8>, input: Vec<u8>) {
@@ -43,7 +54,7 @@ impl Interpreter {
         if module == b"balance" {
             // Balance::from_state(self.state_db.clone()).transfer(calller, input);
         } else if module == b"staking" {
-            let mut state = Staking::from_state(self.state_db.clone());
+            let mut state = Staking::from_state(self.clone());
             match func {
                 b"validate" => state.exec_validate(caller, input),
                 b"deposit" => state.exec_deposit(caller, input),
@@ -52,6 +63,18 @@ impl Interpreter {
         } else {
             warn!("unsupport msg call");
         }
+    }
+}
+
+impl Contract for Interpreter {
+    fn lock_balance(&mut self, addr: Address, amount: u128) {
+        let mut state = Balance::from_state(self.clone());
+        state.lock_balance(addr, amount);
+    }
+
+    fn unlock_balance(&mut self, addr: Address, amount: u128) {
+        let mut state = Balance::from_state(self.clone());
+        state.unlock_balance(addr, amount);
     }
 }
 
