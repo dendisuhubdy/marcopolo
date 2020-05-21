@@ -24,6 +24,7 @@ use super::balance::Balance;
 use super::block::{Block, BlockProof};
 use super::runtime::Interpreter;
 use super::state::{ArchiveDB, StateDB};
+use super::staking::{Validator, Staking};
 
 pub const ed_genesis_priv_key: [u8; 32] = [
     249, 203, 126, 161, 115, 132, 10, 235, 164, 252, 129, 70, 116, 52, 100, 205, 174, 62, 85,
@@ -39,6 +40,11 @@ const allocation: &[(&str, u128)] = &[
     ("0xd2480451ef35ff2fdd7c69cad058719b9dc4d631", 1000000000000000000),
 ];
 
+// validator members (address, pubkey, stake)
+const validators: &[(&str, &[u8], u128)] = &[
+    ("0xd2480451ef35ff2fdd7c69cad058719b9dc4d631", b"0xd2480451ef35ff2fdd7c69cad058719b9dc4d631", 0),
+];
+
 pub fn to_genesis() -> Block {
     let zore_hash = [0u8;32];
     let mut b = Block::default();
@@ -51,10 +57,31 @@ pub fn to_genesis() -> Block {
 }
 
 pub fn setup_allocation(db: Rc<RefCell<StateDB>>) -> Hash {
-    let interpreter = Interpreter::new(db);
-    let mut state = Balance::new(interpreter);
-    for &(addr, value) in allocation {
-        state.add_balance(Address::from_hex(addr).unwrap(), value);
+    {
+        let interpreter = Interpreter::new(db.clone());
+        let mut state = Balance::new(interpreter);
+        for &(addr, value) in allocation {
+            state.add_balance(Address::from_hex(addr).unwrap(), value);
+        }
+        state.commit();
     }
-    state.commit()
+    {
+        let interpreter = Interpreter::new(db.clone());
+        let mut state = Staking::new(interpreter);
+        for &(addr, pk, value) in validators {
+            let validator = Validator {
+                address: Address::from_hex(addr).unwrap(),
+                pubkey: pk.to_vec(),
+                balance: 0,
+                effective_balance: value,
+                activate_height: 0,
+                exit_height: 0,
+                deposit_queue: Vec::new(),
+                unlocked_queue: Vec::new(),
+            };
+            state.insert(&validator);
+        }
+    }
+    db.borrow_mut().commit();
+    db.borrow().root()
 }
