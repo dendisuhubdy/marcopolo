@@ -69,8 +69,7 @@ impl BlockChain {
 
     pub fn setup_genesis(&mut self) -> Hash {
         let state_db = Rc::new(RefCell::new(StateDB::from_existing(&self.state_backend, NULL_ROOT)));
-        let mut state = Balance::new(Interpreter::new(state_db.clone()));
-        let root = genesis::setup_allocation(&mut state);
+        let root = genesis::setup_allocation(state_db.clone());
         self.genesis.set_state_root(root);
 
         self.db.write_block(&self.genesis).expect("can not write block");

@@ -14,11 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::rc::Rc;
+use std::cell::RefCell;
+
 use super::{traits::TxMsg};
 use super::types::{Hash, Address};
 use super::block;
 use super::balance::Balance;
 use super::block::{Block, BlockProof};
+use super::runtime::Interpreter;
+use super::state::{ArchiveDB, StateDB};
 
 pub const ed_genesis_priv_key: [u8; 32] = [
     249, 203, 126, 161, 115, 132, 10, 235, 164, 252, 129, 70, 116, 52, 100, 205, 174, 62, 85,
@@ -45,7 +50,9 @@ pub fn to_genesis() -> Block {
     return b
 }
 
-pub fn setup_allocation(state: &mut Balance) -> Hash {
+pub fn setup_allocation(db: Rc<RefCell<StateDB>>) -> Hash {
+    let interpreter = Interpreter::new(db);
+    let mut state = Balance::new(interpreter);
     for &(addr, value) in allocation {
         state.add_balance(Address::from_hex(addr).unwrap(), value);
     }
