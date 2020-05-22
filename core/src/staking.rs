@@ -23,7 +23,8 @@ use hash;
 use crate::types::{Hash, Address};
 use crate::storage::{List, ListEntry};
 use crate::state::StateDB;
-use crate::runtime::{Interpreter, Contract};
+use crate::balance::Balance;
+use crate::runtime::Interpreter;
 
 #[derive(Copy, Clone)]
 enum StatePrefix {
@@ -245,7 +246,11 @@ impl Staking {
         };
         self.insert(&validator);
 
-        self.interpreter.lock_balance(*addr, amount);
+        // self.interpreter.lock_balance(*addr, amount);
+        {
+            let mut state = Balance::from_state(self.interpreter.clone());
+            state.lock_balance(*addr, amount);
+        }
     }
 
     pub fn deposit(&mut self, addr: &Address, amount: u128) {
@@ -257,7 +262,11 @@ impl Staking {
         validator.balance += amount;
         self.set_item(&validator);
 
-        self.interpreter.lock_balance(*addr, amount);
+        // self.interpreter.lock_balance(*addr, amount);
+        {
+            let mut state = Balance::from_state(self.interpreter.clone());
+            state.lock_balance(*addr, amount);
+        }
     }
 
     pub fn activate_deposit(&mut self, addr: &Address) {

@@ -22,11 +22,11 @@ use crate::staking::Staking;
 use crate::balance::Balance;
 use crate::types::Address;
 
-pub trait Contract: {
-    fn lock_balance(&mut self, addr: Address, value: u128);
+// pub trait Contract: {
+//     fn lock_balance(&mut self, addr: Address, value: u128);
 
-    fn unlock_balance(&mut self, addr: Address, amount: u128);
-}
+//     fn unlock_balance(&mut self, addr: Address, amount: u128);
+// }
 
 #[derive(Clone)]
 pub struct Interpreter {
@@ -47,6 +47,7 @@ impl Interpreter {
     pub fn call(&mut self, caller: &Address, msg: Vec<u8>, input: Vec<u8>) {
         let sep = msg.iter().position(|&x| x == '.' as u8);
         if sep.is_none() {
+            warn!("invalid msg in transaction");
             return
         }
         let (module, func) = msg.split_at(sep.unwrap());
@@ -70,17 +71,17 @@ impl Interpreter {
     }
 }
 
-impl Contract for Interpreter {
-    fn lock_balance(&mut self, addr: Address, amount: u128) {
-        let mut state = Balance::from_state(self.clone());
-        state.lock_balance(addr, amount);
-    }
+// impl Contract for Interpreter {
+//     fn lock_balance(&mut self, addr: Address, amount: u128) {
+//         let mut state = Balance::from_state(self.clone());
+//         state.lock_balance(addr, amount);
+//     }
 
-    fn unlock_balance(&mut self, addr: Address, amount: u128) {
-        let mut state = Balance::from_state(self.clone());
-        state.unlock_balance(addr, amount);
-    }
-}
+//     fn unlock_balance(&mut self, addr: Address, amount: u128) {
+//         let mut state = Balance::from_state(self.clone());
+//         state.unlock_balance(addr, amount);
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
