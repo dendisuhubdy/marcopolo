@@ -18,7 +18,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::state::{StateDB};
-use crate::staking::{Staking, Validator};
+use crate::staking::Staking;
 use crate::balance::Balance;
 use crate::types::Address;
 
@@ -52,7 +52,11 @@ impl Interpreter {
         let (module, func) = msg.split_at(sep.unwrap());
 
         if module == b"balance" {
-            // Balance::from_state(self.state_db.clone()).transfer(calller, input);
+            let mut state = Balance::from_state(self.clone());
+            match func {
+                b"transfer" => state.exec_transfer(*caller, input),
+                _ => warn!("invalid balance call"),
+            }
         } else if module == b"staking" {
             let mut state = Staking::from_state(self.clone());
             match func {

@@ -37,9 +37,21 @@ pub mod balance_msg {
     use crate::types::{Address};
 
     #[derive(Debug, Serialize, Deserialize)]
-    pub struct Transfer {
+    pub struct MsgTransfer {
         pub receiver: Address,
         pub value: u128,
+    }
+}
+
+pub mod staking_msg {
+    use serde::{Deserialize, Serialize};
+    use crate::types::{Address};
+
+    #[derive(Serialize, Deserialize)]
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct MsgValidatorCreate {
+        pub pubkey: Vec<u8>,
+        pub amount: u128,
     }
 }
 
@@ -68,7 +80,7 @@ impl tx_hash_type {
 
 impl Transaction {
 	pub fn get_to_address(&self) -> Address {
-        let input: balance_msg::Transfer = bincode::deserialize(&self.data).unwrap();
+        let input: balance_msg::MsgTransfer = bincode::deserialize(&self.data).unwrap();
         input.receiver
 	}
 	pub fn get_from_address(&self) -> Address {
@@ -78,7 +90,7 @@ impl Transaction {
 		self.nonce
 	}
 	pub fn get_value(&self) -> u128 {
-        let input: balance_msg::Transfer = bincode::deserialize(&self.data).unwrap();
+        let input: balance_msg::MsgTransfer = bincode::deserialize(&self.data).unwrap();
         input.value
 	}
 	pub fn get_sign_data(&self) -> SignatureInfo {
@@ -127,12 +139,12 @@ mod tests {
 
     #[test]
     fn unpack_transfer() {
-        let msg = balance_msg::Transfer {
+        let msg = balance_msg::MsgTransfer {
             receiver: Address::default(),
             value: 1,
         };
         let encoded: Vec<u8> = bincode::serialize(&msg).unwrap();
-        let tx: balance_msg::Transfer = bincode::deserialize(&encoded).unwrap();
+        let tx: balance_msg::MsgTransfer = bincode::deserialize(&encoded).unwrap();
         assert_eq!(tx.value, 1);
     }
 }

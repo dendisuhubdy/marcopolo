@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::marker::PhantomData;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -25,7 +24,6 @@ use crate::types::{Hash, Address};
 use crate::storage::{List, ListEntry};
 use crate::state::StateDB;
 use crate::runtime::{Interpreter, Contract};
-use crate::balance;
 
 #[derive(Copy, Clone)]
 enum StatePrefix {

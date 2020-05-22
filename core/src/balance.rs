@@ -14,17 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
 use serde::{Serialize, Deserialize};
 use bincode;
 use hash;
 use crate::types::{Hash, Address};
-use crate::state::{ArchiveDB, StateDB};
+use crate::state::StateDB;
 use crate::trie::NULL_ROOT;
+use crate::transaction;
 use crate::runtime::Interpreter;
-use crate::staking;
 
 const BALANCE_POS: u64 = 1;
 const NONCE_POS: u64 = 2;
@@ -49,6 +48,7 @@ impl Account {
     }
 }
 
+#[allow(dead_code)]
 pub struct Balance {
     // cache: HashMap<Hash, Account>,
     treedb: Rc<RefCell<StateDB>>,
@@ -200,6 +200,11 @@ impl Balance {
         } else {
             // take transaction fee
         }
+    }
+
+    pub fn exec_transfer(&mut self, from_addr: Address, input: Vec<u8>) {
+        let msg: transaction::balance_msg::MsgTransfer = bincode::deserialize(&input).unwrap();
+        self.transfer(from_addr, msg.receiver, msg.value);
     }
 
     pub fn commit(&mut self) -> Hash {

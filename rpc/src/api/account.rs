@@ -69,7 +69,7 @@ impl AccountManager for AccountManagerImpl {
         };
 
         let nonce = self.tx_pool.read().expect("acquiring tx pool read lock").get_nonce(&from);
-        let input: Vec<u8> = bincode::serialize(&balance_msg::Transfer{
+        let input: Vec<u8> = bincode::serialize(&balance_msg::MsgTransfer{
             receiver: to,
             value: value}).unwrap();
 
