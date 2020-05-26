@@ -40,6 +40,7 @@ impl ChainDB {
         Ok(ChainDB{db: m})
     }
 
+    // Save block header by hash (hash --> blockHeader)
     pub fn write_header(&mut self, h: &Header) -> Result<(), Error> {
         let encoded: Vec<u8> = bincode::serialize(h).unwrap();
         let key = Self::header_key(&(h.hash().0));
@@ -47,6 +48,7 @@ impl ChainDB {
         self.db.put(&key, &encoded)
     }
 
+    // Read block header by hash (hash --> blockHeader)
     pub fn get_header(&self, h: &Hash) -> Option<Header> {
         let key = Self::header_key(&(h.0));
         let serialized = match self.db.get(&key.as_slice()) {
@@ -58,6 +60,7 @@ impl ChainDB {
         Some(header)
     }
 
+    // Delete a block header by hash (hash --> blockHeader)
     pub fn delete_header(&mut self, h: &Hash) -> Result<(), Error> {
         let key = Self::header_key(&(h.0));
         self.db.remove(&key[..])
@@ -102,6 +105,7 @@ impl ChainDB {
         self.db.put(&key, hash.to_slice())
     }
 
+    // read block header hash to certain height (num --> hash)
     pub fn get_header_hash(&self, num: u64) -> Option<Hash> {
         let key = Self::header_hash_key(num);
         self.db.get(&key).map(|h| {
@@ -111,11 +115,13 @@ impl ChainDB {
         })
     }
 
+    // write header hash to num (num --> hash)
     pub fn write_header_hash(&mut self, num: u64, hash: &Hash) -> Result<(), Error> {
         let key = Self::header_hash_key(num);
         self.db.put(&key, hash.to_slice())
     }
 
+    // remove the block assigned to certain height (num --> hash)
     pub fn delete_header_height(&mut self, num: u64) -> Result<(), Error> {
         let key = Self::header_hash_key(num);
         self.db.remove(&key)
@@ -157,9 +163,13 @@ impl ChainDB {
         self.db.put(&key, &encoded)
     }
 
+    // Delete a block with header by hash
     pub fn delete_block(&mut self, h: &Hash) -> Result<(), Error> {
+        // Delete block body
         let key = Self::block_key(h);
-        self.db.remove(&key[..])
+        self.db.remove(&key[..])?;
+        // Delete it's header
+        self.delete_header(h)
     }
 
     fn head_key() -> Vec<u8> {

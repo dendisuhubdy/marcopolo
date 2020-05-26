@@ -23,7 +23,6 @@ use errors::Error;
 use map_consensus::poa;
 use map_core;
 use map_core::trie::NULL_ROOT;
-use map_core::balance::Balance;
 use map_core::block::{Block, Header};
 use map_core::genesis;
 #[allow(unused_imports)]
@@ -200,6 +199,7 @@ impl Validator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use map_core::balance::Balance;
     use std::time::SystemTime;
 
     #[test]
