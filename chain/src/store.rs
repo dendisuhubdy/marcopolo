@@ -156,6 +156,42 @@ impl ChainDB {
         self.get_block(&header_hash)
     }
 
+    // Seek the common ancestor of two branch
+    pub fn find_ancestor(&self, mut a: Header, mut b: Header) -> Option<Hash> {
+        if a.height != b.height {
+            return None
+        }
+
+        while a.hash() != b.hash() {
+            a = match self.get_header(&a.parent_hash) {
+                Some(h) => h,
+                None => return None,
+            };
+            b = match self.get_header(&b.parent_hash) {
+                Some(h) => h,
+                None => return None,
+            };
+        }
+        // Ancestor found here
+        Some(a.hash())
+    }
+
+    pub fn setup_height(&mut self, h: &Header) {
+        let mut pre = h.height;
+        let mut pre_hash = h.hash();
+
+        while pre > 0 {
+            // Update num --> hash index if not set
+            let header = self.get_header(&pre_hash).unwrap();
+            if self.get_header_hash(pre).unwrap() == header.hash() {
+                break;
+            }
+            self.write_header_hash(pre, &header.hash()).unwrap();
+            pre = pre - 1;
+            pre_hash = header.parent_hash;
+        }
+    }
+
     pub fn write_block(&mut self, block: &Block) -> Result<(), Error> {
         self.write_header(&block.header)?;
         let key = Self::block_key(&block.header.hash());

@@ -28,7 +28,6 @@ use map_core::genesis;
 #[allow(unused_imports)]
 use map_core::state::{ArchiveDB, StateDB};
 use map_core::types::Hash;
-use map_core::runtime::Interpreter;
 use map_store;
 use map_store::mapdb::MapDB;
 
