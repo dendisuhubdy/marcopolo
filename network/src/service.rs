@@ -1,6 +1,6 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::io::{Error, ErrorKind};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use futures::prelude::*;
 use futures::Stream;
@@ -12,8 +12,9 @@ use libp2p::core::{
     nodes::Substream,
     transport::boxed::Boxed,
 };
+use parking_lot::Mutex;
 use slog::{debug, error, info, warn};
-use tokio::timer::DelayQueue;
+use tokio::timer::{DelayQueue, Interval};
 
 use crate::{behaviour::{Behaviour, BehaviourEvent, PubsubMessage}, config, GossipTopic, NetworkConfig, transport};
 use crate::error;
@@ -39,7 +40,27 @@ pub struct Service {
     /// A list of timeouts after which peers become unbanned.
     peer_ban_timeout: DelayQueue<PeerId>,
     pub peers: HashSet<PeerId>,
+    nodes: HashMap<PeerId, DialNode>,
+    /// Interval for sending queries.
+    dial_interval: Interval,
     pub log: slog::Logger,
+    mutex: Mutex<()>,
+}
+
+#[derive(Clone, Debug)]
+pub struct DialNode {
+    addrs: Vec<Multiaddr>,
+    state: DialStatus,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+/// The current sync status of the peer.
+pub enum DialStatus {
+    Connected,
+    Dial,
+    Dialing,
+    Disconnected,
+    Unknown,
 }
 
 impl Service {
@@ -108,7 +129,10 @@ impl Service {
             peers_to_ban: DelayQueue::new(),
             peer_ban_timeout: DelayQueue::new(),
             peers: HashSet::new(),
+            nodes: HashMap::new(),
+            dial_interval: Interval::new(Instant::now(), Duration::from_secs(5)),
             log,
+            mutex: Mutex::new(()),
         })
     }
 
@@ -122,19 +146,30 @@ impl Service {
         self.peer_ban_timeout.insert(peer_id, timeout);
     }
 
-    pub fn dial_peer(&mut self, addr: Multiaddr) -> bool {
-        let result = match Swarm::dial_addr(&mut self.swarm, addr.clone()) {
-            Ok(()) => {
-                debug!(self.log, "Dialing p2p peer"; "address" => format!("{}", addr));
-                true
+    pub fn dial_peer(&mut self) {
+        self.mutex.lock();
+        for (peer, node) in self.nodes.iter_mut() {
+            if self.peers.contains(peer) {
+                continue;
             }
-            Err(err) => {
-                debug!(self.log,
+            if node.state != DialStatus::Unknown && node.state != DialStatus::Disconnected {
+                continue;
+            }
+            node.state = DialStatus::Dial;
+
+            let addr = &node.addrs[0];
+            let result = match Swarm::dial_addr(&mut self.swarm, addr.clone()) {
+                Ok(()) => {
+                    debug!(self.log, "Dialing p2p peer"; "address" => format!("{}", addr));
+                    true
+                }
+                Err(err) => {
+                    debug!(self.log,
                             "Could not connect to peer"; "address" => format!("{}", addr), "Error" => format!("{:?}", err));
-                false
-            }
-        };
-        result
+                    false
+                }
+            };
+        }
     }
 }
 
@@ -163,24 +198,37 @@ impl Stream for Service {
                     BehaviourEvent::RPC(peer_id, event) => {
                         return Ok(Async::Ready(Some(Libp2pEvent::RPC(peer_id, event))));
                     }
-                    BehaviourEvent::PeerDialed(peer_id) => {
+                    BehaviourEvent::InjectConnect(peer_id,connected_point) => {
                         self.peers.insert(peer_id.clone());
-                        return Ok(Async::Ready(Some(Libp2pEvent::PeerDialed(peer_id))));
+                        self.nodes.get_mut(&peer_id).unwrap().state = DialStatus::Connected;
+                        match connected_point {
+                            ConnectedPoint::Listener { local_addr, send_back_addr } => {
+                                debug!(self.log, "Peer Connect"; "peer" => format!("{:?}", peer_id),"local" => format!("{:?}", local_addr),"remote" => format!("{:?}", send_back_addr));
+                            },
+                            ConnectedPoint::Dialer { .. } =>
+                                return Ok(Async::Ready(Some(Libp2pEvent::PeerDialed(peer_id)))),
+                        }
                     }
                     BehaviourEvent::PeerDisconnected(peer_id) => {
+                        self.nodes.get_mut(&peer_id).unwrap().state = DialStatus::Disconnected;
                         self.peers.remove(&peer_id);
                         return Ok(Async::Ready(Some(Libp2pEvent::PeerDisconnected(peer_id))));
                     }
                     BehaviourEvent::FindPeers { peer_id, addrs } => {
-                        if !self.peers.contains(&peer_id) {
-                            // attempt to connect to cli p2p nodes
+                        if !self.nodes.contains_key(&peer_id) {
+                            // attempt to connect to p2p nodes
+                            let mut addr_vec: Vec<Multiaddr> = vec![];
                             for addr in addrs.into_vec() {
                                 let addr_str = addr.to_string();
                                 if addr_str.contains("127.0.0.1") || !addr_str.contains("ip4") {
                                     continue;
                                 }
-                                self.dial_peer(addr);
-                            };
+                                addr_vec.push(addr);
+                            }
+                            if addr_vec.len() > 0 {
+                                self.nodes.insert(peer_id.clone(), DialNode { addrs: addr_vec, state: DialStatus::Unknown });
+                            }
+                            break;
                         }
                     }
                 },
@@ -190,6 +238,14 @@ impl Stream for Service {
                 }
                 _ => break,
             }
+        }
+
+        // check dial peers
+        while let Ok(Async::Ready(Some(_))) = self.dial_interval.poll() {
+            if self.peers.len() > 8 {
+                break;
+            }
+            self.dial_peer();
         }
 
         // check if peers need to be banned

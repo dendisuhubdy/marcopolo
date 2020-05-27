@@ -116,11 +116,9 @@ impl<TSubstream> NetworkBehaviour for P2P<TSubstream>
 
     fn inject_connected(&mut self, peer_id: PeerId, connected_point: ConnectedPoint) {
         // if initialised the connection, report this upwards to send the HELLO request
-        if let ConnectedPoint::Dialer { .. } = connected_point {
-            self.events.push(NetworkBehaviourAction::GenerateEvent(
-                P2PMessage::PeerDialed(peer_id),
-            ));
-        }
+        self.events.push(NetworkBehaviourAction::GenerateEvent(
+            P2PMessage::InjectConnect(peer_id,connected_point),
+        ));
     }
 
     fn inject_disconnected(&mut self, peer_id: &PeerId, _: ConnectedPoint) {
@@ -162,6 +160,6 @@ impl<TSubstream> NetworkBehaviour for P2P<TSubstream>
 #[derive(Debug)]
 pub enum P2PMessage {
     P2P(PeerId, P2PEvent),
-    PeerDialed(PeerId),
+    InjectConnect(PeerId,ConnectedPoint),
     PeerDisconnected(PeerId),
 }

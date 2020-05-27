@@ -153,8 +153,8 @@ for Behaviour<TSubstream>
     fn inject_event(&mut self, event: P2PMessage) {
         println!("inject_event P2PMessage:  {:?}", event);
         match event {
-            P2PMessage::PeerDialed(peer_id) => {
-                self.events.push(BehaviourEvent::PeerDialed(peer_id))
+            P2PMessage::InjectConnect(peer_id,connected_point) => {
+                self.events.push(BehaviourEvent::InjectConnect(peer_id,connected_point))
             }
             P2PMessage::PeerDisconnected(peer_id) => {
                 self.events.push(BehaviourEvent::PeerDisconnected(peer_id))
@@ -349,7 +349,7 @@ pub enum BehaviourEvent {
     /// A received RPC event and the peer that it was received from.
     RPC(PeerId, P2PEvent),
     /// We have completed an initial connection to a new peer.
-    PeerDialed(PeerId),
+    InjectConnect(PeerId, ConnectedPoint),
     /// A peer has disconnected.
     PeerDisconnected(PeerId),
     /// A gossipsub message has been received.
