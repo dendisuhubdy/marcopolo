@@ -15,21 +15,22 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
-use core::block::{self,Block,BlockProof,VerificationItem};
-use core::balance::{Balance};
+use map_core::block::{self,Block,BlockProof,VerificationItem};
+use map_core::balance::{Balance};
 use std::collections::HashMap;
-use super::types::{HolderItem,LockItem,P256PK,seed_open};
-use errors::{Error,ErrorKind};
+use crate::ConsensusErrorKind;
+use super::types::{HolderItem, LockItem, P256PK, seed_open, seed_info};
+use errors::{Error, ErrorKind};
 
 #[derive(Debug, Clone)]
 pub struct EpochItem {
     seed: u64,
-    validators: Vec<HolderItem>,    
+    validators: Vec<HolderItem>,
 }
 
 pub struct APOS {
     epochInfos:     HashMap<u64,EpochItem>,
-    lInfo:          LockItem,    
+    lInfo:          LockItem,
     eid:            u64,            // current epoch id
     be_a_holdler:   bool,
     lindex:         i32,            // current index in holder list on the epoch id
@@ -104,7 +105,7 @@ impl APOS {
                 }
             },
             None => None,
-        } 
+        }
     }
     pub fn get_staking_holders(&self, eid: u64) -> Option<Vec<HolderItem>> {
         match self.get_epoch_info(eid) {
@@ -196,7 +197,7 @@ impl APOS {
                     }
                     let b = msg.as_slice();
                     let a: u8 = b[0];
-                    
+
                     Ok(seed_info::new(
                         self.get_my_pos(),
                         self.eid,

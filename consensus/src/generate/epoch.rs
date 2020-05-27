@@ -17,24 +17,25 @@
 
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use core::block::{self,Block,BlockProof,VerificationItem};
+use map_core::block::{self,Block,BlockProof,VerificationItem};
 use crossbeam_channel::{bounded, select, Receiver, RecvError, Sender};
-use core::types::{Hash,seed_open};
-use super::{apos::APOS,fts,types};
-use super::fts;
+use map_core::types::Hash;
+use super::types::{seed_info};
+use super::{apos::APOS,types};
+// use super::fts;
 use super::ConsensusErrorKind;
 use errors::{Error,ErrorKind};
 use std::{thread,time::Duration};
 
 
 const epoch_length: i32 = 100;
-type TypeNewBlockEvent = Receiver<Block>; 
+type TypeNewBlockEvent = Receiver<Block>;
 type TypeNewTimerIntervalEvent = Receiver<()>;
 pub type TypeStopEpoch = Sender<()>;
 
 // block header has the pair of the (sid,height)
 pub struct tmp_blocks {
-    
+
 }
 impl tmp_blocks {
     pub fn make_new_block(&self,height: u64,h: Hash) -> Option<Block> {
@@ -42,7 +43,7 @@ impl tmp_blocks {
     }
     pub fn get_current_Height(&self) -> u64 {
         0
-    } 
+    }
     pub fn get_hash_by_height(&self,height: u64) -> Option<Hash> {
         Some(Hash([0u8;32]))
     }
@@ -81,7 +82,7 @@ impl epoch_info {
         let hi: u64 = eid * epoch_length as u64 - 1;
         (low,hi)
     }
-} 
+}
 
 #[derive(Debug, Clone)]
 pub struct slot {
@@ -94,7 +95,7 @@ impl slot {
         slot{
             timeout:    5000,
             id:         sid,
-            vindex:     index,    
+            vindex:     index,
         }
     }
 }
@@ -163,14 +164,14 @@ impl EpochProcess {
             self.slots.clear();
             let mut validators = vals;
             let seed = self.cur_seed;
-            fts::assign_valditator_to_slot(&mut validators, seed)?;
-            for (i,v) in validators.iter().enumerate() {
-                self.slots.push(
-                    slot::new(v.get_sid(),i as u32)
-                );
-            }
+            // fts::assign_valditator_to_slot(&mut validators, seed)?;
+            // for (i,v) in validators.iter().enumerate() {
+            //     self.slots.push(
+            //         slot::new(v.get_sid(),i as u32)
+            //     );
+            // }
             Ok(())
-        } 
+        }
         Err(ConsensusErrorKind::NotMatchEpochID.into())
     }
     pub fn slot_handle(&mut self,sid: i32,state: Arc<RwLock<APOS>>) {
@@ -210,7 +211,7 @@ impl EpochProcess {
                         walk_pos = walk_pos + 1;
                     },
                 }
-                // new epoch 
+                // new epoch
                 match self.next_epoch(walk_pos,state.clone()) {
                     Err(e) => {
                         println!("start_slot_walk_in_epoch is quit,cause next epoch is err:{:?}",e);
@@ -223,7 +224,7 @@ impl EpochProcess {
                     },
                 }
             })
-            .expect("Start slot_walk failed");  
+            .expect("Start slot_walk failed");
         stop_epoch_send
     }
     fn handle_new_block_event(&mut self, msg: Result<Block, RecvError>,sid: &i32,state: Arc<RwLock<APOS>>) {
@@ -248,9 +249,9 @@ impl EpochProcess {
                                     state.read()
                                     .expect("acquiring apos read lock")
                                     .make_rand_seed()?;
-                                },  
+                                },
                     };
-        // update seed 
+        // update seed
         seed.update_send_count();
         if seed.can_send() {
             state
@@ -269,7 +270,7 @@ impl EpochProcess {
                     .expect("acquiring apos read lock")
                     .get_self_seed() {
             let open = seed.get_Revel_phase_msg();
-            // broadcast the open 
+            // broadcast the open
 
         }
         Err(ConsensusErrorKind::NotFoundSeedInfo.into())
@@ -284,7 +285,7 @@ impl EpochProcess {
             }
         }
         if obj.eid == self.cur_eid && !find {
-            let mut seed_item = seed_info::from_send_seed_info(obj); 
+            let mut seed_item = seed_info::from_send_seed_info(obj);
             match state.read()
             .expect("acquiring apos read lock")
             .recove_the_share(obj) {
@@ -326,7 +327,7 @@ impl EpochProcess {
         }
         None
     }
-    
+
     fn recover_seed_for_next_epoch(&self,state: Arc<RwLock<APOS>>) -> Result<u64,Error> {
         let mut datas: Vec<u8> = Vec::new();
 
@@ -347,8 +348,8 @@ impl EpochProcess {
                 return Ok(seed);
             }
             return Err(ConsensusErrorKind::NotFetchAnyShares.into());
-        } 
-        Err(ConsensusErrorKind::NotMatchEpochID.into())   
+        }
+        Err(ConsensusErrorKind::NotMatchEpochID.into())
     }
     pub fn get_current_height(&self) -> u64 {
         return self.block_chain.read().expect("acquiring blockchian read lock").get_current_Height();
@@ -359,10 +360,10 @@ impl EpochProcess {
         let k = (epoch_length / 10) as u64;
         let m = (height % epoch_length) as u64;
         if m <= 4 * k {
-            // commit phase only once send 
+            // commit phase only once send
             self.commitment_phase(state);
         } else if m <= 8*k {
-            // revel phase 
+            // revel phase
             self.revel_phase(state);
         } else {
             // recover phase try to recover the seed from shares
@@ -381,7 +382,7 @@ impl EpochProcess {
 
 #[cfg(test)]
 pub mod tests {
-    
+
     #[test]
     fn make_epoch() {
 

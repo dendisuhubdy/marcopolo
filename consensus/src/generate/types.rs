@@ -14,9 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
-use core::types::{Hash,Address};
+use std::fmt;
+use map_core::types::{Hash,Address};
 use ed25519::{pubkey::Pubkey,privkey::PrivKey};
 use bincode;
+use pvss;
 
 const max_seed_send_count: i32 = 5;
 #[derive(Debug, Clone)]
@@ -211,7 +213,7 @@ impl LockItem {
     }
     pub fn get_pk2(&self) -> pvss::crypto::PublicKey {
         let ss: pvss::crypto::PrivateKey = self.into();
-        let p = Point::from_scalar(&ss.scalar);
+        let p = pvss::crypto::Point::from_scalar(&ss.scalar);
         return pvss::crypto::PublicKey { point: p };
     }
     pub fn get_my_id(&self) -> Hash {
@@ -311,9 +313,10 @@ impl seed_info {
         self.msg.clone()
     }
 }
+
 impl fmt::Debug for seed_info {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "index:{},eid:{},pk_hash:{},msg:{:?},shares_count:{},decrypted_count:{}", 
+        write!(f, "index:{},eid:{},pk_hash:{},msg:{:?},shares_count:{},decrypted_count:{}",
         self.index,self.eid,self.my_pk,self.msg,self.shares.len(),self.decrypted.len())?;
         Ok(())
     }
@@ -328,7 +331,7 @@ impl fmt::Display for seed_info {
 
 impl From<seed_info> for send_seed_info {
     fn from(v: seed_info) -> Self {
-        let h = 
+        let h =
         send_seed_info::new(v.my_pk,v.index,v.eid,
             v.get_msg_hash(),v.shares.clone());
     }

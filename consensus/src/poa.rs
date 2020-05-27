@@ -18,9 +18,9 @@ extern crate core;
 extern crate ed25519;
 
 use super::{traits::IConsensus,ConsensusErrorKind};
-use core::block::{self,Block,BlockProof,VerificationItem};
-use core::types::{Hash,Address};
-use core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
+use map_core::block::{self,Block,BlockProof,VerificationItem};
+use map_core::types::{Hash,Address};
+use map_core::genesis::{ed_genesis_priv_key,ed_genesis_pub_key};
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 use std::fmt;
 use std::cmp::Ordering;
@@ -48,7 +48,7 @@ impl POA {
                 validator:  ed_genesis_priv_key,
             }
         }
-    } 
+    }
     pub fn new_from_string(priv_key : String) -> Self {
         if priv_key.len() < 32 {
             return  POA::new(None);
@@ -60,7 +60,7 @@ impl POA {
                 POA::new(None)
             },
         }
-    } 
+    }
     fn get_local_pk(&self) -> Option<Vec<u8>> {
         if let Ok(pk) = PrivKey::from_bytes(&self.validator[..]).to_pubkey() {
             Some(pk.to_bytes())

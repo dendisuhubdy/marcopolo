@@ -191,6 +191,11 @@ dependencies = [
 
 [[package]]
 name = "bitflags"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
@@ -1649,6 +1654,7 @@ dependencies = [
  "map-core 0.1.0",
  "map-ed25519 0.1.0-pre",
  "map-errors 0.1.0-pre",
+ "pvss 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1972,6 +1978,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "openssl"
+version = "0.9.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "bitflags 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "foreign-types 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.67 (registry+https://github.com/rust-lang/crates.io-index)",
+ "openssl-sys 0.9.55 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "openssl"
 version = "0.10.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
@@ -2165,6 +2183,14 @@ dependencies = [
 name = "protobuf"
 version = "2.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "pvss"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "openssl 0.9.24 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "quick-error"
@@ -3396,6 +3422,7 @@ dependencies = [
 "checksum bigint 4.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ebecac13b3c745150d7b6c3ea7572d372f09d627c2077e893bf26c5c7f70d282"
 "checksum bincode 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5753e2a71534719bf3f4e57006c3a4f0d2c672a4b676eec84161f763eca87dbf"
 "checksum bindgen 0.53.1 (registry+https://github.com/rust-lang/crates.io-index)" = "99de13bb6361e01e493b3db7928085dcc474b7ba4f5481818e53a89d76b8393f"
+"checksum bitflags 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4efd02e230a02e18f92fc2735f44597385ed02ad8f831e7c1c1156ee5e1ab3a5"
 "checksum bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 "checksum blake2 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "94cb07b0da6a73955f8fb85d24c466778e70cda767a568229b104f0264089330"
 "checksum blake2b-rs 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "6e35e362830ef90ecea16f09b21b75d22d33a8562a679c74ab4f4fa49b4fcb87"
@@ -3552,6 +3579,7 @@ dependencies = [
 "checksum num_cpus 1.12.0 (registry+https://github.com/rust-lang/crates.io-index)" = "46203554f085ff89c235cd12f7075f3233af9b11ed7c9e16dfe2560d03313ce6"
 "checksum opaque-debug 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "2839e79665f131bdb5782e51f2c6c9599c133c6098982a54c794358bf432529c"
 "checksum openssl 0.10.29 (registry+https://github.com/rust-lang/crates.io-index)" = "cee6d85f4cb4c4f59a6a85d5b68a233d280c82e29e822913b9c8b129fbf20bdd"
+"checksum openssl 0.9.24 (registry+https://github.com/rust-lang/crates.io-index)" = "a3605c298474a3aa69de92d21139fb5e2a81688d308262359d85cdd0d12a7985"
 "checksum openssl-sys 0.9.55 (registry+https://github.com/rust-lang/crates.io-index)" = "7717097d810a0f2e2323f9e5d11e71608355e24828410b55b9d4f18aa5f9a5d8"
 "checksum packed_simd 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "a85ea9fc0d4ac0deb6fe7911d38786b32fc11119afd9e9d38b84ff691ce64220"
 "checksum parity-multiaddr 0.6.0 (git+https://github.com/SigP/rust-libp2p?rev=735313ebda6a98604929f6c4606aefac19e00760)" = "<none>"
@@ -3573,6 +3601,7 @@ dependencies = [
 "checksum proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)" = "cf3d2011ab5c909338f7887f4fc896d35932e29146c12c8d01da6b22a80ba759"
 "checksum proc-macro2 1.0.9 (registry+https://github.com/rust-lang/crates.io-index)" = "6c09721c6781493a2a492a96b5a5bf19b65917fe6728884e7c44dd0c60ca3435"
 "checksum protobuf 2.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "40361836defdd5871ff7e84096c6f6444af7fc157f8ef1789f54f147687caa20"
+"checksum pvss 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "028989997405812bfc9c04a05a035c47d649350ef9eb1ce3c699b8544a4ebd7a"
 "checksum quick-error 1.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 "checksum quote 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)" = "7a6e920b65c65f10b2ae65c831a81a073a89edd28c7cce89475bff467ab4167a"
 "checksum quote 0.6.13 (registry+https://github.com/rust-lang/crates.io-index)" = "6ce23b6b870e8f94f81fb0a363d65d86675884b34a09043c81e5562f11c1f8e1"
