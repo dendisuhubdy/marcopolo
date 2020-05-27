@@ -41,7 +41,7 @@ pub struct Service {
     peer_ban_timeout: DelayQueue<PeerId>,
     pub peers: HashSet<PeerId>,
     nodes: HashMap<PeerId, DialNode>,
-    /// Interval for sending queries.
+    /// Interval for dial queries.
     dial_interval: Interval,
     pub log: slog::Logger,
     mutex: Mutex<()>,
