@@ -55,16 +55,17 @@ impl tmp_blocks {
         Some(Block::default())
     }
     pub fn make_seed_in_epoch(&self,eid: u64) -> u64 {
-        let (low,hi) = epoch_info::get_height_from_eid(eid);
+        let (low,hi) = Epoch::get_height_from_eid(eid);
         for i in low..hi {
             let b = self.get_best_chain(i);
         }
         0
     }
 }
-pub struct epoch_info {}
 
-impl epoch_info {
+pub struct Epoch {}
+
+impl Epoch {
     pub fn get_epoch_from_height(h: u64) -> u64 {
         let eid: u64 = h / epoch_length as u64 + 1;
         eid
@@ -148,7 +149,7 @@ impl EpochProcess {
         Some(self.myid.clone())
     }
     pub fn next_epoch(&mut self,sid: i32,state: Arc<RwLock<APOS>>) -> Result<bool,Error> {
-        let next_eid = epoch_info::get_epoch_from_id(sid,self.cur_eid);
+        let next_eid = Epoch::get_epoch_from_id(sid,self.cur_eid);
         if next_eid == self.cur_eid + 1 {
             self.cur_eid = next_eid;
             match self.assign_validator(state) {
