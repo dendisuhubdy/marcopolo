@@ -21,8 +21,10 @@ use bincode;
 use pvss;
 
 const max_seed_send_count: i32 = 5;
+
 #[derive(Debug, Clone)]
-pub struct P256PK (pub u8,pub [u8;32]);
+pub struct P256PK (pub u8, pub [u8;32]);
+
 pub type seed_open = P256PK;
 
 impl Default for P256PK {
@@ -30,12 +32,14 @@ impl Default for P256PK {
         Self(0,[0u8;32])
     }
 }
+
 impl P256PK {
-    pub fn new(a: u8,b: [u8]) -> Self {
+    pub fn new(a: u8, b: &[u8]) -> Self {
         let mut c = [0u8;32];
-        c[..].copy_from_slice(&b[..]);
+        c[..].copy_from_slice(b);
         Self(a,c)
     }
+
     pub fn to_bytes(&self,a: &mut[u8]) {
         a[0] = self.0;
         a[1..].copy_from_slice(&self.1[..]);
@@ -156,28 +160,39 @@ pub struct HolderItem {
     pub sid:        i32,
     pub validator:  bool,
 }
+
 impl HolderItem {
     pub fn set_sid(&mut self,i: i32) {
         self.sid = i;
     }
+
     pub fn get_sid(&self) -> i32 {
         self.sid
     }
+
     pub fn get_seed_puk(&self) -> P256PK {
-        self.seedVerifyPk
+        self.seedVerifyPk.clone()
     }
+
     pub fn is_validator(&self) -> bool {
         self.validator
     }
+
     pub fn get_my_id(&self) -> Hash {
         Hash::make_hash(&self.pubkey[..])
     }
+
+    pub fn get_pubkey(&self) -> Pubkey {
+        Pubkey::from_bytes(&self.pubkey)
+    }
 }
+
 impl From<HolderItem> for Pubkey {
     fn from(v: HolderItem) -> Self {
         Pubkey::from_bytes(&v.pubkey)
     }
 }
+
 impl From<HolderItem> for Stakeholder {
     fn from(v: HolderItem) -> Self {
         Stakeholder{
@@ -188,18 +203,18 @@ impl From<HolderItem> for Stakeholder {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct LockItem {
     key1:   [u8;32],        // for sign message
     key2:   [u8;32],        // for decrypted the seed message
 }
 
 impl LockItem {
-    pub fn equal_pk_by_slice(&self,pk: &[u8]) -> bool {
-        let l_priv: PrivKey = self.into();
+    pub fn equal_pk_by_slice(&self, pk: &[u8]) -> bool {
+        let l_priv: PrivKey = (*self).into();
         match l_priv.to_pubkey(){
             Ok(l_pk) => {
-                return l_pk.equal(Pubkey::from_bytes(&pk))
+                return l_pk.equal(&Pubkey::from_bytes(pk))
             },
             Err(e) => {
                 println!("to_pubkey(in eqaul pk function) failed, Error: {:?}", e);
@@ -212,7 +227,7 @@ impl LockItem {
         return self.equal_pk_by_slice(&data);
     }
     pub fn get_pk2(&self) -> pvss::crypto::PublicKey {
-        let ss: pvss::crypto::PrivateKey = self.into();
+        let ss: pvss::crypto::PrivateKey = (*self).into();
         let p = pvss::crypto::Point::from_scalar(&ss.scalar);
         return pvss::crypto::PublicKey { point: p };
     }
@@ -220,6 +235,7 @@ impl LockItem {
         Hash::make_hash(&self.key1)
     }
 }
+
 impl Default for LockItem {
     fn default() -> Self {
         Self{
@@ -228,11 +244,13 @@ impl Default for LockItem {
         }
     }
 }
+
 impl From<LockItem> for PrivKey {
     fn from(v: LockItem) -> Self {
         PrivKey::from_bytes(&v.key1)
     }
 }
+
 impl From<LockItem> for pvss::crypto::PrivateKey {
     fn from(v: LockItem) -> Self {
         pvss::crypto::PrivateKey::from_bytes(&v.key2)
@@ -248,9 +266,10 @@ pub struct seed_info {
     pub shares: Vec<pvss::simple::EncryptedShare>,
     pub decrypted:     Vec<pvss::simple::DecryptedShare>,
 }
+
 impl seed_info {
-    pub fn new(i: i32,e: u64,my: Hash,s: seed_open,shs: &Vec<pvss::simple::EncryptedShare>,
-    de: &Vec<pvss::simple::DecryptedShare>) -> Self {
+    pub fn new(i: i32,e: u64,my: Hash,s: seed_open,shs: Vec<pvss::simple::EncryptedShare>,
+    de: Vec<pvss::simple::DecryptedShare>) -> Self {
         Self{
             index:  i,
             msg:    s,
@@ -288,27 +307,27 @@ impl seed_info {
         self.msg = P256PK::new(a,&b);
     }
     pub fn get_open_msg(&self) -> seed_open {
-        self.msg
+        self.msg.clone()
     }
-    pub fn from_send_seed_info(info: &send_seed_info) -> Self {
-        Self{
-            index:  info.index,
-            msg:    P256PK::new(0,&[0u8;32]),
-            eid:    info.eid,
-            my_pk:  info.pk_hash,
-            shares: info.clone(),
-            decrypted: Vec::new(),
-        }
-    }
+    // pub fn from_send_seed_info(info: &send_seed_info) -> Self {
+    //     Self{
+    //         index:  info.index,
+    //         msg:    P256PK::new(0,&[0u8;32]),
+    //         eid:    info.eid,
+    //         my_pk:  info.pk_hash,
+    //         shares: info.clone(),
+    //         decrypted: Vec::new(),
+    //     }
+    // }
     pub fn get_msg_hash(&self) -> Hash {
         let mut data: [u8;33] = [0u8;33];
         self.msg.to_bytes(&mut data);
         Hash::make_hash(&data)
     }
-    pub fn get_commit_phase_msg(&self,pk: Hash,i: i32,eid: u64) -> send_seed_info {
-        let h = self.get_msg_hash();
-        send_seed_info::new(pk,i,eid,h,self.shares.clone())
-    }
+    // pub fn get_commit_phase_msg(&self,pk: Hash,i: i32,eid: u64) -> send_seed_info {
+    //     let h = self.get_msg_hash();
+    //     send_seed_info::new(pk,i,eid,h,self.shares)
+    // }
     pub fn get_Revel_phase_msg(&self) -> seed_open {
         self.msg.clone()
     }
@@ -332,13 +351,15 @@ impl fmt::Display for seed_info {
 impl From<seed_info> for send_seed_info {
     fn from(v: seed_info) -> Self {
         let h =
-        send_seed_info::new(v.my_pk,v.index,v.eid,
-            v.get_msg_hash(),v.shares.clone());
+        send_seed_info::new(
+            v.my_pk,
+            v.index,v.eid,
+            v.get_msg_hash(),
+            v.shares);
+        h
     }
 }
 
-
-#[derive(Debug, Clone)]
 pub struct send_seed_info {
     pub pk_hash:    Hash,
     pub index:      i32,
@@ -357,12 +378,12 @@ impl send_seed_info {
             shares:     s,
         }
     }
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let encoded: Vec<u8> = bincode::serialize(&self).unwrap();
-        return encoded;
-    }
-    pub fn from_bytes(data: Vec<u8>) -> send_seed_info {
-        let obj: send_seed_info = bincode::deserialize(&data.as_slice()).unwrap();
-        obj
-    }
+    // pub fn to_bytes(&self) -> Vec<u8> {
+    //     let encoded: Vec<u8> = bincode::serialize(&self).unwrap();
+    //     return encoded;
+    // }
+    // pub fn from_bytes(data: Vec<u8>) -> send_seed_info {
+    //     let obj: send_seed_info = bincode::deserialize(&data.as_slice()).unwrap();
+    //     obj
+    // }
 }

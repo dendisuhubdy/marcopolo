@@ -139,7 +139,7 @@ impl APOS {
                 for (i,v) in validators.iter().enumerate() {
                     vv.push(v.get_seed_puk());
                 }
-                vv
+                Some(vv)
             },
             None    => None,
         }
@@ -150,9 +150,9 @@ impl APOS {
     pub fn is_validator(&self) -> bool {
         match self.get_staking_holders(self.eid) {
             Some(vv) => {
-                match vv.get(self.lindex) {
+                match vv.get(self.lindex as usize) {
                     Some(v) => {
-                        return self.lInfo.equal_pk(v.into());
+                        return self.lInfo.equal_pk(&v.get_pubkey());
                     },
                     None => false,
                 }
@@ -164,7 +164,8 @@ impl APOS {
         self.my_seed = s
     }
     pub fn get_self_seed(&self) -> Option<seed_info> {
-        self.my_seed
+        // self.my_seed
+        None
     }
     pub fn set_seed_next_epoch(&mut self,seed: u64) {
         self.seed_next_epoch = seed
@@ -173,97 +174,101 @@ impl APOS {
         self.seed_next_epoch
     }
     pub fn make_rand_seed(&self) -> Result<seed_info,Error> {
-        let escrow = pvss::simple::escrow(super::os_seed_share_count);
-        let msg = pvss::crypto::PublicKey{point:escrow.secret}.to_bytes();
-        let mut pubs : Vec<pvss::crypto::PublicKey> = Vec::new();
-        match self.get_seed_puk_from_validator() {
-            Some(vv)  => {
-                for v in vv.iter() { pubs.push(v.into()); }
-                let commitments = pvss::simple::commitments(&escrow);
-                let shares = pvss::simple::create_shares(&escrow, &pubs);
-                let de: Vec<pvss::simple::DecryptedShare> = Vec::new();
-                // verify shares
-                for share in shares {
-                    let idx = (share.id - 1) as usize;
-                    let verified_encrypted =
-                        share.verify(share.id, &pubs[idx], &escrow.extra_generator, &commitments);
-                    if !verified_encrypted {
-                        println!(
-                            "encrypted share {id}: {verified}",
-                            id = share.id,
-                            verified = verified_encrypted
-                        );
-                        return Err(ConsensusErrorKind::NoValidatorsInEpoch.into());
-                    }
-                    let b = msg.as_slice();
-                    let a: u8 = b[0];
+        // let escrow = pvss::simple::escrow(super::os_seed_share_count);
+        // let msg = pvss::crypto::PublicKey{point:escrow.secret}.to_bytes();
+        // let mut pubs : Vec<pvss::crypto::PublicKey> = Vec::new();
+        // match self.get_seed_puk_from_validator() {
+        //     Some(vv)  => {
+        //         for v in vv.iter() { pubs.push(v.into()); }
+        //         let commitments = pvss::simple::commitments(&escrow);
+        //         let shares = pvss::simple::create_shares(&escrow, &pubs);
+        //         let de: Vec<pvss::simple::DecryptedShare> = Vec::new();
+        //         // verify shares
+        //         for share in shares {
+        //             let idx = (share.id - 1) as usize;
+        //             let verified_encrypted =
+        //                 share.verify(share.id, &pubs[idx], &escrow.extra_generator, &commitments);
+        //             if !verified_encrypted {
+        //                 println!(
+        //                     "encrypted share {id}: {verified}",
+        //                     id = share.id,
+        //                     verified = verified_encrypted
+        //                 );
+        //                 return Err(ConsensusErrorKind::NoValidatorsInEpoch.into());
+        //             }
+        //             let b = msg.as_slice();
+        //             let a: u8 = b[0];
 
-                    Ok(seed_info::new(
-                        self.get_my_pos(),
-                        self.eid,
-                        self.lInfo.get_my_id(),
-                        P256PK::new(a,&b[1..]),
-                        &shares,
-                        &de
-                    ))
-                }
-            },
-            None    => Err(ConsensusErrorKind::NoValidatorsInEpoch.into()),
-        }
+        //             return Ok(seed_info::new(
+        //                 self.get_my_pos(),
+        //                 self.eid,
+        //                 self.lInfo.get_my_id(),
+        //                 P256PK::new(a,b[1..]),
+        //                 &shares,
+        //                 &de
+        //             ))
+        //         }
+        //     },
+        //     None    => return Err(ConsensusErrorKind::NoValidatorsInEpoch.into()),
+        // };
+
+        return Err(ConsensusErrorKind::NoValidatorsInEpoch.into());
     }
     pub fn recover_seed_from_shared_msg(&self,si: &seed_info) -> Result<Vec<u8>,Error> {
-        if si.index != self.lindex {
-            return Err(ConsensusErrorKind::NotMatchLocalHolders.into());
-        }
-        if si.decrypted.len() < super::os_seed_share_count {
-            return Err(ConsensusErrorKind::NotEnoughShares.into());
-        }
-        match pvss::simple::recover(super::os_seed_share_count, si.decrypted.as_slice()) {
-            Ok(recovered) => { Ok(recovered.secret.to_bytes()) },
-            Err(()) => Err(ConsensusErrorKind::RecoverSharesError.into()),
-         }
+        // if si.index != self.lindex {
+        //     return Err(ConsensusErrorKind::NotMatchLocalHolders.into());
+        // }
+        // if si.decrypted.len() < super::os_seed_share_count {
+        //     return Err(ConsensusErrorKind::NotEnoughShares.into());
+        // }
+        // match pvss::simple::recover(super::os_seed_share_count, si.decrypted.as_slice()) {
+        //     Ok(recovered) => { Ok(recovered.secret.to_bytes()) },
+        //     Err(()) => Err(ConsensusErrorKind::RecoverSharesError.into()),
+        //  }
+
+        return Err(ConsensusErrorKind::RecoverSharesError.into());
     }
     pub fn recove_the_share(&self,si: &mut seed_info) -> Result<(),Error> {
-        for share in si.shares {
-            if self.lindex == (share.id - 1) as i32 {
-                let pk = self.lInfo.get_pk2();
-                let d = pvss::simple::decrypt_share(&self.lInfo.into(), &pk, &share);
-                let verified_decrypted = d.verify(&pk, &share);
-                println!(
-                    "decrypted share {id}: {verified}",
-                    id = share.id,
-                    verified = verified_decrypted
-                );
-                if verified_decrypted {
-                    si.decrypted.push(d);
-                    return Ok(());
-                } else {
-                    return Err(Err(ConsensusErrorKind::DecryptShareMsgError.into()))
-                }
-            }
-        }
-        return Err(Err(ConsensusErrorKind::NoValidatorsInEpoch.into()))
+        // for share in si.shares {
+        //     if self.lindex == (share.id - 1) as i32 {
+        //         let pk = self.lInfo.get_pk2();
+        //         let d = pvss::simple::decrypt_share(&self.lInfo.into(), &pk, &share);
+        //         let verified_decrypted = d.verify(&pk, &share);
+        //         println!(
+        //             "decrypted share {id}: {verified}",
+        //             id = share.id,
+        //             verified = verified_decrypted
+        //         );
+        //         if verified_decrypted {
+        //             si.decrypted.push(d);
+        //             return Ok(());
+        //         } else {
+        //             return Err(Err(ConsensusErrorKind::DecryptShareMsgError.into()))
+        //         }
+        //     }
+        // }
+        return Err(ConsensusErrorKind::NoValidatorsInEpoch.into());
     }
-    pub fn recover_share_from_seed_info(&self,si: &send_seed_info) -> Result<pvss::simple::DecryptedShare,Error> {
-        for share in si.shares {
-            if self.lindex == (share.id - 1) as i32 {
-                let pk = self.lInfo.get_pk2();
-                let d = pvss::simple::decrypt_share(&self.lInfo.into(), &pk, &share);
-                let verified_decrypted = d.verify(&pk, &share);
-                println!(
-                    "decrypted share {id}: {verified}",
-                    id = share.id,
-                    verified = verified_decrypted
-                );
-                if verified_decrypted {
-                    return Ok(d);
-                } else {
-                    return Err(Err(ConsensusErrorKind::DecryptShareMsgError.into()))
-                }
-            }
-        }
-        return Err(Err(ConsensusErrorKind::NoValidatorsInEpoch.into()))
-    }
+    // pub fn recover_share_from_seed_info(&self,si: &send_seed_info) -> Result<pvss::simple::DecryptedShare,Error> {
+    //     for share in si.shares {
+    //         if self.lindex == (share.id - 1) as i32 {
+    //             let pk = self.lInfo.get_pk2();
+    //             let d = pvss::simple::decrypt_share(&self.lInfo.into(), &pk, &share);
+    //             let verified_decrypted = d.verify(&pk, &share);
+    //             println!(
+    //                 "decrypted share {id}: {verified}",
+    //                 id = share.id,
+    //                 verified = verified_decrypted
+    //             );
+    //             if verified_decrypted {
+    //                 return Ok(d);
+    //             } else {
+    //                 return Err(Err(ConsensusErrorKind::DecryptShareMsgError.into()))
+    //             }
+    //         }
+    //     }
+    //     return Err(Err(ConsensusErrorKind::NoValidatorsInEpoch.into()))
+    // }
     pub fn make_seed_on_epoch() -> bool {
         false
     }
