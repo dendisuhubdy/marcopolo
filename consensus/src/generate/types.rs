@@ -153,9 +153,9 @@ impl ftsResult {
 
 #[derive(Debug, Clone)]
 pub struct HolderItem {
-    pub pubkey: [u8;32],
-    pub seedVerifyPk: P256PK,
-    pub seedPk:       Option<P256PK>,
+    pub pubkey: [u8; 32],
+    // pub seedVerifyPk: P256PK,
+    // pub seedPk:       Option<P256PK>,
     pub stakeAmount: u128,
     pub sid:        i32,
     pub validator:  bool,
@@ -170,9 +170,9 @@ impl HolderItem {
         self.sid
     }
 
-    pub fn get_seed_puk(&self) -> P256PK {
-        self.seedVerifyPk.clone()
-    }
+    // pub fn get_seed_puk(&self) -> P256PK {
+    //     self.seedVerifyPk.clone()
+    // }
 
     pub fn is_validator(&self) -> bool {
         self.validator

@@ -269,13 +269,13 @@ impl EpochProcess {
     }
     // broadcast the open info to the validators in the epoch
     fn revel_phase(&self,state: Arc<RwLock<APOS>>) -> Result<(),Error> {
-        if let Some(seed) = state.read()
-                    .expect("acquiring apos read lock")
-                    .get_self_seed() {
-            let open = seed.get_Revel_phase_msg();
-            // broadcast the open
+        // if let Some(seed) = state.read()
+        //             .expect("acquiring apos read lock")
+        //             .get_self_seed() {
+        //     let open = seed.get_Revel_phase_msg();
+        //     // broadcast the open
 
-        }
+        // }
         Err(ConsensusErrorKind::NotFoundSeedInfo.into())
     }
     // fn receive_shares(&mut self,data: Vec<u8>,state: Arc<RwLock<APOS>>) -> Result<(),Error> {
@@ -368,9 +368,9 @@ impl EpochProcess {
         if m <= 4 * k {
             // commit phase only once send
             self.commitment_phase(state.clone());
-        } else if m <= 8*k {
-            // revel phase
-            self.revel_phase(state.clone());
+        // } else if m <= 8*k {
+        //     // revel phase
+        //     self.revel_phase(state.clone());
         } else {
             // recover phase try to recover the seed from shares
             self.recovery_phase(state.clone());

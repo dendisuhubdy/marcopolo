@@ -14,10 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::collections::HashMap;
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 use map_core::block::{self,Block,BlockProof,VerificationItem};
-use map_core::balance::{Balance};
-use std::collections::HashMap;
+use map_core::balance::Balance;
+use map_core::staking::Staking;
 use crate::ConsensusErrorKind;
 use super::types::{HolderItem, LockItem, P256PK, seed_open, seed_info};
 use errors::{Error, ErrorKind};
@@ -29,12 +30,12 @@ pub struct EpochItem {
 }
 
 pub struct APOS {
-    epochInfos:     HashMap<u64,EpochItem>,
+    epochInfos:     HashMap<u64, EpochItem>,
     lInfo:          LockItem,
     eid:            u64,            // current epoch id
     be_a_holdler:   bool,
     lindex:         i32,            // current index in holder list on the epoch id
-    my_seed:        Option<seed_info>,
+    // my_seed:        Option<seed_info>,
     seed_next_epoch: u64,
 }
 
@@ -46,7 +47,7 @@ impl APOS {
             eid: 0,
             be_a_holdler:   false,
             lindex:         0,
-            my_seed:           None,
+            // my_seed:           None,
             seed_next_epoch: 0,
         }
     }
@@ -57,7 +58,7 @@ impl APOS {
             eid: 0,
             be_a_holdler:   false,
             lindex:     0,
-            my_seed:       None,
+            // my_seed:       None,
             seed_next_epoch: 0,
         }
     }
@@ -76,8 +77,8 @@ impl APOS {
                 pubkey:         proof.0,
                 stakeAmount:    state.balance(proof.to_address()),
                 sid:            -1 as i32,
-                seedVerifyPk:   P256PK::default(),
-                seedPk:         None,
+                // seedVerifyPk:   P256PK::default(),
+                // seedPk:         None,
                 validator:      true,
             });
         }
@@ -86,6 +87,28 @@ impl APOS {
             validators: vals,
         });
     }
+
+    pub fn genesis_epoch(&self, genesis: &Block, state: &Staking) -> Option<EpochItem> {
+        let validators = state.validator_set();
+        let mut holders: Vec<HolderItem> = Vec::new();
+
+        for v in validators.iter() {
+            let mut pk: [u8; 32] = [0; 32];
+            pk.copy_from_slice(&v.pubkey);
+
+            holders.push(HolderItem {
+                pubkey: pk,
+                stakeAmount: 0,
+                sid: 0,
+                validator: false,
+            });
+        }
+        Some(EpochItem {
+            seed: 0,
+            validators: holders,
+        })
+    }
+
     pub fn next_epoch(&mut self) {
         self.eid = self.eid + 1
     }
@@ -132,18 +155,18 @@ impl APOS {
             0
         }
     }
-    pub fn get_seed_puk_from_validator(&self) -> Option<Vec<P256PK>> {
-        let mut vv = Vec::new();
-        match self.get_staking_holders(self.eid) {
-            Some(validators)  => {
-                for (i,v) in validators.iter().enumerate() {
-                    vv.push(v.get_seed_puk());
-                }
-                Some(vv)
-            },
-            None    => None,
-        }
-    }
+    // pub fn get_seed_puk_from_validator(&self) -> Option<Vec<P256PK>> {
+    //     let mut vv = Vec::new();
+    //     match self.get_staking_holders(self.eid) {
+    //         Some(validators)  => {
+    //             for (i,v) in validators.iter().enumerate() {
+    //                 vv.push(v.get_seed_puk());
+    //             }
+    //             Some(vv)
+    //         },
+    //         None    => None,
+    //     }
+    // }
     pub fn get_my_pos(&self) -> i32 {
         self.lindex
     }
@@ -160,13 +183,13 @@ impl APOS {
             None => false,
         }
     }
-    pub fn set_self_seed(&mut self,s: Option<seed_info>) {
-        self.my_seed = s
-    }
-    pub fn get_self_seed(&self) -> Option<seed_info> {
-        // self.my_seed
-        None
-    }
+    // pub fn set_self_seed(&mut self,s: Option<seed_info>) {
+    //     self.my_seed = s
+    // }
+    // pub fn get_self_seed(&self) -> Option<seed_info> {
+    //     // self.my_seed
+    //     None
+    // }
     pub fn set_seed_next_epoch(&mut self,seed: u64) {
         self.seed_next_epoch = seed
     }
