@@ -88,14 +88,14 @@ impl Epoch {
 }
 
 #[derive(Debug, Clone)]
-pub struct slot {
+pub struct Slot {
     timeout:    u32,     // millsecond
     id:         i32,
     vindex:     u32,
 }
-impl slot {
+impl Slot {
     pub fn new(sid: i32,index: u32) -> Self {
-        slot{
+        Slot{
             timeout:    5000,
             id:         sid,
             vindex:     index,
@@ -106,7 +106,7 @@ pub struct EpochProcess {
     myid:           Pubkey,
     cur_eid:        u64,
     cur_seed:       u64,
-    slots:          Vec<slot>,
+    slots:          Vec<Slot>,
     block_chain:    Arc<RwLock<tmp_blocks>>,
     received_seed_info: Vec<seed_info>,
 }
