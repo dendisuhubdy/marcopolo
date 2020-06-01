@@ -14,13 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::{thread,time::Duration};
+use std::thread;
+use std::time::{Duration, Instant};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::convert::TryInto;
 
+use crossbeam_channel::{bounded, select, Receiver, RecvError, Sender, tick};
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
 use map_core::block::{self,Block,BlockProof,VerificationItem};
-use crossbeam_channel::{bounded, select, Receiver, RecvError, Sender};
 use map_core::types::Hash;
 use errors::{Error, ErrorKind};
 use super::types::{seed_info, HolderItem};
@@ -31,7 +32,7 @@ use super::ConsensusErrorKind;
 
 const epoch_length: i32 = 100;
 type TypeNewBlockEvent = Receiver<Block>;
-type TypeNewTimerIntervalEvent = Receiver<()>;
+type TypeNewTimerIntervalEvent = Receiver<Instant>;
 pub type TypeStopEpoch = Sender<()>;
 
 // block header has the pair of the (sid,height)
@@ -102,6 +103,7 @@ impl Slot {
         }
     }
 }
+
 pub struct EpochProcess {
     myid:           Pubkey,
     cur_eid:        u64,
@@ -112,7 +114,7 @@ pub struct EpochProcess {
 }
 
 impl EpochProcess {
-    pub fn new(mid: Pubkey,eid: u64,seed: u64,b: Arc<RwLock<tmp_blocks>>) -> Self {
+    pub fn new(mid: Pubkey, eid: u64, seed: u64, b: Arc<RwLock<tmp_blocks>>) -> Self {
         EpochProcess{
             myid:           mid,
             cur_eid:        eid,
@@ -122,8 +124,13 @@ impl EpochProcess {
             block_chain:    b.clone(),
         }
     }
-    pub fn start(mut self,state: Arc<RwLock<APOS>>,new_block: TypeNewBlockEvent,
-        new_interval: TypeNewTimerIntervalEvent) -> Result<TypeStopEpoch,Error> {
+    pub fn start(
+        mut self,
+        state: Arc<RwLock<APOS>>,
+        new_block: TypeNewBlockEvent,
+        // new_interval: TypeNewTimerIntervalEvent
+    ) -> Result<TypeStopEpoch,Error> {
+        let new_interval = tick(Duration::new(6, 0));
         // setup validators
         match self.assign_validator(state.clone()) {
             Ok(()) => {
@@ -194,8 +201,8 @@ impl EpochProcess {
             // boradcast the block and insert the block
         }
     }
-    pub fn start_slot_walk_in_epoch(mut self,sid: i32,new_block: TypeNewBlockEvent,
-        new_interval: TypeNewTimerIntervalEvent,state: Arc<RwLock<APOS>>) -> TypeStopEpoch {
+    pub fn start_slot_walk_in_epoch(mut self, sid: i32, new_block: TypeNewBlockEvent,
+        new_interval: TypeNewTimerIntervalEvent, state: Arc<RwLock<APOS>>) -> TypeStopEpoch {
         let (stop_epoch_send, stop_epoch_receiver) = bounded::<()>(1);
         let mut walk_pos :i32 = sid;
         let mut thread_builder = thread::Builder::new();

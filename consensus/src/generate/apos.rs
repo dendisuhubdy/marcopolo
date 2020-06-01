@@ -65,28 +65,28 @@ impl APOS {
     pub fn be_a_holder(&mut self,b: bool) {
         self.be_a_holdler = true;
     }
-    pub fn from_genesis(&mut self,genesis: &Block,state: &Balance) {
-        let proofs = genesis.get_proofs();
-        let mut vals: Vec<HolderItem> = Vec::new();
-        let seed: u64 = 0;
-        for (i,proof) in proofs.iter().enumerate() {
-            if self.lInfo.equal_pk_by_slice(&proof.0[..]) {
-                self.lindex = i as i32;
-            }
-            vals.push(HolderItem{
-                pubkey:         proof.0,
-                stakeAmount:    state.balance(proof.to_address()),
-                sid:            -1 as i32,
-                // seedVerifyPk:   P256PK::default(),
-                // seedPk:         None,
-                validator:      true,
-            });
-        }
-        self.epochInfos.insert(0,EpochItem{
-            seed:       seed,
-            validators: vals,
-        });
-    }
+    // pub fn from_genesis(&mut self,genesis: &Block,state: &Balance) {
+    //     let proofs = genesis.get_proofs();
+    //     let mut vals: Vec<HolderItem> = Vec::new();
+    //     let seed: u64 = 0;
+    //     for (i,proof) in proofs.iter().enumerate() {
+    //         if self.lInfo.equal_pk_by_slice(&proof.0[..]) {
+    //             self.lindex = i as i32;
+    //         }
+    //         vals.push(HolderItem{
+    //             pubkey:         proof.0,
+    //             stakeAmount:    state.balance(proof.to_address()),
+    //             sid:            -1 as i32,
+    //             // seedVerifyPk:   P256PK::default(),
+    //             // seedPk:         None,
+    //             validator:      true,
+    //         });
+    //     }
+    //     self.epochInfos.insert(0,EpochItem{
+    //         seed:       seed,
+    //         validators: vals,
+    //     });
+    // }
 
     pub fn genesis_epoch(&self, genesis: &Block, state: &Staking) -> Option<EpochItem> {
         let validators = state.validator_set();
