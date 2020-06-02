@@ -143,7 +143,7 @@ impl EpochProcess {
             Err(e) => Err(e),
         }
     }
-    pub fn is_my_produce(&self,sid: i32,state: Arc<RwLock<APOS>>) -> bool {
+    pub fn is_proposer(&self,sid: i32,state: Arc<RwLock<APOS>>) -> bool {
         if let Some(item) = state.read()
         .expect("acquiring apos read lock")
         .get_staking_holder(sid,self.cur_eid) {
@@ -185,7 +185,7 @@ impl EpochProcess {
         Err(ConsensusErrorKind::NotMatchEpochID.into())
     }
     pub fn slot_handle(&mut self,sid: i32,state: Arc<RwLock<APOS>>) {
-        if self.is_my_produce(sid,state) {
+        if self.is_proposer(sid,state) {
            let c_height = self.block_chain
                               .read()
                               .expect("acquiring shared_block_chain read lock")
