@@ -15,17 +15,17 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::convert::TryInto;
 
 use crossbeam_channel::{bounded, select, Receiver, RecvError, Sender, tick};
 use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
-use map_core::block::{self,Block,BlockProof,VerificationItem};
+use map_core::block::{self, Block, BlockProof, VerificationItem};
 use map_core::types::Hash;
 use errors::{Error, ErrorKind};
 use super::types::{seed_info, HolderItem};
-use super::{apos::APOS,types};
+use super::{apos::APOS, types};
 // use super::fts;
 use super::ConsensusErrorKind;
 
@@ -35,13 +35,17 @@ type TypeNewBlockEvent = Receiver<Block>;
 type TypeNewTimerIntervalEvent = Receiver<Instant>;
 pub type TypeStopEpoch = Sender<()>;
 
-// block header has the pair of the (sid,height)
-pub struct tmp_blocks {
+// Block bulder to make proposer block
+pub struct Builder {}
 
-}
-impl tmp_blocks {
-    pub fn make_new_block(&self,height: u64,h: Hash) -> Option<Block> {
-        Some(Block::default())
+impl Builder {
+    // Proposal new block from certain slot
+    pub fn make_new_block(&self, height: u64, parent: Hash) -> Option<Block> {
+        let mut block = Block::default();
+        block.header.parent_hash = parent;
+        block.header.height = height;
+        block.header.time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+        Some(block)
     }
     pub fn get_current_Height(&self) -> u64 {
         0
@@ -109,12 +113,12 @@ pub struct EpochProcess {
     cur_eid:        u64,
     cur_seed:       u64,
     slots:          Vec<Slot>,
-    block_chain:    Arc<RwLock<tmp_blocks>>,
+    block_chain:    Arc<RwLock<Builder>>,
     received_seed_info: Vec<seed_info>,
 }
 
 impl EpochProcess {
-    pub fn new(mid: Pubkey, eid: u64, seed: u64, b: Arc<RwLock<tmp_blocks>>) -> Self {
+    pub fn new(mid: Pubkey, eid: u64, seed: u64, b: Arc<RwLock<Builder>>) -> Self {
         EpochProcess{
             myid:           mid,
             cur_eid:        eid,
@@ -184,8 +188,8 @@ impl EpochProcess {
         // }
         Err(ConsensusErrorKind::NotMatchEpochID.into())
     }
-    pub fn slot_handle(&mut self,sid: i32,state: Arc<RwLock<APOS>>) {
-        if self.is_proposer(sid,state) {
+    pub fn slot_handle(&mut self, sid: i32, state: Arc<RwLock<APOS>>) {
+        if self.is_proposer(sid, state) {
            let c_height = self.block_chain
                               .read()
                               .expect("acquiring shared_block_chain read lock")
