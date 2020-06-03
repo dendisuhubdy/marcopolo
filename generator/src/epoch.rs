@@ -30,7 +30,9 @@ use map_core::block::{self, Block, BlockProof, VerificationItem};
 use map_core::types::Hash;
 // use super::fts;
 
-const epoch_length: u64 = 100;
+/// Slots per epoch constant
+const EPOCH_LENGTH: u64 = 100;
+
 type TypeNewBlockEvent = Receiver<Block>;
 type TypeNewTimerIntervalEvent = Receiver<Instant>;
 pub type TypeStopEpoch = Sender<()>;
@@ -86,26 +88,26 @@ impl Builder {
     }
 }
 
-pub struct Epoch {}
+pub struct Epoch(u64);
 
 impl Epoch {
-    pub fn get_epoch_from_height(h: u64) -> u64 {
-        let eid: u64 = h / epoch_length as u64 + 1;
+    pub fn epoch_from_height(h: u64) -> u64 {
+        let eid: u64 = h / EPOCH_LENGTH;
         eid
     }
-    pub fn get_epoch_from_id(sid: u64, cur_eid: u64) -> u64 {
-        let mut eid = cur_eid;
-        if sid >= epoch_length {
-            eid = cur_eid + 1
-        }
+
+    pub fn epoch_from_id(sid: u64) -> u64 {
+        // We may skip block from slot
+        let eid: u64 = sid / EPOCH_LENGTH;
         eid
     }
+
     pub fn get_height_from_eid(eid: u64) -> (u64, u64) {
         if eid as i64 <= 0 {
             return (0, 0);
         }
-        let low: u64 = (eid - 1) * epoch_length as u64;
-        let hi: u64 = eid * epoch_length as u64 - 1;
+        let low: u64 = (eid - 1) * EPOCH_LENGTH as u64;
+        let hi: u64 = eid * EPOCH_LENGTH as u64 - 1;
         (low, hi)
     }
 }
@@ -163,6 +165,7 @@ impl EpochProcess {
             Err(e) => Err(e),
         }
     }
+
     pub fn is_proposer(&self, sid: u64, state: Arc<RwLock<APOS>>) -> bool {
         if let Some(item) = state
             .read()
@@ -174,11 +177,13 @@ impl EpochProcess {
             false
         }
     }
+
     pub fn get_my_pk(&self) -> Option<Pubkey> {
         Some(self.myid.clone())
     }
+
     pub fn next_epoch(&mut self, sid: u64, state: Arc<RwLock<APOS>>) -> Result<bool, Error> {
-        let next_eid = Epoch::get_epoch_from_id(sid, self.cur_eid);
+        let next_eid = Epoch::epoch_from_id(sid);
         if next_eid == self.cur_eid + 1 {
             self.cur_eid = next_eid;
             match self.assign_validator(state) {
@@ -402,8 +407,8 @@ impl EpochProcess {
     pub fn epoch_step(&mut self, state: Arc<RwLock<APOS>>, height: u64) {
         // get the height event from blockchain
         // 4k,4k,2k for commit phase,revel phase,recovery
-        let k = (epoch_length / 10) as u64;
-        let m = (height % epoch_length as u64) as u64;
+        let k = (EPOCH_LENGTH / 10) as u64;
+        let m = (height % EPOCH_LENGTH as u64) as u64;
         if m <= 4 * k {
             // commit phase only once send
             self.commitment_phase(state.clone());
@@ -414,7 +419,7 @@ impl EpochProcess {
             // recover phase try to recover the seed from shares
             self.recovery_phase(state.clone());
         }
-        if 0 as u64 == (height + 1) % epoch_length as u64 {
+        if 0 as u64 == (height + 1) % EPOCH_LENGTH as u64 {
             if let Ok(seed) = self.recover_seed_for_next_epoch(state.clone()) {
                 state
                     .write()

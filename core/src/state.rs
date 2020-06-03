@@ -241,6 +241,7 @@ impl Payload {
     }
 }
 
+#[derive(Clone)]
 pub struct StateDB {
     // db: HashDB<Blake2Hasher, DBValue>,
     db: ArchiveDB,

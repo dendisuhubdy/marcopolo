@@ -15,11 +15,15 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::collections::HashMap;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use map_consensus::ConsensusErrorKind;
 use map_core::balance::Balance;
 use map_core::block::{self, Block, BlockProof, VerificationItem};
 use map_core::staking::Staking;
+use map_core::state::StateDB;
+use map_core::runtime::Interpreter;
 use crate::types::{seed_info, seed_open, HolderItem, LockItem, P256PK};
 use ed25519::{privkey::PrivKey, pubkey::Pubkey, signature::SignatureInfo};
 use errors::{Error, ErrorKind};
@@ -38,10 +42,12 @@ pub struct APOS {
     lindex: i32, // current index in holder list on the epoch id
     // my_seed:        Option<seed_info>,
     seed_next_epoch: u64,
+    genesis_block: Block,
+    state: StateDB,
 }
 
 impl APOS {
-    pub fn new() -> Self {
+    pub fn new(genesis: Block, state: StateDB) -> Self {
         APOS {
             epochInfos: HashMap::default(),
             lInfo: LockItem::default(),
@@ -50,19 +56,21 @@ impl APOS {
             lindex: 0,
             // my_seed:           None,
             seed_next_epoch: 0,
+            genesis_block: genesis,
+            state: state,
         }
     }
-    pub fn new2(info: LockItem) -> Self {
-        APOS {
-            epochInfos: HashMap::default(),
-            lInfo: info,
-            eid: 0,
-            be_a_holdler: false,
-            lindex: 0,
-            // my_seed:       None,
-            seed_next_epoch: 0,
-        }
-    }
+    // pub fn new2(info: LockItem) -> Self {
+    //     APOS {
+    //         epochInfos: HashMap::default(),
+    //         lInfo: info,
+    //         eid: 0,
+    //         be_a_holdler: false,
+    //         lindex: 0,
+    //         // my_seed:       None,
+    //         seed_next_epoch: 0,
+    //     }
+    // }
     pub fn be_a_holder(&mut self, b: bool) {
         self.be_a_holdler = true;
     }
@@ -89,7 +97,9 @@ impl APOS {
     //     });
     // }
 
-    pub fn genesis_epoch(&self, genesis: &Block, state: &Staking) -> Option<EpochItem> {
+    pub fn genesis_epoch(&self) -> Option<EpochItem> {
+        let state = Staking::new(Interpreter::new(Rc::new(RefCell::new(self.state.clone())).clone()));
+
         let validators = state.validator_set();
         let mut holders: Vec<HolderItem> = Vec::new();
 
@@ -113,12 +123,19 @@ impl APOS {
     pub fn next_epoch(&mut self) {
         self.eid = self.eid + 1
     }
+
     pub fn get_epoch_info(&self, eid: u64) -> Option<EpochItem> {
-        match self.epochInfos.get(&eid) {
-            Some(v) => Some(v.clone()),
-            None => None,
+        // match self.epochInfos.get(&eid) {
+        //     Some(v) => Some(v.clone()),
+        //     None => None,
+        // }
+        if let Some(v) = self.epochInfos.get(&eid) {
+            return Some(v.clone());
         }
+        // genesis epoch committee at start
+        self.genesis_epoch()
     }
+
     pub fn get_staking_holder(&self, index: u64, eid: u64) -> Option<HolderItem> {
         match self.get_epoch_info(eid) {
             Some(items) => {
@@ -131,6 +148,7 @@ impl APOS {
             None => None,
         }
     }
+
     pub fn get_staking_holders(&self, eid: u64) -> Option<Vec<HolderItem>> {
         match self.get_epoch_info(eid) {
             Some(items) => {
