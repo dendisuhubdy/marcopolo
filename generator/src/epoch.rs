@@ -30,7 +30,7 @@ use map_core::block::{self, Block, BlockProof, VerificationItem};
 use map_core::types::Hash;
 // use super::fts;
 
-const epoch_length: i32 = 100;
+const epoch_length: u64 = 100;
 type TypeNewBlockEvent = Receiver<Block>;
 type TypeNewTimerIntervalEvent = Receiver<Instant>;
 pub type TypeStopEpoch = Sender<()>;
@@ -69,7 +69,7 @@ impl Builder {
         self.chain.read().unwrap().get_block_by_number(height)
     }
 
-    pub fn get_sid_from_current_block(&self) -> i32 {
+    pub fn get_sid_from_current_block(&self) -> u64 {
         0
     }
 
@@ -93,7 +93,7 @@ impl Epoch {
         let eid: u64 = h / epoch_length as u64 + 1;
         eid
     }
-    pub fn get_epoch_from_id(sid: i32, cur_eid: u64) -> u64 {
+    pub fn get_epoch_from_id(sid: u64, cur_eid: u64) -> u64 {
         let mut eid = cur_eid;
         if sid >= epoch_length {
             eid = cur_eid + 1
@@ -163,7 +163,7 @@ impl EpochProcess {
             Err(e) => Err(e),
         }
     }
-    pub fn is_proposer(&self, sid: i32, state: Arc<RwLock<APOS>>) -> bool {
+    pub fn is_proposer(&self, sid: u64, state: Arc<RwLock<APOS>>) -> bool {
         if let Some(item) = state
             .read()
             .expect("acquiring apos read lock")
@@ -177,7 +177,7 @@ impl EpochProcess {
     pub fn get_my_pk(&self) -> Option<Pubkey> {
         Some(self.myid.clone())
     }
-    pub fn next_epoch(&mut self, sid: i32, state: Arc<RwLock<APOS>>) -> Result<bool, Error> {
+    pub fn next_epoch(&mut self, sid: u64, state: Arc<RwLock<APOS>>) -> Result<bool, Error> {
         let next_eid = Epoch::get_epoch_from_id(sid, self.cur_eid);
         if next_eid == self.cur_eid + 1 {
             self.cur_eid = next_eid;
@@ -206,10 +206,12 @@ impl EpochProcess {
         // }
         Err(ConsensusErrorKind::NotMatchEpochID.into())
     }
-    pub fn slot_handle(&mut self, sid: i32, state: Arc<RwLock<APOS>>) {
+    pub fn slot_handle(&mut self, sid: u64, state: Arc<RwLock<APOS>>) {
         if self.is_proposer(sid, state) {
             let current = self.block_chain.get_head_block();
-            let b = self.block_chain.make_new_block(current.height(), current.hash());
+            let b = self
+                .block_chain
+                .make_new_block(current.height(), current.hash());
             info!("make new hash={}", b.hash());
             // boradcast and import the block
         }
@@ -217,13 +219,13 @@ impl EpochProcess {
 
     pub fn start_slot_walk_in_epoch(
         mut self,
-        sid: i32,
+        sid: u64,
         new_block: TypeNewBlockEvent,
         new_interval: TypeNewTimerIntervalEvent,
         state: Arc<RwLock<APOS>>,
     ) -> TypeStopEpoch {
         let (stop_epoch_send, stop_epoch_receiver) = bounded::<()>(1);
-        let mut walk_pos: i32 = sid;
+        let mut walk_pos: u64 = sid;
         let mut thread_builder = thread::Builder::new();
         // thread_builder = thread_builder.name("slot_walk".to_string());
         let join_handle = thread_builder
@@ -233,11 +235,11 @@ impl EpochProcess {
                         break;
                     }
                     recv(new_block) -> msg => {
-                        self.handle_new_block_event(msg,&walk_pos,state.clone());
+                        self.handle_new_block_event(msg, &walk_pos, state.clone());
                         walk_pos = walk_pos + 1;
                     },
                     recv(new_interval) -> _ => {
-                        self.handle_new_time_interval_event(&walk_pos,state.clone());
+                        self.handle_new_time_interval_event(&walk_pos, state.clone());
                         walk_pos = walk_pos + 1;
                     },
                 }
@@ -264,7 +266,7 @@ impl EpochProcess {
     fn handle_new_block_event(
         &mut self,
         msg: Result<Block, RecvError>,
-        sid: &i32,
+        sid: &u64,
         state: Arc<RwLock<APOS>>,
     ) {
         match msg {
@@ -275,7 +277,7 @@ impl EpochProcess {
             Err(e) => println!("insert_block Error: {:?}", e),
         }
     }
-    fn handle_new_time_interval_event(&mut self, sid: &i32, state: Arc<RwLock<APOS>>) {
+    fn handle_new_time_interval_event(&mut self, sid: &u64, state: Arc<RwLock<APOS>>) {
         self.slot_handle(*sid, state);
     }
     // if it want to be a validator and then make the local secret and broadcast it
