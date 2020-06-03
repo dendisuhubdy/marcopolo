@@ -24,6 +24,7 @@ members = [
 	"core",
     "chain",
 	"consensus",
+    "generator",
 	"service",
 	"rpc",
 	"network"

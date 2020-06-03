@@ -764,6 +764,24 @@ version = "0.3.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "generator"
+version = "0.1.0"
+dependencies = [
+ "bincode 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "chain 0.1.0",
+ "crossbeam-channel 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "enum-display-derive 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "map-consensus 0.1.0",
+ "map-core 0.1.0",
+ "map-ed25519 0.1.0-pre",
+ "map-errors 0.1.0-pre",
+ "pvss 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

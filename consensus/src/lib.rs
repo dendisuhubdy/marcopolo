@@ -22,12 +22,11 @@ extern crate log;
 extern crate ed25519;
 
 use failure::{Backtrace, err_msg, Context, Fail};
-use std::fmt::{self, Display,Debug};
+use std::fmt::{self, Display, Debug};
 use errors::{Error, ErrorKind};
 
 pub mod poa;
 pub mod traits;
-// pub mod generate;
 
 const os_seed_share_count: i32 = 10;
 //////////////////////////////////////////////////////////////////

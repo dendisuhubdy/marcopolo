@@ -15,12 +15,13 @@
 // along with MarcoPolo Protocol.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::collections::HashMap;
-use ed25519::{pubkey::Pubkey,privkey::PrivKey,signature::SignatureInfo};
-use map_core::block::{self,Block,BlockProof,VerificationItem};
+
+use map_consensus::ConsensusErrorKind;
 use map_core::balance::Balance;
+use map_core::block::{self, Block, BlockProof, VerificationItem};
 use map_core::staking::Staking;
-use crate::ConsensusErrorKind;
-use super::types::{HolderItem, LockItem, P256PK, seed_open, seed_info};
+use crate::types::{seed_info, seed_open, HolderItem, LockItem, P256PK};
+use ed25519::{privkey::PrivKey, pubkey::Pubkey, signature::SignatureInfo};
 use errors::{Error, ErrorKind};
 
 #[derive(Debug, Clone)]
@@ -30,39 +31,39 @@ pub struct EpochItem {
 }
 
 pub struct APOS {
-    epochInfos:     HashMap<u64, EpochItem>,
-    lInfo:          LockItem,
-    eid:            u64,            // current epoch id
-    be_a_holdler:   bool,
-    lindex:         i32,            // current index in holder list on the epoch id
+    epochInfos: HashMap<u64, EpochItem>,
+    lInfo: LockItem,
+    eid: u64, // current epoch id
+    be_a_holdler: bool,
+    lindex: i32, // current index in holder list on the epoch id
     // my_seed:        Option<seed_info>,
     seed_next_epoch: u64,
 }
 
 impl APOS {
     pub fn new() -> Self {
-        APOS{
+        APOS {
             epochInfos: HashMap::default(),
-            lInfo:      LockItem::default(),
+            lInfo: LockItem::default(),
             eid: 0,
-            be_a_holdler:   false,
-            lindex:         0,
+            be_a_holdler: false,
+            lindex: 0,
             // my_seed:           None,
             seed_next_epoch: 0,
         }
     }
-    pub fn new2(info: LockItem) ->Self {
-        APOS{
+    pub fn new2(info: LockItem) -> Self {
+        APOS {
             epochInfos: HashMap::default(),
-            lInfo:      info,
+            lInfo: info,
             eid: 0,
-            be_a_holdler:   false,
-            lindex:     0,
+            be_a_holdler: false,
+            lindex: 0,
             // my_seed:       None,
             seed_next_epoch: 0,
         }
     }
-    pub fn be_a_holder(&mut self,b: bool) {
+    pub fn be_a_holder(&mut self, b: bool) {
         self.be_a_holdler = true;
     }
     // pub fn from_genesis(&mut self,genesis: &Block,state: &Balance) {
@@ -112,21 +113,21 @@ impl APOS {
     pub fn next_epoch(&mut self) {
         self.eid = self.eid + 1
     }
-    pub fn get_epoch_info(&self,eid: u64) -> Option<EpochItem> {
+    pub fn get_epoch_info(&self, eid: u64) -> Option<EpochItem> {
         match self.epochInfos.get(&eid) {
             Some(v) => Some(v.clone()),
             None => None,
         }
     }
-    pub fn get_staking_holder(&self, index: i32,eid: u64) -> Option<HolderItem> {
+    pub fn get_staking_holder(&self, index: i32, eid: u64) -> Option<HolderItem> {
         match self.get_epoch_info(eid) {
-            Some(items)  =>{
-                if items.validators.len() > index as usize{
+            Some(items) => {
+                if items.validators.len() > index as usize {
                     Some(items.validators[index as usize].clone())
                 } else {
                     None
                 }
-            },
+            }
             None => None,
         }
     }
@@ -144,11 +145,11 @@ impl APOS {
                 } else {
                     None
                 }
-            },
+            }
             None => None,
         }
     }
-    pub fn get_seed_by_epochid(&self,eid: u64) -> u64 {
+    pub fn get_seed_by_epochid(&self, eid: u64) -> u64 {
         if let Some(items) = self.get_epoch_info(eid) {
             items.seed
         } else {
@@ -172,13 +173,11 @@ impl APOS {
     }
     pub fn is_validator(&self) -> bool {
         match self.get_staking_holders(self.eid) {
-            Some(vv) => {
-                match vv.get(self.lindex as usize) {
-                    Some(v) => {
-                        return self.lInfo.equal_pk(&v.get_pubkey());
-                    },
-                    None => false,
+            Some(vv) => match vv.get(self.lindex as usize) {
+                Some(v) => {
+                    return self.lInfo.equal_pk(&v.get_pubkey());
                 }
+                None => false,
             },
             None => false,
         }
@@ -190,13 +189,13 @@ impl APOS {
     //     // self.my_seed
     //     None
     // }
-    pub fn set_seed_next_epoch(&mut self,seed: u64) {
+    pub fn set_seed_next_epoch(&mut self, seed: u64) {
         self.seed_next_epoch = seed
     }
     pub fn get_seed_next_epoch(&self) -> u64 {
         self.seed_next_epoch
     }
-    pub fn make_rand_seed(&self) -> Result<seed_info,Error> {
+    pub fn make_rand_seed(&self) -> Result<seed_info, Error> {
         // let escrow = pvss::simple::escrow(super::os_seed_share_count);
         // let msg = pvss::crypto::PublicKey{point:escrow.secret}.to_bytes();
         // let mut pubs : Vec<pvss::crypto::PublicKey> = Vec::new();
@@ -237,7 +236,7 @@ impl APOS {
 
         return Err(ConsensusErrorKind::NoValidatorsInEpoch.into());
     }
-    pub fn recover_seed_from_shared_msg(&self,si: &seed_info) -> Result<Vec<u8>,Error> {
+    pub fn recover_seed_from_shared_msg(&self, si: &seed_info) -> Result<Vec<u8>, Error> {
         // if si.index != self.lindex {
         //     return Err(ConsensusErrorKind::NotMatchLocalHolders.into());
         // }
@@ -251,7 +250,7 @@ impl APOS {
 
         return Err(ConsensusErrorKind::RecoverSharesError.into());
     }
-    pub fn recove_the_share(&self,si: &mut seed_info) -> Result<(),Error> {
+    pub fn recove_the_share(&self, si: &mut seed_info) -> Result<(), Error> {
         // for share in si.shares {
         //     if self.lindex == (share.id - 1) as i32 {
         //         let pk = self.lInfo.get_pk2();

@@ -11,6 +11,6 @@ chain_indent="Visual"
 chain_one_line_max=100
 reorder_imports=true
 format_strings=false
-hard_tabs=true
+hard_tabs=false
 wrap_match_arms=false
 error_on_line_overflow=false

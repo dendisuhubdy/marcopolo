@@ -44,7 +44,7 @@ pub struct BlockChain {
 }
 
 impl BlockChain {
-    pub fn new(datadir: PathBuf,key: String) -> Self {
+    pub fn new(datadir: PathBuf, key: String) -> Self {
         info!("using datadir {}", datadir.display());
         let db_cfg = map_store::Config::new(datadir.clone());
         let backend;
