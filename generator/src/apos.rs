@@ -25,6 +25,7 @@ use map_core::staking::Staking;
 use map_core::state::StateDB;
 use map_core::runtime::Interpreter;
 use crate::types::{seed_info, seed_open, HolderItem, LockItem, P256PK};
+use crate::epoch::EPOCH_LENGTH;
 use ed25519::{privkey::PrivKey, pubkey::Pubkey, signature::SignatureInfo};
 use errors::{Error, ErrorKind};
 
@@ -103,17 +104,20 @@ impl APOS {
         let validators = state.validator_set();
         let mut holders: Vec<HolderItem> = Vec::new();
 
-        for v in validators.iter() {
+        for n in 0..EPOCH_LENGTH {
+            // static genesis validator
+            let v = validators[0].clone();
             let mut pk: [u8; 32] = [0; 32];
             pk.copy_from_slice(&v.pubkey);
 
             holders.push(HolderItem {
                 pubkey: pk,
                 stakeAmount: 0,
-                sid: 0,
-                validator: false,
+                sid: n as u64,
+                validator: true,
             });
         }
+
         Some(EpochItem {
             seed: 0,
             validators: holders,
@@ -133,7 +137,12 @@ impl APOS {
             return Some(v.clone());
         }
         // genesis epoch committee at start
-        self.genesis_epoch()
+        let mut epoch = self.genesis_epoch().unwrap().clone();
+        for (i, val) in epoch.validators.iter_mut().enumerate() {
+            val.sid = i as u64 + eid * EPOCH_LENGTH;
+        }
+
+        Some(epoch)
     }
 
     pub fn get_staking_holder(&self, index: u64, eid: u64) -> Option<HolderItem> {

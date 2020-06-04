@@ -157,16 +157,16 @@ pub struct HolderItem {
     // pub seedVerifyPk: P256PK,
     // pub seedPk:       Option<P256PK>,
     pub stakeAmount: u128,
-    pub sid:        i32,
+    pub sid:        u64,
     pub validator:  bool,
 }
 
 impl HolderItem {
-    pub fn set_sid(&mut self,i: i32) {
+    pub fn set_sid(&mut self, i: u64) {
         self.sid = i;
     }
 
-    pub fn get_sid(&self) -> i32 {
+    pub fn get_sid(&self) -> u64 {
         self.sid
     }
 

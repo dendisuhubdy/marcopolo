@@ -31,7 +31,7 @@ use map_core::types::Hash;
 // use super::fts;
 
 /// Slots per epoch constant
-const EPOCH_LENGTH: u64 = 100;
+pub const EPOCH_LENGTH: u64 = 64;
 
 type TypeNewBlockEvent = Receiver<Block>;
 type TypeNewTimerIntervalEvent = Receiver<Instant>;
@@ -209,7 +209,11 @@ impl EpochProcess {
         //     // }
         //     Ok(())
         // }
-        Err(ConsensusErrorKind::NotMatchEpochID.into())
+        // Err(ConsensusErrorKind::NotMatchEpochID.into())
+        let pos = state.read().unwrap();
+        let committee = pos.genesis_epoch().unwrap();
+
+        Ok(())
     }
     pub fn slot_handle(&mut self, sid: u64, state: Arc<RwLock<APOS>>) {
         if self.is_proposer(sid, state) {
