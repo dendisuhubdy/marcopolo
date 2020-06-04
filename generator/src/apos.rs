@@ -43,12 +43,12 @@ pub struct APOS {
     lindex: i32, // current index in holder list on the epoch id
     // my_seed:        Option<seed_info>,
     seed_next_epoch: u64,
-    genesis_block: Block,
+    // genesis_block: Block,
     state: StateDB,
 }
 
 impl APOS {
-    pub fn new(genesis: Block, state: StateDB) -> Self {
+    pub fn new(state: StateDB) -> Self {
         APOS {
             epochInfos: HashMap::default(),
             lInfo: LockItem::default(),
@@ -57,7 +57,6 @@ impl APOS {
             lindex: 0,
             // my_seed:           None,
             seed_next_epoch: 0,
-            genesis_block: genesis,
             state: state,
         }
     }

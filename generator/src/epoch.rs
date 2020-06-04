@@ -211,7 +211,7 @@ impl EpochProcess {
         // }
         // Err(ConsensusErrorKind::NotMatchEpochID.into())
         let pos = state.read().unwrap();
-        let committee = pos.genesis_epoch().unwrap();
+        let committee = pos.get_epoch_info(self.cur_eid).unwrap();
 
         Ok(())
     }
@@ -235,7 +235,7 @@ impl EpochProcess {
     ) -> TypeStopEpoch {
         let (stop_epoch_send, stop_epoch_receiver) = bounded::<()>(1);
         let mut walk_pos: u64 = sid;
-        let mut thread_builder = thread::Builder::new();
+        let thread_builder = thread::Builder::new();
         // thread_builder = thread_builder.name("slot_walk".to_string());
         let join_handle = thread_builder
             .spawn(move || loop {
