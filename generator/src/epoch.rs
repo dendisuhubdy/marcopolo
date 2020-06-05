@@ -72,7 +72,7 @@ impl Builder {
     }
 
     pub fn get_sid_from_current_block(&self) -> u64 {
-        0
+        self.chain.read().unwrap().current_block().height() + 1
     }
 
     pub fn get_best_chain(&self, height: u64) -> Option<Block> {
@@ -165,6 +165,7 @@ impl EpochProcess {
         //     Err(e) => Err(e),
         // }
 
+        // Get start slot on node lanuch
         let sid = self.block_chain.get_sid_from_current_block();
         Ok(self.start_slot_walk_in_epoch(sid, new_block, new_interval, state.clone()))
     }
@@ -193,6 +194,7 @@ impl EpochProcess {
             //     Err(e) => Err(e),
             //     Ok(()) => Ok(true),
             // }
+            Ok(true)
         } else {
             Ok(false)
         }
@@ -256,32 +258,32 @@ impl EpochProcess {
             .spawn(move || loop {
                 select! {
                     recv(stop_epoch_receiver) -> _ => {
+                        // end of slot
                         break;
                     }
+                    recv(new_interval) -> _ => {
+                        self.handle_new_time_interval_event(&walk_pos, state.clone());
+                        // walk_pos = walk_pos + 1;
+                    },
                     // recv(new_block) -> msg => {
                     //     self.handle_new_block_event(msg, &walk_pos, state.clone());
                     //     walk_pos = walk_pos + 1;
                     // },
-                    recv(new_interval) -> _ => {
-                        self.handle_new_time_interval_event(&walk_pos, state.clone());
-                        walk_pos = walk_pos + 1;
-                    },
                 }
                 // new epoch
-                match self.next_epoch(walk_pos, state.clone()) {
+                match self.next_epoch(walk_pos + 1, state.clone()) {
                     Err(e) => {
                         println!(
                             "start_slot_walk_in_epoch is quit,cause next epoch is err:{:?}",
                             e
                         );
                         return;
-                    }
-                    Ok(next) => {
-                        if next {
-                            walk_pos = 0;
-                        }
-                    }
+                    },
+                    _ => (),
                 }
+
+                // No skipping empty slot right now
+                walk_pos = self.block_chain.get_sid_from_current_block();
             })
             .expect("Start slot_walk failed");
         stop_epoch_send
