@@ -189,10 +189,10 @@ impl EpochProcess {
         let next_eid = Epoch::epoch_from_id(sid);
         if next_eid == self.cur_eid + 1 {
             self.cur_eid = next_eid;
-            match self.assign_validator(state) {
-                Err(e) => Err(e),
-                Ok(()) => Ok(true),
-            }
+            // match self.assign_validator(state) {
+            //     Err(e) => Err(e),
+            //     Ok(()) => Ok(true),
+            // }
         } else {
             Ok(false)
         }
@@ -218,13 +218,25 @@ impl EpochProcess {
 
         Ok(())
     }
+
+    pub fn new_slot_handle(&mut self, sid: u64, state: Arc<RwLock<APOS>>) {
+        if self.is_proposer(sid, state) {
+            let current = self.block_chain.get_head_block();
+            let b = self
+                .block_chain
+                .make_new_block(current.height(), current.hash());
+            info!("make new block hash={}", b.hash());
+            // boradcast and import the block
+        }
+    }
+
     pub fn slot_handle(&mut self, sid: u64, state: Arc<RwLock<APOS>>) {
         if self.is_proposer(sid, state) {
             let current = self.block_chain.get_head_block();
             let b = self
                 .block_chain
                 .make_new_block(current.height(), current.hash());
-            info!("make new hash={}", b.hash());
+            info!("make new block hash={}", b.hash());
             // boradcast and import the block
         }
     }
@@ -290,7 +302,7 @@ impl EpochProcess {
         }
     }
     fn handle_new_time_interval_event(&mut self, sid: &u64, state: Arc<RwLock<APOS>>) {
-        self.slot_handle(*sid, state);
+        self.new_slot_handle(*sid, state);
     }
     // if it want to be a validator and then make the local secret and broadcast it
     fn commitment_phase(&self, state: Arc<RwLock<APOS>>) -> Result<(), Error> {
