@@ -157,13 +157,16 @@ impl EpochProcess {
     ) -> Result<TypeStopEpoch, Error> {
         let new_interval = tick(Duration::new(6, 0));
         // setup validators
-        match self.assign_validator(state.clone()) {
-            Ok(()) => {
-                let sid = self.block_chain.get_sid_from_current_block();
-                Ok(self.start_slot_walk_in_epoch(sid, new_block, new_interval, state.clone()))
-            }
-            Err(e) => Err(e),
-        }
+        // match self.assign_validator(state.clone()) {
+        //     Ok(()) => {
+        //         let sid = self.block_chain.get_sid_from_current_block();
+        //         Ok(self.start_slot_walk_in_epoch(sid, new_block, new_interval, state.clone()))
+        //     }
+        //     Err(e) => Err(e),
+        // }
+
+        let sid = self.block_chain.get_sid_from_current_block();
+        Ok(self.start_slot_walk_in_epoch(sid, new_block, new_interval, state.clone()))
     }
 
     pub fn is_proposer(&self, sid: u64, state: Arc<RwLock<APOS>>) -> bool {
@@ -243,10 +246,10 @@ impl EpochProcess {
                     recv(stop_epoch_receiver) -> _ => {
                         break;
                     }
-                    recv(new_block) -> msg => {
-                        self.handle_new_block_event(msg, &walk_pos, state.clone());
-                        walk_pos = walk_pos + 1;
-                    },
+                    // recv(new_block) -> msg => {
+                    //     self.handle_new_block_event(msg, &walk_pos, state.clone());
+                    //     walk_pos = walk_pos + 1;
+                    // },
                     recv(new_interval) -> _ => {
                         self.handle_new_time_interval_event(&walk_pos, state.clone());
                         walk_pos = walk_pos + 1;
