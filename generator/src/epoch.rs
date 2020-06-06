@@ -23,6 +23,7 @@ use crate::types::{seed_info, HolderItem};
 use crate::{apos::APOS, types};
 use chain::blockchain::BlockChain;
 use crossbeam_channel::{bounded, select, tick, Receiver, RecvError, Sender};
+// use tokio::sync::mpsc::{Receiver, Sender};
 use ed25519::{privkey::PrivKey, pubkey::Pubkey, signature::SignatureInfo};
 use errors::{Error, ErrorKind};
 use map_consensus::ConsensusErrorKind;
@@ -32,9 +33,11 @@ use map_core::types::Hash;
 
 /// Slots per epoch constant
 pub const EPOCH_LENGTH: u64 = 64;
+pub const SLOT_DURATION: u64 = 6;
 
 type TypeNewBlockEvent = Receiver<Block>;
 type TypeNewTimerIntervalEvent = Receiver<Instant>;
+type TypeTickEvent = Receiver<Instant>;
 pub type TypeStopEpoch = Sender<()>;
 
 // Chain bulder to make proposer block
@@ -149,13 +152,13 @@ impl EpochProcess {
             block_chain: Builder::new(chain.clone()),
         }
     }
+
     pub fn start(
         mut self,
         state: Arc<RwLock<APOS>>,
         new_block: TypeNewBlockEvent,
-        // new_interval: TypeNewTimerIntervalEvent
     ) -> Result<TypeStopEpoch, Error> {
-        let new_interval = tick(Duration::new(6, 0));
+        // let new_interval = tick(Duration::new(6, 0));
         // setup validators
         // match self.assign_validator(state.clone()) {
         //     Ok(()) => {
@@ -167,7 +170,7 @@ impl EpochProcess {
 
         // Get start slot on node lanuch
         let sid = self.block_chain.get_sid_from_current_block();
-        Ok(self.start_slot_walk_in_epoch(sid, new_block, new_interval, state.clone()))
+        Ok(self.start_slot_walk_in_epoch(sid, new_block, state.clone()))
     }
 
     pub fn is_proposer(&self, sid: u64, state: Arc<RwLock<APOS>>) -> bool {
@@ -247,13 +250,17 @@ impl EpochProcess {
         mut self,
         sid: u64,
         new_block: TypeNewBlockEvent,
-        new_interval: TypeNewTimerIntervalEvent,
         state: Arc<RwLock<APOS>>,
     ) -> TypeStopEpoch {
         let (stop_epoch_send, stop_epoch_receiver) = bounded::<()>(1);
         let mut walk_pos: u64 = sid;
         let thread_builder = thread::Builder::new();
-        // thread_builder = thread_builder.name("slot_walk".to_string());
+        // let start_slot = sid;
+        let new_interval = tick(Duration::new(SLOT_DURATION, 0));
+        // let start = Instant::now();
+        // let now = Instant::now();
+        // let elapse = now.duration_since(start);
+
         let join_handle = thread_builder
             .spawn(move || loop {
                 select! {
@@ -262,8 +269,8 @@ impl EpochProcess {
                         break;
                     }
                     recv(new_interval) -> _ => {
-                        self.handle_new_time_interval_event(&walk_pos, state.clone());
-                        // walk_pos = walk_pos + 1;
+                        self.handle_new_time_interval_event(walk_pos, state.clone());
+                        walk_pos = walk_pos + 1;
                     },
                     // recv(new_block) -> msg => {
                     //     self.handle_new_block_event(msg, &walk_pos, state.clone());
@@ -271,16 +278,16 @@ impl EpochProcess {
                     // },
                 }
                 // new epoch
-                match self.next_epoch(walk_pos + 1, state.clone()) {
-                    Err(e) => {
-                        println!(
-                            "start_slot_walk_in_epoch is quit,cause next epoch is err:{:?}",
-                            e
-                        );
-                        return;
-                    },
-                    _ => (),
-                }
+                // match self.next_epoch(walk_pos + 1, state.clone()) {
+                //     Err(e) => {
+                //         println!(
+                //             "start_slot_walk_in_epoch is quit,cause next epoch is err:{:?}",
+                //             e
+                //         );
+                //         return;
+                //     },
+                //     _ => (),
+                // }
 
                 // No skipping empty slot right now
                 walk_pos = self.block_chain.get_sid_from_current_block();
@@ -303,8 +310,8 @@ impl EpochProcess {
             Err(e) => println!("insert_block Error: {:?}", e),
         }
     }
-    fn handle_new_time_interval_event(&mut self, sid: &u64, state: Arc<RwLock<APOS>>) {
-        self.new_slot_handle(*sid, state);
+    fn handle_new_time_interval_event(&mut self, sid: u64, state: Arc<RwLock<APOS>>) {
+        self.new_slot_handle(sid, state);
     }
     // if it want to be a validator and then make the local secret and broadcast it
     fn commitment_phase(&self, state: Arc<RwLock<APOS>>) -> Result<(), Error> {
@@ -454,7 +461,24 @@ impl EpochProcess {
 
 #[cfg(test)]
 pub mod tests {
+    use std::thread;
+    use std::time::{Duration, Instant};
+    use crossbeam_channel::tick;
 
     #[test]
-    fn make_epoch() {}
+    fn slot_tick() {
+        let start = Instant::now();
+        let ticker = tick(Duration::from_millis(1000));
+
+        for _ in 0..2 {
+            ticker.recv().unwrap();
+            println!("elapsed: {:?}", start.elapsed());
+        }
+        thread::sleep(Duration::from_millis(1500));
+
+        for _ in 0..2 {
+            ticker.recv().unwrap();
+            println!("delayed elapsed: {:?}", start.elapsed());
+        }
+    }
 }
