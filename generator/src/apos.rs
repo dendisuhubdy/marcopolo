@@ -17,6 +17,7 @@
 use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::{Arc, RwLock};
 
 use map_consensus::ConsensusErrorKind;
 use map_core::balance::Balance;
@@ -24,6 +25,7 @@ use map_core::block::{self, Block, BlockProof, VerificationItem};
 use map_core::staking::Staking;
 use map_core::state::StateDB;
 use map_core::runtime::Interpreter;
+use chain::blockchain::BlockChain;
 use crate::types::{seed_info, seed_open, HolderItem, LockItem, P256PK};
 use crate::epoch::EPOCH_LENGTH;
 use ed25519::{privkey::PrivKey, pubkey::Pubkey, signature::SignatureInfo};
@@ -44,11 +46,11 @@ pub struct APOS {
     // my_seed:        Option<seed_info>,
     seed_next_epoch: u64,
     // genesis_block: Block,
-    state: StateDB,
+    chain: Arc<RwLock<BlockChain>>,
 }
 
 impl APOS {
-    pub fn new(state: StateDB) -> Self {
+    pub fn new(chain: Arc<RwLock<BlockChain>>) -> Self {
         APOS {
             epochInfos: HashMap::default(),
             lInfo: LockItem::default(),
@@ -57,7 +59,7 @@ impl APOS {
             lindex: 0,
             // my_seed:           None,
             seed_next_epoch: 0,
-            state: state,
+            chain: chain,
         }
     }
     // pub fn new2(info: LockItem) -> Self {
@@ -98,7 +100,10 @@ impl APOS {
     // }
 
     pub fn genesis_epoch(&self) -> Option<EpochItem> {
-        let state = Staking::new(Interpreter::new(Rc::new(RefCell::new(self.state.clone())).clone()));
+        let chain = self.chain.read().unwrap();
+        let cur_block = chain.current_block();
+        let statedb = chain.state_at(cur_block.state_root());
+        let state = Staking::new(Interpreter::new(statedb.clone()));
 
         let validators = state.validator_set();
         let mut holders: Vec<HolderItem> = Vec::new();

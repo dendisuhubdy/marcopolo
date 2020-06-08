@@ -30,6 +30,7 @@ use std::time::{Duration, SystemTime};
 
 use chain::blockchain::BlockChain;
 use chain::tx_pool::TxPoolManager;
+use ed25519::pubkey::Pubkey;
 use consensus::{ConsensusErrorKind, poa::POA};
 use core::balance::Balance;
 use core::block::{self, Block, Header};
@@ -38,6 +39,8 @@ use core::types::Hash;
 use core::runtime::Interpreter;
 use errors::Error;
 use executor::Executor;
+use generator::epoch::EpochProcess;
+use generator::apos::APOS;
 use network::{manager as network_executor, Multiaddr, NetworkConfig};
 use rpc::http_server;
 use futures::{Future};
@@ -110,6 +113,15 @@ impl Service {
         let (tx,rx): (mpsc::Sender<i32>,mpsc::Receiver<i32>) = mpsc::channel();
         let shared_block_chain = self.block_chain.clone();
 
+        // let slot_tick = EpochProcess::new(
+        //     Pubkey::from_bytes(&b"0xd2480451ef35ff2fdd7c69cad058719b9dc4d631".to_vec()),
+        //     0,
+        //     0,
+        //     shared_block_chain.clone(),
+        // );
+        // let stake = APOS::new(shared_block_chain.clone());
+        // slot_tick.start(Arc::new(RwLock::new(stake)));
+
         let builder = thread::spawn(move || {
             loop {
                 if !thread_cfg.seal_block {
@@ -129,6 +141,7 @@ impl Service {
                     };
                     thread::sleep(Duration::from_millis(POA::get_interval()));
                 }
+
                 if rx.try_recv().is_ok() {
                     if !network.exit_signal.is_closed() {
                         network.exit_signal.send(1).expect("network exit error");

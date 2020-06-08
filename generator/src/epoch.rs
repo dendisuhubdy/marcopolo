@@ -22,7 +22,7 @@ use std::time::{Duration, Instant, SystemTime};
 use crate::types::{seed_info, HolderItem};
 use crate::{apos::APOS, types};
 use chain::blockchain::BlockChain;
-use crossbeam_channel::{bounded, select, tick, Receiver, RecvError, Sender};
+use crossbeam_channel::{bounded, unbounded, select, tick, Receiver, RecvError, Sender};
 // use tokio::sync::mpsc::{Receiver, Sender};
 use ed25519::{privkey::PrivKey, pubkey::Pubkey, signature::SignatureInfo};
 use errors::{Error, ErrorKind};
@@ -156,7 +156,6 @@ impl EpochProcess {
     pub fn start(
         mut self,
         state: Arc<RwLock<APOS>>,
-        new_block: TypeNewBlockEvent,
     ) -> Result<TypeStopEpoch, Error> {
         // let new_interval = tick(Duration::new(6, 0));
         // setup validators
@@ -167,6 +166,8 @@ impl EpochProcess {
         //     }
         //     Err(e) => Err(e),
         // }
+
+        let (_, new_block) = unbounded();
 
         // Get start slot on node lanuch
         let sid = self.block_chain.get_sid_from_current_block();
