@@ -114,7 +114,7 @@ impl Service {
         let shared_block_chain = self.block_chain.clone();
 
         // let slot_tick = EpochProcess::new(
-        //     Pubkey::from_bytes(&b"0xd2480451ef35ff2fdd7c69cad058719b9dc4d631".to_vec()),
+        //     Pubkey::from_hex("0xf3a87c2ea52bbc7cd764ddd7f947d93ce20d094872185049761ffb2652c09307".to_vec()),
         //     0,
         //     0,
         //     shared_block_chain.clone(),

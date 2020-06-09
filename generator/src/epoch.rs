@@ -226,6 +226,7 @@ impl EpochProcess {
     }
 
     pub fn new_slot_handle(&mut self, sid: u64, state: Arc<RwLock<APOS>>) {
+        info!("new slot id={}", sid);
         if self.is_proposer(sid, state) {
             let current = self.block_chain.get_head_block();
             let b = self
@@ -264,11 +265,13 @@ impl EpochProcess {
 
         let join_handle = thread_builder
             .spawn(move || loop {
+
                 select! {
-                    recv(stop_epoch_receiver) -> _ => {
-                        // end of slot
-                        break;
-                    }
+                    // recv(stop_epoch_receiver) -> _ => {
+                    //     // end of slot
+                    //     // break;
+                    //     warn!("stop receiver");
+                    // },
                     recv(new_interval) -> _ => {
                         self.handle_new_time_interval_event(walk_pos, state.clone());
                         walk_pos = walk_pos + 1;
@@ -291,7 +294,7 @@ impl EpochProcess {
                 // }
 
                 // No skipping empty slot right now
-                walk_pos = self.block_chain.get_sid_from_current_block();
+                // walk_pos = self.block_chain.get_sid_from_current_block();
             })
             .expect("Start slot_walk failed");
         stop_epoch_send

@@ -17,6 +17,7 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 
+use ed25519::pubkey::Pubkey;
 use super::{traits::TxMsg};
 use super::types::{Hash, Address};
 use super::block;
@@ -41,8 +42,8 @@ const allocation: &[(&str, u128)] = &[
 ];
 
 // validator members (address, pubkey, stake)
-const validators: &[(&str, &[u8], u128)] = &[
-    ("0xd2480451ef35ff2fdd7c69cad058719b9dc4d631", b"0xd2480451ef35ff2fdd7c69cad058719b9dc4d631", 0),
+const validators: &[(&str, &str, u128)] = &[
+    ("0xd2480451ef35ff2fdd7c69cad058719b9dc4d631", "0xf3a87c2ea52bbc7cd764ddd7f947d93ce20d094872185049761ffb2652c09307", 0),
 ];
 
 pub fn to_genesis() -> Block {
@@ -71,7 +72,7 @@ pub fn setup_allocation(db: Rc<RefCell<StateDB>>) -> Hash {
         for &(addr, pk, value) in validators {
             let validator = Validator {
                 address: Address::from_hex(addr).unwrap(),
-                pubkey: pk.to_vec(),
+                pubkey: Pubkey::from_hex(pk).to_bytes(),
                 balance: 0,
                 effective_balance: value,
                 activate_height: 0,

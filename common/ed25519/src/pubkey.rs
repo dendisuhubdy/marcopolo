@@ -22,6 +22,7 @@ extern crate sha2;
 extern crate errors;
 
 use errors::{Error,InternalErrorKind};
+use hex;
 use bincode::{serialize};
 use ed25519_dalek::{PublicKey,Signature};
 use super::signature::SignatureInfo;
@@ -40,6 +41,20 @@ impl Pubkey {
     pub fn to_bytes(&self)->Vec<u8> {
         Vec::from(&self.inner.0[..])
     }
+
+    pub fn from_hex(text: &str) -> Self {
+        let mut pk: [u8; 32] = [0u8; 32];
+
+        let mut from = text;
+        if text.starts_with("0x") || text.starts_with("0X") {
+            from = &text[2..];
+        }
+
+        let b = hex::decode(from).unwrap();
+        pk.copy_from_slice(&b);
+        Pubkey {inner: H256(pk)}
+    }
+
     pub fn from_bytes(bytes: &[u8]) -> Self {
         let mut pk: [u8; 32] = [0u8; 32];
         pk.copy_from_slice(&bytes[..32]);
