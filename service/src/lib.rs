@@ -31,6 +31,7 @@ use std::time::{Duration, SystemTime};
 use chain::blockchain::BlockChain;
 use chain::tx_pool::TxPoolManager;
 use ed25519::pubkey::Pubkey;
+use ed25519::privkey::PrivKey;
 use consensus::{ConsensusErrorKind, poa::POA};
 use core::balance::Balance;
 use core::block::{self, Block, Header};
@@ -107,20 +108,25 @@ impl Service {
         let rpc = http_server::start_http(http_server::RpcConfig {
             rpc_addr: cfg.rpc_addr,
             rpc_port: cfg.rpc_port,
-            key: cfg.key,
+            key: cfg.key.clone(),
         }, self.block_chain.clone(), self.tx_pool.clone());
 
         let (tx,rx): (mpsc::Sender<i32>,mpsc::Receiver<i32>) = mpsc::channel();
         let shared_block_chain = self.block_chain.clone();
 
-        // let slot_tick = EpochProcess::new(
-        //     Pubkey::from_hex("0xf3a87c2ea52bbc7cd764ddd7f947d93ce20d094872185049761ffb2652c09307".to_vec()),
-        //     0,
-        //     0,
-        //     shared_block_chain.clone(),
-        // );
-        // let stake = APOS::new(shared_block_chain.clone());
-        // slot_tick.start(Arc::new(RwLock::new(stake)));
+        let node_key = match PrivKey::from_hex(&cfg.key.clone()) {
+            Ok(k) => k.to_pubkey().unwrap(),
+            _ => Pubkey::from_hex("0xf3a87c2ea52bbc7cd764ddd7f947d93ce20d094872185049761ffb2652c09307"),
+        };
+
+        let slot_tick = EpochProcess::new(
+            node_key,
+            0,
+            0,
+            shared_block_chain.clone(),
+        );
+        let stake = APOS::new(shared_block_chain.clone());
+        slot_tick.start(Arc::new(RwLock::new(stake)));
 
         let builder = thread::spawn(move || {
             loop {
