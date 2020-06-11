@@ -32,6 +32,7 @@ use chain::blockchain::BlockChain;
 use chain::tx_pool::TxPoolManager;
 use ed25519::pubkey::Pubkey;
 use ed25519::privkey::PrivKey;
+use ed25519::generator::create_key;
 use consensus::{ConsensusErrorKind, poa::POA};
 use core::balance::Balance;
 use core::block::{self, Block, Header};
@@ -116,7 +117,10 @@ impl Service {
 
         let node_key = match PrivKey::from_hex(&cfg.key.clone()) {
             Ok(k) => k.to_pubkey().unwrap(),
-            _ => Pubkey::from_hex("0xf3a87c2ea52bbc7cd764ddd7f947d93ce20d094872185049761ffb2652c09307"),
+            _ => {
+                let (_, pk) = create_key();
+                pk
+            },
         };
 
         let slot_tick = EpochProcess::new(

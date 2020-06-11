@@ -54,7 +54,10 @@ impl Builder {
     pub fn make_new_block(&self, height: u64, parent: Hash) -> Block {
         let mut block = Block::default();
         block.header.parent_hash = parent;
-        block.header.height = height;
+        block.header.height = height + 1;
+        block.header.tx_root = Hash::default();
+        block.header.state_root = Hash::default();
+        block.header.sign_root = Hash::default();
         block.header.time = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
@@ -232,7 +235,7 @@ impl EpochProcess {
             let b = self
                 .block_chain
                 .make_new_block(current.height(), current.hash());
-            info!("make new block hash={}", b.hash());
+            info!("make new block hash={} num={}", b.hash(), b.height());
             // boradcast and import the block
         }
     }

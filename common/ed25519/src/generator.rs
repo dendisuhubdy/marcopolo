@@ -40,6 +40,10 @@ impl Generator {
     }
 }
 
+pub fn create_key() -> (PrivKey, Pubkey) {
+    Generator::default().new()
+}
+
 #[test]
 fn generatePair() {
     println!("start generatePair test....");
