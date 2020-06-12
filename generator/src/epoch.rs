@@ -136,6 +136,7 @@ impl Slot {
 }
 
 pub struct EpochProcess {
+    exit_event: Receiver<i32>,
     myid: Pubkey,
     cur_eid: u64,
     cur_seed: u64,
@@ -145,7 +146,7 @@ pub struct EpochProcess {
 }
 
 impl EpochProcess {
-    pub fn new(mid: Pubkey, eid: u64, seed: u64, chain: Arc<RwLock<BlockChain>>) -> Self {
+    pub fn new(mid: Pubkey, eid: u64, seed: u64, chain: Arc<RwLock<BlockChain>>, exit: Receiver<i32>) -> Self {
         EpochProcess {
             myid: mid,
             cur_eid: eid,
@@ -153,6 +154,7 @@ impl EpochProcess {
             slots: Vec::new(),
             received_seed_info: Vec::new(),
             block_chain: Builder::new(chain.clone()),
+            exit_event: exit,
         }
     }
 
@@ -278,6 +280,10 @@ impl EpochProcess {
                     recv(new_interval) -> _ => {
                         self.handle_new_time_interval_event(walk_pos, state.clone());
                         walk_pos = walk_pos + 1;
+                    },
+                    recv(self.exit_event) -> _ => {
+                        warn!("slot tick task exit");
+                        break;
                     },
                     // recv(new_block) -> msg => {
                     //     self.handle_new_block_event(msg, &walk_pos, state.clone());

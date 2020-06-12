@@ -167,7 +167,7 @@ pub fn run() {
     th_handle.join().unwrap();
 }
 
-pub fn wait_exit(exit: Arc<(Mutex<()>, Condvar)>,tx : mpsc::Sender<i32>) {
+pub fn wait_exit(exit: Arc<(Mutex<()>, Condvar)>, tx : mpsc::Sender<i32>) {
     let e = Arc::<(Mutex<()>, Condvar)>::clone(&exit);
     let _ = ctrlc::set_handler(move || {
         tx.send(1).expect("stop block chain");

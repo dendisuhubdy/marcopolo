@@ -28,6 +28,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::{Duration, SystemTime};
 
+use crossbeam_channel::unbounded;
 use chain::blockchain::BlockChain;
 use chain::tx_pool::TxPoolManager;
 use ed25519::pubkey::Pubkey;
@@ -113,6 +114,8 @@ impl Service {
         }, self.block_chain.clone(), self.tx_pool.clone());
 
         let (tx,rx): (mpsc::Sender<i32>,mpsc::Receiver<i32>) = mpsc::channel();
+        // Slot tick exit event
+        let(ts, rs) = unbounded();
         let shared_block_chain = self.block_chain.clone();
 
         let node_key = match PrivKey::from_hex(&cfg.key.clone()) {
@@ -128,31 +131,19 @@ impl Service {
             0,
             0,
             shared_block_chain.clone(),
+            rs,
         );
-        // let stake = APOS::new(shared_block_chain.clone());
-        // let builder = slot_tick.start(Arc::new(RwLock::new(stake)));
+        let stake = APOS::new(shared_block_chain.clone());
+        let builder = slot_tick.start(Arc::new(RwLock::new(stake)));
 
-        let builder = thread::spawn(move || {
+        // Cancel all tasks
+        thread::spawn(move || {
             loop {
-                if !thread_cfg.seal_block {
-                    let res2 = self.generate_block();
-                    match res2 {
-                        Ok(b) => {
-                            if let Err(e) = shared_block_chain
-                                .write()
-                                .expect("acquiring shared_block_chain write lock")
-                                .insert_block(b.clone()) {
-                                error!("insert_block Error: {:?}", e);
-                            } else {
-                                network.gossip(b);
-                            }
-                        },
-                        Err(e) => error!("generate_block,Error: {:?}", e),
-                    };
-                    thread::sleep(Duration::from_millis(POA::get_interval()));
-                }
+                thread::sleep(Duration::from_millis(500));
 
                 if rx.try_recv().is_ok() {
+                    // Cancel slot tick service
+                    ts.send(0).unwrap();
                     if !network.exit_signal.is_closed() {
                         network.exit_signal.send(1).expect("network exit error");
                     }
@@ -165,6 +156,40 @@ impl Service {
                 }
             }
         });
+
+        // let builder = thread::spawn(move || {
+        //     loop {
+        //         if !thread_cfg.seal_block {
+        //             let res2 = self.generate_block();
+        //             match res2 {
+        //                 Ok(b) => {
+        //                     if let Err(e) = shared_block_chain
+        //                         .write()
+        //                         .expect("acquiring shared_block_chain write lock")
+        //                         .insert_block(b.clone()) {
+        //                         error!("insert_block Error: {:?}", e);
+        //                     } else {
+        //                         network.gossip(b);
+        //                     }
+        //                 },
+        //                 Err(e) => error!("generate_block,Error: {:?}", e),
+        //             };
+        //             thread::sleep(Duration::from_millis(POA::get_interval()));
+        //         }
+
+        //         if rx.try_recv().is_ok() {
+        //             if !network.exit_signal.is_closed() {
+        //                 network.exit_signal.send(1).expect("network exit error");
+        //             }
+        //             network.runtime
+        //                 .shutdown_on_idle()
+        //                 .wait()
+        //                 .map_err(|e| format!("Tokio runtime shutdown returned an error: {:?}", e)).unwrap();
+        //             rpc.close();
+        //             break;
+        //         }
+        //     }
+        // });
         (tx, builder)
     }
     pub fn new_empty_block() -> Block {

@@ -1806,6 +1806,7 @@ name = "map-service"
 version = "0.1.0"
 dependencies = [
  "chain 0.1.0",
+ "crossbeam-channel 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "generator 0.1.0",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",

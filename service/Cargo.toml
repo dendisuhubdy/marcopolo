@@ -21,3 +21,4 @@ ed25519 = { package = "map-ed25519", path = "../common/ed25519" }
 #hash = { package = "map-hash", path = "../common/hash" }
 errors = { package = "map-errors", path = "../common/errors" }
 futures = "0.1.25"
+crossbeam-channel = "0.4"
