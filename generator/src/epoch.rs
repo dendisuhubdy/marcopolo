@@ -52,11 +52,12 @@ impl Builder {
     }
     // Proposal new block from certain slot
     pub fn make_new_block(&self, height: u64, parent: Hash) -> Block {
+        let pre = self.chain.read().unwrap().get_block(parent).unwrap();
         let mut block = Block::default();
         block.header.parent_hash = parent;
         block.header.height = height + 1;
         block.header.tx_root = Hash::default();
-        block.header.state_root = Hash::default();
+        block.header.state_root = pre.state_root();
         block.header.sign_root = Hash::default();
         block.header.time = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -84,6 +85,15 @@ impl Builder {
     pub fn get_best_chain(&self, height: u64) -> Option<Block> {
         Some(Block::default())
     }
+
+    pub fn get_blockchain(&self) ->  Arc<RwLock<BlockChain>> {
+        // self.chain.write().unwrap().insert_block_ref(block);
+        self.chain.clone()
+    }
+
+    // pub fn insert_block(&self, block: &Block) {
+    //     self.chain.write().unwrap().insert_block_ref(block);
+    // }
 
     pub fn make_seed_in_epoch(&self, eid: u64) -> u64 {
         let (low, hi) = Epoch::get_height_from_eid(eid);
@@ -238,6 +248,13 @@ impl EpochProcess {
                 .block_chain
                 .make_new_block(current.height(), current.hash());
             info!("make new block hash={} num={}", b.hash(), b.height());
+
+            let block_chain = self.block_chain.get_blockchain();
+            let mut chain = block_chain.write().unwrap();
+            if let Err(e) = chain.insert_block(b.clone()) {
+                error!("insert_block Error: {:?}", e);
+            } else {
+            }
             // boradcast and import the block
         }
     }

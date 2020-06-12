@@ -146,11 +146,11 @@ impl BlockChain {
         }
 
         self.validator.validate_header(self, &block.header)?;
-        self.validator.validate_block(self, &block)?;
-        if let Err(e) = self.consensus.verify(&block) {
-            error!("consensus err height={}, {:?}", block.height(), e);
-            return Err(BlockChainErrorKind::InvalidAuthority.into());
-        }
+        // self.validator.validate_block(self, &block)?;
+        // if let Err(e) = self.consensus.verify(&block) {
+        //     error!("consensus err height={}, {:?}", block.height(), e);
+        //     return Err(BlockChainErrorKind::InvalidAuthority.into());
+        // }
 
         self.db.write_block(&block).expect("can not write block");
         self.db.write_head_hash(block.header.hash()).expect("can not wirte head");
