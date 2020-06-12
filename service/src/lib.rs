@@ -97,7 +97,7 @@ impl Service {
         let key = self.cfg.poa_privkey.clone();
         POA::new_from_string(key)
     }
-    pub fn start(mut self,cfg: NodeConfig) -> (mpsc::Sender<i32>,JoinHandle<()>) {
+    pub fn start(mut self, cfg: NodeConfig) -> (mpsc::Sender<i32>, JoinHandle<()>) {
         self.get_write_blockchain().load();
         let network_block_chain = self.block_chain.clone();
         let thread_cfg = cfg.clone();
@@ -129,8 +129,8 @@ impl Service {
             0,
             shared_block_chain.clone(),
         );
-        let stake = APOS::new(shared_block_chain.clone());
-        slot_tick.start(Arc::new(RwLock::new(stake)));
+        // let stake = APOS::new(shared_block_chain.clone());
+        // let builder = slot_tick.start(Arc::new(RwLock::new(stake)));
 
         let builder = thread::spawn(move || {
             loop {
@@ -165,7 +165,7 @@ impl Service {
                 }
             }
         });
-        (tx,builder)
+        (tx, builder)
     }
     pub fn new_empty_block() -> Block {
         Block::default()

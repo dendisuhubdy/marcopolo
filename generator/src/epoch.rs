@@ -16,7 +16,7 @@
 
 use std::convert::TryInto;
 use std::sync::{Arc, RwLock};
-use std::thread;
+use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant, SystemTime};
 
 use crate::types::{seed_info, HolderItem};
@@ -159,7 +159,7 @@ impl EpochProcess {
     pub fn start(
         mut self,
         state: Arc<RwLock<APOS>>,
-    ) -> Result<TypeStopEpoch, Error> {
+    ) -> JoinHandle<()> {
         // let new_interval = tick(Duration::new(6, 0));
         // setup validators
         // match self.assign_validator(state.clone()) {
@@ -174,7 +174,7 @@ impl EpochProcess {
 
         // Get start slot on node lanuch
         let sid = self.block_chain.get_sid_from_current_block();
-        Ok(self.start_slot_walk_in_epoch(sid, new_block, state.clone()))
+        self.start_slot_walk_in_epoch(sid, new_block, state.clone())
     }
 
     pub fn is_proposer(&self, sid: u64, state: Arc<RwLock<APOS>>) -> bool {
@@ -256,7 +256,7 @@ impl EpochProcess {
         sid: u64,
         new_block: TypeNewBlockEvent,
         state: Arc<RwLock<APOS>>,
-    ) -> TypeStopEpoch {
+    ) -> JoinHandle<()> {
         let (stop_epoch_send, stop_epoch_receiver) = bounded::<()>(1);
         let mut walk_pos: u64 = sid;
         let thread_builder = thread::Builder::new();
@@ -300,7 +300,7 @@ impl EpochProcess {
                 // walk_pos = self.block_chain.get_sid_from_current_block();
             })
             .expect("Start slot_walk failed");
-        stop_epoch_send
+        join_handle
     }
 
     fn handle_new_block_event(
