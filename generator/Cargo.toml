@@ -12,11 +12,13 @@ failure = "0.1.7"
 enum-display-derive = "0.1.0"
 map-core = { package = "map-core", path = "../core" }
 map-consensus = { path = "../consensus" }
+map-network = { path = "../network" }
 chain = { package = "chain", path = "../chain" }
 #serde = { version = "1.0.102", features = ["derive"] }
 bincode = "1.2.0"
 ed25519 = { package = "map-ed25519", path = "../common/ed25519" }
 errors = { package = "map-errors", path = "../common/errors" }
 crossbeam-channel = "0.4"
+futures = "0.1.25"
 rand = "0.6.5"
 pvss = "0.1.0"

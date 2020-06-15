@@ -98,14 +98,16 @@ impl Service {
         let key = self.cfg.poa_privkey.clone();
         POA::new_from_string(key)
     }
-    pub fn start(mut self, cfg: NodeConfig) -> (mpsc::Sender<i32>, JoinHandle<()>) {
+    pub fn start(self, cfg: NodeConfig) -> (mpsc::Sender<i32>, JoinHandle<()>) {
         self.get_write_blockchain().load();
         let network_block_chain = self.block_chain.clone();
         let thread_cfg = cfg.clone();
 
         let mut config = NetworkConfig::new();
         config.update_network_cfg(cfg.data_dir, cfg.dial_addrs, cfg.p2p_port).unwrap();
-        let mut network = network_executor::NetworkExecutor::new(config.clone(), network_block_chain).expect("Network start error");
+        let network = network_executor::NetworkExecutor::new(config.clone(), network_block_chain).expect("Network start error");
+        // let p2p_network = Arc::new(RwLock::new(
+        //     network_executor::NetworkExecutor::new(config.clone(), network_block_chain).expect("Network start error")));
 
         let rpc = http_server::start_http(http_server::RpcConfig {
             rpc_addr: cfg.rpc_addr,
@@ -131,6 +133,7 @@ impl Service {
             0,
             0,
             shared_block_chain.clone(),
+            network,
             rs,
         );
         let stake = APOS::new(shared_block_chain.clone());
@@ -144,13 +147,13 @@ impl Service {
                 if rx.try_recv().is_ok() {
                     // Cancel slot tick service
                     ts.send(0).unwrap();
-                    if !network.exit_signal.is_closed() {
-                        network.exit_signal.send(1).expect("network exit error");
-                    }
-                    network.runtime
-                        .shutdown_on_idle()
-                        .wait()
-                        .map_err(|e| format!("Tokio runtime shutdown returned an error: {:?}", e)).unwrap();
+                    // if !network.exit_signal.is_closed() {
+                    //     network.exit_signal.send(1).expect("network exit error");
+                    // }
+                    // network.runtime
+                    //     .shutdown_on_idle()
+                    //     .wait()
+                    //     .map_err(|e| format!("Tokio runtime shutdown returned an error: {:?}", e)).unwrap();
                     rpc.close();
                     break;
                 }

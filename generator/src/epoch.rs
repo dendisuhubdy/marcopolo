@@ -23,10 +23,12 @@ use crate::types::{seed_info, HolderItem};
 use crate::{apos::APOS, types};
 use chain::blockchain::BlockChain;
 use crossbeam_channel::{bounded, unbounded, select, tick, Receiver, RecvError, Sender};
+use futures::future::Future;
 // use tokio::sync::mpsc::{Receiver, Sender};
 use ed25519::{privkey::PrivKey, pubkey::Pubkey, signature::SignatureInfo};
 use errors::{Error, ErrorKind};
 use map_consensus::ConsensusErrorKind;
+use map_network::manager::NetworkExecutor;
 use map_core::block::{self, Block, BlockProof, VerificationItem};
 use map_core::types::Hash;
 // use super::fts;
@@ -153,10 +155,11 @@ pub struct EpochProcess {
     slots: Vec<Slot>,
     block_chain: Builder,
     received_seed_info: Vec<seed_info>,
+    network: NetworkExecutor,
 }
 
 impl EpochProcess {
-    pub fn new(mid: Pubkey, eid: u64, seed: u64, chain: Arc<RwLock<BlockChain>>, exit: Receiver<i32>) -> Self {
+    pub fn new(mid: Pubkey, eid: u64, seed: u64, chain: Arc<RwLock<BlockChain>>, p2p: NetworkExecutor, exit: Receiver<i32>) -> Self {
         EpochProcess {
             myid: mid,
             cur_eid: eid,
@@ -165,6 +168,7 @@ impl EpochProcess {
             received_seed_info: Vec::new(),
             block_chain: Builder::new(chain.clone()),
             exit_event: exit,
+            network: p2p,
         }
     }
 
@@ -255,7 +259,9 @@ impl EpochProcess {
                 error!("insert_block Error: {:?}", e);
             } else {
             }
+
             // boradcast and import the block
+            self.network.gossip(b);
         }
     }
 
@@ -300,6 +306,13 @@ impl EpochProcess {
                     },
                     recv(self.exit_event) -> _ => {
                         warn!("slot tick task exit");
+                        if !self.network.exit_signal.is_closed() {
+                            self.network.exit_signal.send(1).expect("network exit error");
+                        }
+                        self.network.runtime
+                            .shutdown_on_idle()
+                            .wait()
+                            .map_err(|e| format!("Tokio runtime shutdown returned an error: {:?}", e)).unwrap();
                         break;
                     },
                     // recv(new_block) -> msg => {
