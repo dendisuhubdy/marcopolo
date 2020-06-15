@@ -78,6 +78,9 @@ impl PrivKey {
         }
         let b = hex::decode(from)?;
         let mut pkey: [u8; 32] = [0u8; 32];
+        if b.len() != 32 {
+            return Err(FromHexError::InvalidStringLength);
+        }
         pkey.copy_from_slice(&b);
         Ok(PrivKey{inner: H256(pkey)})
     }
