@@ -257,9 +257,7 @@ impl EpochProcess {
             let mut chain = block_chain.write().unwrap();
             if let Err(e) = chain.insert_block(b.clone()) {
                 error!("insert_block Error: {:?}", e);
-            } else {
             }
-
             // boradcast and import the block
             self.network.gossip(b);
         }

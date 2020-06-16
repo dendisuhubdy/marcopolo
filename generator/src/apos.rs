@@ -152,8 +152,9 @@ impl APOS {
     pub fn get_staking_holder(&self, index: u64, eid: u64) -> Option<HolderItem> {
         match self.get_epoch_info(eid) {
             Some(items) => {
-                if items.validators.len() > index as usize {
-                    Some(items.validators[index as usize].clone())
+                let i = index % EPOCH_LENGTH;
+                if items.validators.len() > i as usize {
+                    Some(items.validators[i as usize].clone())
                 } else {
                     None
                 }
