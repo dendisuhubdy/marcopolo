@@ -329,7 +329,8 @@ impl MessageProcessor {
         block: Block,
     ) -> bool {
         let current_block = self.chain.read().unwrap().current_block();
-        debug!(self.log, "Gossip message received: {:?} {:?}", block.height(),block.hash());
+        debug!(self.log, "Gossip message received: {:?} {:?}", block.height(), block.hash());
+        debug!(self.log, "Gossip message current: {:?} {:?}", current_block.height(), current_block.hash());
 
         if !self.queue.is_empty() {
             let (block_low,height_low_negative) = self.queue.peek().unwrap();
@@ -362,6 +363,7 @@ impl MessageProcessor {
             return broadcast
         } else if block.height() > current_block.height() + 1 {
             self.queue.push(block.clone(),-(block.height() as i64));
+            debug!(self.log, "unknown gossip parent: {:?} {:?}", block.height(), current_block.height());
         }
 
         false
