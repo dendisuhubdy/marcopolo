@@ -333,24 +333,15 @@ impl MessageProcessor {
         debug!(self.log, "Gossip message current: {:?} {:?}", current_block.height(), current_block.hash());
 
         if !self.queue.is_empty() {
-            let (block_low,height_low_negative) = self.queue.peek().unwrap();
+            let (block_low, height_low_negative) = self.queue.peek().unwrap();
             let height_low_ref = *height_low_negative;
             let height_low = (-height_low_ref) as u64;
             if  height_low > current_block.height() + 1 {
-                self.queue.push(block_low.clone(),height_low_ref);
-            } else if height_low == current_block.height() + 1 {
-                let broadcast = match self.chain.write().expect("").insert_block_ref(&block) {
-                    Ok(_) => {
-                        true
-                    }
-                    Err(e) => {
-                        println!("network insert_block,Error: {:?}", e);
-                        false
-                    }
-                };
-                return broadcast
+                self.queue.push(block_low.clone(), height_low_ref);
             }
-        } else if block.height() == current_block.height() + 1 {
+        }
+
+        if block.height() == current_block.height() + 1 {
             let broadcast = match self.chain.write().expect("").insert_block_ref(&block) {
                 Ok(_) => {
                     true
