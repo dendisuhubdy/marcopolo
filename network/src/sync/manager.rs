@@ -19,7 +19,7 @@ use map_core::block::Block;
 /// The number of slots ahead of us that is allowed before requesting a long-range (batch)  Sync
 /// from a peer. If a peer is within this tolerance (forwards or backwards), it is treated as a
 /// fully sync'd peer.
-const SLOT_IMPORT_TOLERANCE: u64 = 20;
+const SLOT_IMPORT_TOLERANCE: u64 = 1;
 /// How many attempts we try to find a parent of a block before we give up trying .
 const PARENT_FAIL_TOLERANCE: u64 = 3;
 /// The maximum depth we will search for a parent block. In principle we should have sync'd any
