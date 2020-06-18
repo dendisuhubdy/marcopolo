@@ -150,6 +150,11 @@ impl RangeSync {
         }
     }
 
+    pub fn update_finalized(&mut self, network: &mut SyncNetworkContext) {
+        let local = self.chain.read().unwrap().current_block().height();
+        self.chains.start_syncing(network, local);
+    }
+
     /// A peer has disconnected. This removes the peer from any ongoing chains and mappings. A
     /// disconnected peer could remove a chain
     pub fn peer_disconnect(&mut self, network: &mut SyncNetworkContext, peer_id: &PeerId) {

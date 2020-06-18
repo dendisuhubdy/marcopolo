@@ -19,7 +19,7 @@ use map_core::block::Block;
 /// The number of slots ahead of us that is allowed before requesting a long-range (batch)  Sync
 /// from a peer. If a peer is within this tolerance (forwards or backwards), it is treated as a
 /// fully sync'd peer.
-const SLOT_IMPORT_TOLERANCE: u64 = 1;
+const SLOT_IMPORT_TOLERANCE: u64 = 20;
 /// How many attempts we try to find a parent of a block before we give up trying .
 const PARENT_FAIL_TOLERANCE: u64 = 3;
 /// The maximum depth we will search for a parent block. In principle we should have sync'd any
@@ -39,6 +39,8 @@ pub enum SyncMessage {
         request_id: RequestId,
         beacon_block: Option<Box<Block>>,
     },
+
+    UnknownBlock(PeerId),
 
     /// A peer has disconnected.
     Disconnect(PeerId),
@@ -246,6 +248,9 @@ impl Future for SyncManager {
                     }
                     SyncMessage::RPCError(peer_id, request_id) => {
                         println!("RPCError");
+                    }
+                    SyncMessage::UnknownBlock(peer_id) => {
+                        println!("UnknownBlock {:?}", peer_id);
                     }
                     SyncMessage::BatchProcessed {
                         batch_id,

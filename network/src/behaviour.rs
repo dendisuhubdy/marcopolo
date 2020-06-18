@@ -115,7 +115,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<GossipsubE
 for Behaviour<TSubstream>
 {
     fn inject_event(&mut self, event: GossipsubEvent) {
-        println!("inject_event gossipsub:  {:?}", event);
+        // println!("inject_event gossipsub:  {:?}", event);
         match event {
             GossipsubEvent::Message(propagation_source, id, gs_msg) => {
                 let msg = PubsubMessage::from_topics(&gs_msg.topics, gs_msg.data);
@@ -151,7 +151,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<P2PMessage
 for Behaviour<TSubstream>
 {
     fn inject_event(&mut self, event: P2PMessage) {
-        println!("inject_event P2PMessage:  {:?}", event);
+        // println!("inject_event P2PMessage:  {:?}", event);
         match event {
             P2PMessage::InjectConnect(peer_id,connected_point) => {
                 self.events.push(BehaviourEvent::InjectConnect(peer_id,connected_point))
@@ -274,7 +274,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<IdentifyEv
 for Behaviour<TSubstream>
 {
     fn inject_event(&mut self, event: IdentifyEvent) {
-        println!("inject_event IdentifyEvent:  {:?}", event);
+        // println!("inject_event IdentifyEvent:  {:?}", event);
         match event {
             IdentifyEvent::Received {
                 peer_id,

@@ -420,6 +420,7 @@ impl SyncingChain {
             self.completed_batches.clear();
             self.processed_batches.clear();
         }
+        debug!(self.log, "Start syncing chain";"local_slot" => local_finalized_number);
 
         self.state = ChainSyncingState::Syncing;
 
@@ -495,7 +496,7 @@ impl SyncingChain {
             return None;
         }
 
-        println!("get_next_batch {:?}",self.to_be_downloaded_id);
+        // println!("get_next_batch {:?}",self.to_be_downloaded_id);
         // don't request batches beyond the target head slot
         let batch_start_numer =
             self.start_numer + self.to_be_downloaded_id.saturating_sub(1) * BLOCKS_PER_BATCH + 1;
