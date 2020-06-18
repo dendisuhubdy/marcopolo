@@ -46,6 +46,15 @@ pub enum BlockChainErrorKind {
     InvalidAuthority,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum BlockProcessState {
+    Processed,
+    ParentUnknown,
+    FutureBlock,
+    BlockIsAlreadyKnown,
+}
+
+
 impl fmt::Display for BlockChainError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if let Some(cause) = self.cause() {
