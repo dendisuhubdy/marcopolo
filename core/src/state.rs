@@ -50,7 +50,7 @@ impl ArchiveDB {
     }
 
     fn payload(&self, key: &Hash) -> Option<DBValue> {
-        debug!("load payload {:}", key);
+        trace!("load payload {:}", key);
         self.backend.read().unwrap().get(key.as_bytes()).expect("get diskdb payload failed")
     }
 
@@ -60,7 +60,7 @@ impl ArchiveDB {
             let (key, (value, rc)) = i;
             if rc > 0 {
                 let mut backend = self.backend.write().unwrap();
-                debug!("db set key={:}, value={:x?}", key, value);
+                trace!("db set key={:}, value={:x?}", key, value);
                 backend.put(key.as_bytes(), &value).expect("wirte backend");
             }
         }
@@ -83,17 +83,17 @@ impl HashDB<Blake2Hasher, DBValue> for ArchiveDB {
 
     fn insert(&mut self, prefix: Prefix, value: &[u8]) -> Hash {
         let key = self.cached.insert(prefix, value);
-        debug!("hashdb insert key={:} value={:x?}", key, value);
+        trace!("hashdb insert key={:} value={:x?}", key, value);
         key
     }
 
     fn emplace(&mut self, key: Hash, prefix: Prefix, value: DBValue) {
-        debug!("hashdb emplace key={:} value={:x?}", key, value);
+        trace!("hashdb emplace key={:} value={:x?}", key, value);
         self.cached.emplace(key, prefix, value);
     }
 
     fn remove(&mut self, key: &Hash, prefix: Prefix) {
-        debug!("hashdb remove key={:}", key);
+        trace!("hashdb remove key={:}", key);
         self.cached.remove(key, prefix);
     }
 }

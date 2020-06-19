@@ -11,7 +11,7 @@ use libp2p::{
 
 };
 use parking_lot::Mutex;
-use slog::{debug, Drain, info, o, warn,trace};
+use slog::{debug, Drain, Level, info, warn, trace, o};
 use tokio::runtime::{Builder as RuntimeBuilder, Runtime, TaskExecutor};
 use tokio::sync::{mpsc, oneshot};
 use tokio::timer::Delay;
@@ -50,8 +50,18 @@ impl NetworkExecutor {
 
         let decorator = slog_term::TermDecorator::new().build();
         let drain = slog_term::CompactFormat::new(decorator).build().fuse();
-        let drain = slog_async::Async::new(drain).build().fuse();
-        let log = slog::Logger::root(drain, o!());
+        let drain = slog_async::Async::new(drain).build();
+        let drain = match log_level.as_str() {
+            "info" => drain.filter_level(Level::Info),
+            "debug" => drain.filter_level(Level::Debug),
+            "trace" => drain.filter_level(Level::Trace),
+            "warn" => drain.filter_level(Level::Warning),
+            "error" => drain.filter_level(Level::Error),
+            "crit" => drain.filter_level(Level::Critical),
+            _ => drain.filter_level(Level::Info),
+        };
+
+        let log = slog::Logger::root(drain.fuse(), o!());
 
         let runtime = RuntimeBuilder::new()
             .core_threads(1)
