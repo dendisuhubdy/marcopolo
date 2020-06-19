@@ -43,7 +43,7 @@ pub struct NetworkExecutor {
 }
 
 impl NetworkExecutor {
-    pub fn new(cfg: NetworkConfig, block_chain: Arc<RwLock<BlockChain>>) -> error::Result<Self> {
+    pub fn new(cfg: NetworkConfig, block_chain: Arc<RwLock<BlockChain>>, log_level: String) -> error::Result<Self> {
         // build the network channel
         let (network_send, network_recv) = mpsc::unbounded_channel::<NetworkMessage>();
         // launch libp2p Network

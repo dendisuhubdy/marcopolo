@@ -105,7 +105,8 @@ impl Service {
 
         let mut config = NetworkConfig::new();
         config.update_network_cfg(cfg.data_dir, cfg.dial_addrs, cfg.p2p_port).unwrap();
-        let network = network_executor::NetworkExecutor::new(config.clone(), network_block_chain).expect("Network start error");
+        let network = network_executor::NetworkExecutor::new(
+            config.clone(), network_block_chain, cfg.log).expect("Network start error");
         // let p2p_network = Arc::new(RwLock::new(
         //     network_executor::NetworkExecutor::new(config.clone(), network_block_chain).expect("Network start error")));
 
