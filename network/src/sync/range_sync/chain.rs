@@ -132,7 +132,7 @@ impl SyncingChain {
 
     /// Returns the latest slot number that has been processed.
     fn current_processed_slot(&self) -> u64 {
-        println!("current_processed_slot {:?}",self.to_be_processed_id);
+        // println!("current_processed_slot {:?}",self.to_be_processed_id);
         self.start_numer
             .saturating_add(self.to_be_processed_id.saturating_sub(1u64) * BLOCKS_PER_BATCH)
     }
@@ -339,7 +339,7 @@ impl SyncingChain {
                     }
                 }
 
-                println!("on_batch_process_result {:?}",batch.end_number);
+                // println!("on_batch_process_result {:?}",batch.end_number);
                 // Add the current batch to processed batches to be verified in the future. We are
                 // only uncertain about this batch, if it has not returned all blocks.
                 if batch.downloaded_blocks.last().map(|block| block.height())
