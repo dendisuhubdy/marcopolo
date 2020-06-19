@@ -40,7 +40,7 @@ pub enum SyncMessage {
         beacon_block: Option<Box<Block>>,
     },
 
-    UnknownBlock(PeerId),
+    UnknownBlock(PeerId, Box<Block>),
 
     /// A peer has disconnected.
     Disconnect(PeerId),
@@ -249,8 +249,10 @@ impl Future for SyncManager {
                     SyncMessage::RPCError(peer_id, request_id) => {
                         println!("RPCError");
                     }
-                    SyncMessage::UnknownBlock(peer_id) => {
-                        println!("UnknownBlock {:?}", peer_id);
+                    SyncMessage::UnknownBlock(peer_id, block) => {
+
+                        info!(self.log, "Unknown block"; "height"=>block.height());
+                        self.range_sync.update_finalized(&mut self.network, *block);
                     }
                     SyncMessage::BatchProcessed {
                         batch_id,

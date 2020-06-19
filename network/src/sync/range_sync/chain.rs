@@ -420,7 +420,7 @@ impl SyncingChain {
             self.completed_batches.clear();
             self.processed_batches.clear();
         }
-        debug!(self.log, "Start syncing chain";"local_slot" => local_finalized_number);
+        warn!(self.log, "Start syncing chain";"local_slot" => local_finalized_number);
 
         self.state = ChainSyncingState::Syncing;
 

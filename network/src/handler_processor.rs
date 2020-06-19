@@ -355,7 +355,7 @@ impl MessageProcessor {
         } else if block.height() > current_block.height() + 1 {
             self.queue.push(block.clone(),-(block.height() as i64));
             warn!(self.log, "unknown gossip parent: {:?} {:?}", block.height(), current_block.height());
-            self.send_to_sync(SyncMessage::UnknownBlock(peer_id));
+            self.send_to_sync(SyncMessage::UnknownBlock(peer_id, Box::new(block.clone())));
         }
 
         false

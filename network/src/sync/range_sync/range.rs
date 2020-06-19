@@ -150,8 +150,11 @@ impl RangeSync {
         }
     }
 
-    pub fn update_finalized(&mut self, network: &mut SyncNetworkContext) {
+    pub fn update_finalized(&mut self, network: &mut SyncNetworkContext, block: Block) {
         let local = self.chain.read().unwrap().current_block().height();
+
+        self.chains.target_head_slot = block.height();
+        self.chains.target_head_root = block.hash();
         self.chains.start_syncing(network, local);
     }
 
